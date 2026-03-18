@@ -1,16 +1,20 @@
 import { useRouter } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 import PagerView from 'react-native-pager-view';
+import { MarketStatusBar } from '../features/market/MarketStatusBar';
 
 function WatchlistPage() {
   const router = useRouter();
   return (
     <View className="flex-1 bg-bg px-4 pt-12">
-      <View className="flex-row items-center justify-between mb-6">
-        <Text className="text-text text-2xl font-bold">Watchlist</Text>
-        <Pressable onPress={() => router.push('/settings')}>
-          <Text className="text-primary text-base">Settings</Text>
-        </Pressable>
+      <View className="mb-6">
+        <View className="flex-row items-center justify-between">
+          <Text className="text-text text-2xl font-bold">Watchlist</Text>
+          <Pressable onPress={() => router.push('/settings')}>
+            <Text className="text-primary text-base">Settings</Text>
+          </Pressable>
+        </View>
+        <MarketStatusBar />
       </View>
       <View className="bg-surface rounded-lg p-4 mb-3 border border-border">
         <Text className="text-primary text-lg font-semibold">2330 TSMC</Text>
