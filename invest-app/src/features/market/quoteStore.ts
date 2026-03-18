@@ -1,0 +1,101 @@
+import { create } from 'zustand';
+import { getQuotes } from '../../services/stockService';
+import { isMarketOpen } from './marketHours';
+
+interface Quote {
+  symbol: string;
+  name: string;
+  price: number | null;
+  prevClose: number;
+  change: number;
+  changePct: number;
+  fetchedAt: number;
+}
+
+interface QuoteState {
+  quotes: Record<string, Quote>;
+  polling: boolean;
+  lastError: string | null;
+  _intervalId: ReturnType<typeof setInterval> | null;
+  startPolling: (symbols: string[]) => void;
+  stopPolling: () => void;
+}
+
+export const useQuoteStore = create<QuoteState>((set, get) => ({
+  quotes: {},
+  polling: false,
+  lastError: null,
+  _intervalId: null,
+
+  startPolling(symbols: string[]) {
+    if (get().polling) return;
+    if (!isMarketOpen()) {
+      set({ polling: false });
+      return;
+    }
+
+    const tick = async () => {
+      if (!isMarketOpen()) {
+        // Final fetch before stopping
+        try {
+          const raw = await getQuotes(symbols);
+          const fetchedAt = Date.now();
+          const quotes: Record<string, Quote> = {};
+          for (const q of raw) {
+            const change = q.price !== null ? q.price - q.prevClose : 0;
+            const changePct = q.price !== null ? (change / q.prevClose) * 100 : 0;
+            quotes[q.symbol] = {
+              symbol: q.symbol,
+              name: q.name,
+              price: q.price,
+              prevClose: q.prevClose,
+              change,
+              changePct,
+              fetchedAt,
+            };
+          }
+          set({ quotes: { ...get().quotes, ...quotes } });
+        } catch (e) {
+          set({ lastError: String(e) });
+        }
+        get().stopPolling();
+        return;
+      }
+
+      try {
+        const raw = await getQuotes(symbols);
+        const fetchedAt = Date.now();
+        const quotes: Record<string, Quote> = {};
+        for (const q of raw) {
+          const change = q.price !== null ? q.price - q.prevClose : 0;
+          const changePct = q.price !== null ? (change / q.prevClose) * 100 : 0;
+          quotes[q.symbol] = {
+            symbol: q.symbol,
+            name: q.name,
+            price: q.price,
+            prevClose: q.prevClose,
+            change,
+            changePct,
+            fetchedAt,
+          };
+        }
+        set({ quotes: { ...get().quotes, ...quotes } });
+      } catch (e) {
+        set({ lastError: String(e) });
+      }
+    };
+
+    tick();
+
+    const id = setInterval(tick, 30_000);
+    set({ polling: true, _intervalId: id });
+  },
+
+  stopPolling() {
+    const { _intervalId } = get();
+    if (_intervalId !== null) {
+      clearInterval(_intervalId);
+    }
+    set({ polling: false, _intervalId: null });
+  },
+}));
