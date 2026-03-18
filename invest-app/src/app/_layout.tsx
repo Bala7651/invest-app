@@ -1,12 +1,37 @@
 import '../global.css';
 import { Stack } from 'expo-router';
-import { View, Text } from 'react-native';
+import { useEffect } from 'react';
+import { View, Text, AppState } from 'react-native';
 import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator';
 import { db } from '../db/client';
 import migrations from '../../drizzle/migrations';
+import { useQuoteStore } from '../features/market/quoteStore';
+import { isMarketOpen } from '../features/market/marketHours';
+import { useWatchlistStore } from '../features/watchlist/store/watchlistStore';
 
 export default function RootLayout() {
   const { success, error } = useMigrations(db, migrations);
+
+  useEffect(() => {
+    const symbols = useWatchlistStore.getState().items.map(i => i.symbol);
+    if (symbols.length > 0 && isMarketOpen()) {
+      useQuoteStore.getState().startPolling(symbols);
+    }
+
+    const sub = AppState.addEventListener('change', (state) => {
+      const syms = useWatchlistStore.getState().items.map(i => i.symbol);
+      if (state === 'active' && syms.length > 0 && isMarketOpen()) {
+        useQuoteStore.getState().startPolling(syms);
+      } else if (state === 'background') {
+        useQuoteStore.getState().stopPolling();
+      }
+    });
+
+    return () => {
+      sub.remove();
+      useQuoteStore.getState().stopPolling();
+    };
+  }, []);
 
   if (error) {
     return (
