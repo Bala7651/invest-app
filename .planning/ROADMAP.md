@@ -35,7 +35,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. NativeWind is configured — a test screen renders with a deep-dark background and at least one neon accent color class
   4. SQLite database initializes on app launch with the correct schema (watchlist table, daily_summaries table)
   5. `.gitignore` includes `.env`, `*.keystore`, and `google-services.json`; no secrets appear in `git status`
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 - [ ] 01-01: Expo SDK 55 scaffold with TypeScript strict, NativeWind v4, Zustand v5
@@ -185,7 +185,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 
 Note: Phase 5 (Settings) depends only on Phase 1 and can be built in parallel with Phases 2-4 if desired. Phase 6 (AI) requires both Phase 4 and Phase 5 to be complete. Phase 9 (Price Alerts) requires both Phase 4 (chart detail page) and Phase 8 (background task infrastructure).
 
