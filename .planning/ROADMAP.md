@@ -12,7 +12,7 @@ Build a cyberpunk-styled Android app for Taiwan stock tracking and AI-powered in
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation** - Project scaffold, architecture layers, SQLite schema, NativeWind cyberpunk theme primitives, gitignore
+- [x] **Phase 1: Foundation** - Project scaffold, architecture layers, SQLite schema, NativeWind cyberpunk theme primitives, gitignore (completed 2026-03-18)
 - [ ] **Phase 2: Data Layer** - TWSE OpenAPI client with rate-limit queue, market-hours polling guard, quote stores, non-trading-day handling
 - [ ] **Phase 3: Watchlist** - Home screen watchlist with stock search, add/remove, persist to SQLite, price cards
 - [ ] **Phase 4: Charts** - Stock detail view with candlestick chart, 5 timeframes, volume bars, smooth Skia rendering
@@ -38,7 +38,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 2 plans
 
 Plans:
-- [ ] 01-01: Expo SDK 55 scaffold with TypeScript strict, NativeWind v4, Zustand v5
+- [x] 01-01: Expo SDK 55 scaffold with TypeScript strict, NativeWind v4, Zustand v5
 - [ ] 01-02: SQLite schema initialization and gitignore hardening
 
 ### Phase 2: Data Layer
@@ -191,7 +191,7 @@ Note: Phase 5 (Settings) depends only on Phase 1 and can be built in parallel wi
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/2 | Not started | - |
+| 1. Foundation | 2/2 | Complete   | 2026-03-18 |
 | 2. Data Layer | 0/3 | Not started | - |
 | 3. Watchlist | 0/2 | Not started | - |
 | 4. Charts | 0/2 | Not started | - |
