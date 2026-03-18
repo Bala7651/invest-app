@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 2 context gathered
-last_updated: "2026-03-18T12:05:54.766Z"
+stopped_at: Completed 02-data-layer/02-01-PLAN.md
+last_updated: "2026-03-18T12:38:52.105Z"
 last_activity: "2026-03-18 — Completed 01-01: Expo SDK 55 scaffold with NativeWind cyberpunk theme"
 progress:
   total_phases: 10
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  total_plans: 5
+  completed_plans: 3
   percent: 5
 ---
 
@@ -51,6 +51,7 @@ Progress: [█░░░░░░░░░] 5%
 
 *Updated after each plan completion*
 | Phase 01-foundation P02 | 6 min | 2 tasks | 9 files |
+| Phase 02-data-layer P01 | 12 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -71,6 +72,9 @@ Recent decisions affecting current work:
 - [01-01]: babel-plugin-inline-import added now for .sql files needed in Phase 2 drizzle-orm
 - [Phase 01-02]: drizzle-kit generate with expo driver produces migrations.js for expo-sqlite/migrator; import path is ../../drizzle/migrations from src/app/_layout.tsx
 - [Phase 01-02]: npm EFBIG workaround: install drizzle-orm via direct tarball URL when packument is too large for cache; normalize version string in package.json post-install
+- [Phase 02-data-layer]: encodeURIComponent applied to TWSE ex_ch param — pipe encoded as %7C, tests use decodeURIComponent to assert literal pipe
+- [Phase 02-data-layer]: parseSentinel exported for direct unit testing; _fetchQuotes and _queue remain unexported — bypass impossible
+- [Phase 02-data-layer]: isHoliday receives pre-converted Taipei Date; isMarketOpen handles UTC→Taipei conversion internally via toLocaleString
 
 ### Pending Todos
 
@@ -85,6 +89,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-18T12:05:54.762Z
-Stopped at: Phase 2 context gathered
-Resume file: .planning/phases/02-data-layer/02-CONTEXT.md
+Last session: 2026-03-18T12:38:52.101Z
+Stopped at: Completed 02-data-layer/02-01-PLAN.md
+Resume file: None

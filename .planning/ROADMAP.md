@@ -192,7 +192,7 @@ Note: Phase 5 (Settings) depends only on Phase 1 and can be built in parallel wi
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 2/2 | Complete   | 2026-03-18 |
-| 2. Data Layer | 0/3 | Not started | - |
+| 2. Data Layer | 1/3 | In Progress|  |
 | 3. Watchlist | 0/2 | Not started | - |
 | 4. Charts | 0/2 | Not started | - |
 | 5. Settings | 0/2 | Not started | - |
