@@ -39,7 +39,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 Plans:
 - [x] 01-01: Expo SDK 55 scaffold with TypeScript strict, NativeWind v4, Zustand v5
-- [ ] 01-02: SQLite schema initialization and gitignore hardening
+- [x] 01-02: SQLite schema initialization and gitignore hardening
 
 ### Phase 2: Data Layer
 **Goal**: The app can fetch live Taiwan stock quotes safely without triggering the TWSE rate limit, pauses polling outside market hours, and handles non-trading days without crashing
@@ -50,12 +50,12 @@ Plans:
   2. The market open/closed status indicator correctly reads "Open" during 09:00-13:30 Mon-Fri and "Closed" at all other times
   3. On a simulated non-trading day (public holiday), the app shows cached last-known prices rather than crashing or showing blank data
   4. `StockService` rejects any code that would bypass the request queue (unit test verifiable)
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 02-01: TWSE OpenAPI client (StockService) with serial request queue and typed responses
-- [ ] 02-02: Market-hours guard, QuoteStore polling lifecycle, non-trading-day cache fallback
-- [ ] 02-03: DATA-03 market status indicator component and DATA-04 holiday detection
+- [ ] 02-01-PLAN.md — StockService FIFO queue, TWSE client, marketHours pure functions, unit tests
+- [ ] 02-02-PLAN.md — QuoteStore polling lifecycle, _layout.tsx AppState wiring, cache fallback
+- [ ] 02-03-PLAN.md — MarketStatusBar component with Reanimated pulse, home screen integration
 
 ### Phase 3: Watchlist
 **Goal**: Users can build and maintain a personal stock watchlist on the home screen that persists across app restarts and displays live price data on each card
