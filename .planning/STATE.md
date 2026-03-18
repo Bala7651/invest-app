@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-data-layer/02-02-PLAN.md
-last_updated: "2026-03-18T16:06:39.408Z"
+stopped_at: Completed 02-data-layer/02-03-PLAN.md
+last_updated: "2026-03-19T00:00:00.000Z"
 last_activity: "2026-03-19 — Completed 02-03: MarketStatusBar component with Reanimated pulse in WatchlistPage header"
 progress:
   total_phases: 10
@@ -53,6 +53,7 @@ Progress: [██░░░░░░░░] 10%
 | Phase 01-foundation P02 | 6 min | 2 tasks | 9 files |
 | Phase 02-data-layer P01 | 12 | 2 tasks | 6 files |
 | Phase 02-data-layer P02 | 15 | 2 tasks | 3 files |
+| Phase 02-data-layer P03 | 3 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -79,6 +80,8 @@ Recent decisions affecting current work:
 - [Phase 02-data-layer]: quoteStore useEffect placed before migration guard returns to ensure cleanup always fires on unmount
 - [Phase 02-data-layer]: Quotes NOT cleared on stopPolling — cached data with fetchedAt timestamp remains when market is closed
 - [Phase 02-data-layer]: startPolling idempotent via polling boolean guard — safe to call repeatedly from AppState active events
+- [Phase 02-03]: 60-second interval for MarketStatusBar label refresh — accurate enough for market countdown, battery-friendly vs per-second
+- [Phase 02-03]: Opacity pulse (1.0→0.3) used instead of scale for Reanimated dot — avoids layout shifts in header row
 
 ### Pending Todos
 
@@ -93,6 +96,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-18T16:06:39.404Z
-Stopped at: Completed 02-data-layer/02-02-PLAN.md
+Last session: 2026-03-19T00:00:00.000Z
+Stopped at: Completed 02-data-layer/02-03-PLAN.md
 Resume file: None
