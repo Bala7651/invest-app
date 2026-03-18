@@ -40,6 +40,16 @@
 - [ ] **AI-07**: AI prompts are grounded with real TWSE data (no hallucinated figures)
 - [ ] **AI-08**: AI analysis uses MiniMax M2.5 via OpenAI-compatible API (api.minimax.io/v1)
 
+### Price Alerts
+
+- [ ] **ALRT-01**: User can enable price alert from the chart detail page via top-right icon
+- [ ] **ALRT-02**: User can set a target price (above or below current) to trigger notification
+- [ ] **ALRT-03**: When alert is first enabled, app prompts user to disable battery optimization (Android)
+- [ ] **ALRT-04**: App monitors prices in background and sends push notification when target price is reached
+- [ ] **ALRT-05**: Background monitoring is battery-efficient (uses Android WorkManager with smart intervals)
+- [ ] **ALRT-06**: User can view and manage all active price alerts
+- [ ] **ALRT-07**: Alert persists in SQLite and survives app restart
+
 ### Daily Summary
 
 - [ ] **SUMM-01**: App auto-generates daily market summary at 12:30 (1 hour before close)
@@ -96,48 +106,55 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| WTCH-01 | — | Pending |
-| WTCH-02 | — | Pending |
-| WTCH-03 | — | Pending |
-| WTCH-04 | — | Pending |
-| WTCH-05 | — | Pending |
-| WTCH-06 | — | Pending |
-| DATA-01 | — | Pending |
-| DATA-02 | — | Pending |
-| DATA-03 | — | Pending |
-| DATA-04 | — | Pending |
-| DATA-05 | — | Pending |
-| CHRT-01 | — | Pending |
-| CHRT-02 | — | Pending |
-| CHRT-03 | — | Pending |
-| CHRT-04 | — | Pending |
-| AI-01 | — | Pending |
-| AI-02 | — | Pending |
-| AI-03 | — | Pending |
-| AI-04 | — | Pending |
-| AI-05 | — | Pending |
-| AI-06 | — | Pending |
-| AI-07 | — | Pending |
-| AI-08 | — | Pending |
-| SUMM-01 | — | Pending |
-| SUMM-02 | — | Pending |
-| SUMM-03 | — | Pending |
-| SUMM-04 | — | Pending |
-| SETT-01 | — | Pending |
-| SETT-02 | — | Pending |
-| SETT-03 | — | Pending |
-| SETT-04 | — | Pending |
-| SETT-05 | — | Pending |
-| UI-01 | — | Pending |
-| UI-02 | — | Pending |
-| UI-03 | — | Pending |
-| UI-04 | — | Pending |
+| WTCH-01 | Phase 3 | Pending |
+| WTCH-02 | Phase 3 | Pending |
+| WTCH-03 | Phase 3 | Pending |
+| WTCH-04 | Phase 3 | Pending |
+| WTCH-05 | Phase 3 | Pending |
+| WTCH-06 | Phase 10 | Pending |
+| DATA-01 | Phase 2 | Pending |
+| DATA-02 | Phase 2 | Pending |
+| DATA-03 | Phase 2 | Pending |
+| DATA-04 | Phase 2 | Pending |
+| DATA-05 | Phase 2 | Pending |
+| CHRT-01 | Phase 4 | Pending |
+| CHRT-02 | Phase 4 | Pending |
+| CHRT-03 | Phase 4 | Pending |
+| CHRT-04 | Phase 4 | Pending |
+| AI-01 | Phase 6 | Pending |
+| AI-02 | Phase 6 | Pending |
+| AI-03 | Phase 6 | Pending |
+| AI-04 | Phase 6 | Pending |
+| AI-05 | Phase 6 | Pending |
+| AI-06 | Phase 6 | Pending |
+| AI-07 | Phase 6 | Pending |
+| AI-08 | Phase 6 | Pending |
+| ALRT-01 | Phase 9 | Pending |
+| ALRT-02 | Phase 9 | Pending |
+| ALRT-03 | Phase 9 | Pending |
+| ALRT-04 | Phase 9 | Pending |
+| ALRT-05 | Phase 9 | Pending |
+| ALRT-06 | Phase 9 | Pending |
+| ALRT-07 | Phase 9 | Pending |
+| SUMM-01 | Phase 8 | Pending |
+| SUMM-02 | Phase 8 | Pending |
+| SUMM-03 | Phase 8 | Pending |
+| SUMM-04 | Phase 8 | Pending |
+| SETT-01 | Phase 5 | Pending |
+| SETT-02 | Phase 5 | Pending |
+| SETT-03 | Phase 5 | Pending |
+| SETT-04 | Phase 5 | Pending |
+| SETT-05 | Phase 5 | Pending |
+| UI-01 | Phase 1 | Pending |
+| UI-02 | Phase 6 | Pending |
+| UI-03 | Phase 10 | Pending |
+| UI-04 | Phase 7 | Pending |
 
 **Coverage:**
-- v1 requirements: 36 total
-- Mapped to phases: 0
-- Unmapped: 36
+- v1 requirements: 43 total
+- Mapped to phases: 43
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-18*
-*Last updated: 2026-03-18 after initial definition*
+*Last updated: 2026-03-18 after adding Phase 9 Price Alerts (ALRT-01..07)*
