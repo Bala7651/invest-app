@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-data-layer/02-01-PLAN.md
-last_updated: "2026-03-18T12:38:52.105Z"
-last_activity: "2026-03-18 — Completed 01-01: Expo SDK 55 scaffold with NativeWind cyberpunk theme"
+stopped_at: Completed 02-data-layer/02-02-PLAN.md
+last_updated: "2026-03-18T16:06:39.408Z"
+last_activity: "2026-03-19 — Completed 02-03: MarketStatusBar component with Reanimated pulse in WatchlistPage header"
 progress:
   total_phases: 10
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 5
-  completed_plans: 3
-  percent: 5
+  completed_plans: 5
+  percent: 10
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** Real-time Taiwan stock tracking with AI-powered investment analysis in a cyberpunk mobile interface
-**Current focus:** Phase 1 — Foundation
+**Current focus:** Phase 2 — Data Layer
 
 ## Current Position
 
-Phase: 1 of 10 (Foundation)
-Plan: 1 of 2 in current phase (01-01 complete)
+Phase: 2 of 10 (Data Layer)
+Plan: 3 of 3 in current phase (02-01, 02-02, 02-03 complete)
 Status: In progress
-Last activity: 2026-03-18 — Completed 01-01: Expo SDK 55 scaffold with NativeWind cyberpunk theme
+Last activity: 2026-03-19 — Completed 02-03: MarketStatusBar component with Reanimated pulse in WatchlistPage header
 
-Progress: [█░░░░░░░░░] 5%
+Progress: [██░░░░░░░░] 10%
 
 ## Performance Metrics
 
@@ -52,6 +52,7 @@ Progress: [█░░░░░░░░░] 5%
 *Updated after each plan completion*
 | Phase 01-foundation P02 | 6 min | 2 tasks | 9 files |
 | Phase 02-data-layer P01 | 12 | 2 tasks | 6 files |
+| Phase 02-data-layer P02 | 15 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -75,6 +76,9 @@ Recent decisions affecting current work:
 - [Phase 02-data-layer]: encodeURIComponent applied to TWSE ex_ch param — pipe encoded as %7C, tests use decodeURIComponent to assert literal pipe
 - [Phase 02-data-layer]: parseSentinel exported for direct unit testing; _fetchQuotes and _queue remain unexported — bypass impossible
 - [Phase 02-data-layer]: isHoliday receives pre-converted Taipei Date; isMarketOpen handles UTC→Taipei conversion internally via toLocaleString
+- [Phase 02-data-layer]: quoteStore useEffect placed before migration guard returns to ensure cleanup always fires on unmount
+- [Phase 02-data-layer]: Quotes NOT cleared on stopPolling — cached data with fetchedAt timestamp remains when market is closed
+- [Phase 02-data-layer]: startPolling idempotent via polling boolean guard — safe to call repeatedly from AppState active events
 
 ### Pending Todos
 
@@ -89,6 +93,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-18T12:38:52.101Z
-Stopped at: Completed 02-data-layer/02-01-PLAN.md
+Last session: 2026-03-18T16:06:39.404Z
+Stopped at: Completed 02-data-layer/02-02-PLAN.md
 Resume file: None

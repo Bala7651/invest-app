@@ -17,9 +17,9 @@
 ### Market Data
 
 - [x] **DATA-01**: App polls TWSE OpenAPI for real-time prices (~20s delay, 20-30s interval)
-- [ ] **DATA-02**: Polling only occurs during Taiwan market hours (Mon-Fri 09:00-13:30)
+- [x] **DATA-02**: Polling only occurs during Taiwan market hours (Mon-Fri 09:00-13:30)
 - [ ] **DATA-03**: App shows market open/closed status indicator
-- [ ] **DATA-04**: App handles non-trading days (holidays) gracefully with cached data
+- [x] **DATA-04**: App handles non-trading days (holidays) gracefully with cached data
 - [x] **DATA-05**: TWSE request queue enforces rate limit (max 3 req/5s) to avoid IP ban
 
 ### Charts
@@ -113,9 +113,9 @@
 | WTCH-05 | Phase 3 | Pending |
 | WTCH-06 | Phase 10 | Pending |
 | DATA-01 | Phase 2 | Complete |
-| DATA-02 | Phase 2 | Pending |
+| DATA-02 | Phase 2 | Complete |
 | DATA-03 | Phase 2 | Pending |
-| DATA-04 | Phase 2 | Pending |
+| DATA-04 | Phase 2 | Complete |
 | DATA-05 | Phase 2 | Complete |
 | CHRT-01 | Phase 4 | Pending |
 | CHRT-02 | Phase 4 | Pending |
