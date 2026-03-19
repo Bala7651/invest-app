@@ -7,10 +7,10 @@
 
 ### Watchlist
 
-- [ ] **WTCH-01**: User can search Taiwan stocks by code (e.g. 2330) or name (e.g. 台積電)
-- [ ] **WTCH-02**: User can add a stock to the home page watchlist
-- [ ] **WTCH-03**: User can remove a stock from the watchlist
-- [ ] **WTCH-04**: Watchlist persists across app restarts (SQLite)
+- [x] **WTCH-01**: User can search Taiwan stocks by code (e.g. 2330) or name (e.g. 台積電)
+- [x] **WTCH-02**: User can add a stock to the home page watchlist
+- [x] **WTCH-03**: User can remove a stock from the watchlist
+- [x] **WTCH-04**: Watchlist persists across app restarts (SQLite)
 - [ ] **WTCH-05**: Each watchlist card shows stock name, code, current price, price change (delta + percent)
 - [ ] **WTCH-06**: Each watchlist card shows a sparkline mini chart of the day's price trend
 
@@ -106,10 +106,10 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| WTCH-01 | Phase 3 | Pending |
-| WTCH-02 | Phase 3 | Pending |
-| WTCH-03 | Phase 3 | Pending |
-| WTCH-04 | Phase 3 | Pending |
+| WTCH-01 | Phase 3 | Complete |
+| WTCH-02 | Phase 3 | Complete |
+| WTCH-03 | Phase 3 | Complete |
+| WTCH-04 | Phase 3 | Complete |
 | WTCH-05 | Phase 3 | Pending |
 | WTCH-06 | Phase 10 | Pending |
 | DATA-01 | Phase 2 | Complete |

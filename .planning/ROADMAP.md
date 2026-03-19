@@ -70,7 +70,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — WatchlistStore SQLite CRUD, watchlistService, stocks.json search data, _layout hydration
+- [x] 03-01-PLAN.md — WatchlistStore SQLite CRUD, watchlistService, stocks.json search data, _layout hydration
 - [ ] 03-02-PLAN.md — StockCard, SearchModal, EmptyWatchlist components, ReorderableList home screen
 
 ### Phase 4: Charts
@@ -193,7 +193,7 @@ Note: Phase 5 (Settings) depends only on Phase 1 and can be built in parallel wi
 |-------|----------------|--------|-----------|
 | 1. Foundation | 2/2 | Complete   | 2026-03-18 |
 | 2. Data Layer | 3/3 | Complete   | 2026-03-18 |
-| 3. Watchlist | 0/2 | Not started | - |
+| 3. Watchlist | 1/2 | In progress | - |
 | 4. Charts | 0/2 | Not started | - |
 | 5. Settings | 0/2 | Not started | - |
 | 6. AI Analysis | 0/3 | Not started | - |

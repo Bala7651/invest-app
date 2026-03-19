@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 3 context gathered
-last_updated: "2026-03-18T16:25:01.502Z"
-last_activity: "2026-03-19 — Completed 02-03: MarketStatusBar component with Reanimated pulse in WatchlistPage header"
+stopped_at: "Completed 03-01: Watchlist data layer"
+last_updated: "2026-03-19T03:49:38Z"
+last_activity: "2026-03-19 — Completed 03-01: watchlistService CRUD, watchlistStore SQLite sync, stocks.json, searchStocks, _layout hydration"
 progress:
   total_phases: 10
   completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
-  percent: 10
+  total_plans: 6
+  completed_plans: 6
+  percent: 12
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** Real-time Taiwan stock tracking with AI-powered investment analysis in a cyberpunk mobile interface
-**Current focus:** Phase 2 — Data Layer
+**Current focus:** Phase 3 — Watchlist
 
 ## Current Position
 
-Phase: 2 of 10 (Data Layer)
-Plan: 3 of 3 in current phase (02-01, 02-02, 02-03 complete)
+Phase: 3 of 10 (Watchlist)
+Plan: 1 of 3 in current phase (03-01 complete)
 Status: In progress
-Last activity: 2026-03-19 — Completed 02-03: MarketStatusBar component with Reanimated pulse in WatchlistPage header
+Last activity: 2026-03-19 — Completed 03-01: watchlistService CRUD, watchlistStore SQLite sync, stocks.json, searchStocks, _layout hydration
 
-Progress: [██░░░░░░░░] 10%
+Progress: [███░░░░░░░] 12%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
-- Average duration: 5 min
-- Total execution time: 0.08 hours
+- Total plans completed: 6
+- Average duration: 7 min
+- Total execution time: 0.22 hours
 
 **By Phase:**
 
@@ -54,6 +54,7 @@ Progress: [██░░░░░░░░] 10%
 | Phase 02-data-layer P01 | 12 | 2 tasks | 6 files |
 | Phase 02-data-layer P02 | 15 | 2 tasks | 3 files |
 | Phase 02-data-layer P03 | 3 | 2 tasks | 2 files |
+| Phase 03-watchlist P01 | 3 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -82,6 +83,9 @@ Recent decisions affecting current work:
 - [Phase 02-data-layer]: startPolling idempotent via polling boolean guard — safe to call repeatedly from AppState active events
 - [Phase 02-03]: 60-second interval for MarketStatusBar label refresh — accurate enough for market countdown, battery-friendly vs per-second
 - [Phase 02-03]: Opacity pulse (1.0→0.3) used instead of scale for Reanimated dot — avoids layout shifts in header row
+- [Phase 03-01]: stocks.json uses 公司簡稱 (short name) not 公司名稱 (full name) — enables common abbreviation search (台積電 not 台灣積體電路製造股份有限公司)
+- [Phase 03-01]: _layout.tsx split into hydration useEffect (success-triggered) + AppState useEffect (always-on) — polling starts after data loaded
+- [Phase 03-01]: Duplicate guard in addItem uses pre-insert check not catch-after-SQLite-error
 
 ### Pending Todos
 
@@ -96,6 +100,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-18T16:25:01.498Z
-Stopped at: Phase 3 context gathered
-Resume file: .planning/phases/03-watchlist/03-CONTEXT.md
+Last session: 2026-03-19T03:49:38Z
+Stopped at: Completed 03-01: Watchlist data layer
+Resume file: .planning/phases/03-watchlist/03-01-SUMMARY.md
