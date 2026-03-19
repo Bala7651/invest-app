@@ -67,11 +67,11 @@ Plans:
   3. User can remove a stock from the watchlist and it disappears immediately and stays gone after app restart
   4. Each watchlist card shows stock name, code, current price, and price change (absolute delta and percent) that updates with each poll
   5. Watchlist data (selected stocks) survives app close and reopen — the same stocks appear on next launch
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 03-01: WatchlistStore, SQLite persistence layer, add/remove logic
-- [ ] 03-02: HomeScreen with FlatList, StockCard component, search modal
+- [ ] 03-01-PLAN.md — WatchlistStore SQLite CRUD, watchlistService, stocks.json search data, _layout hydration
+- [ ] 03-02-PLAN.md — StockCard, SearchModal, EmptyWatchlist components, ReorderableList home screen
 
 ### Phase 4: Charts
 **Goal**: Users can tap any watchlist stock to see a detailed candlestick chart with volume bars across 5 timeframes, rendered smoothly without SVG performance issues
