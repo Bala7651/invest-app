@@ -71,7 +71,7 @@ Plans:
 
 Plans:
 - [x] 03-01-PLAN.md — WatchlistStore SQLite CRUD, watchlistService, stocks.json search data, _layout hydration
-- [ ] 03-02-PLAN.md — StockCard, SearchModal, EmptyWatchlist components, ReorderableList home screen
+- [x] 03-02-PLAN.md — StockCard, SearchModal, EmptyWatchlist components, ReorderableList home screen
 
 ### Phase 4: Charts
 **Goal**: Users can tap any watchlist stock to see a detailed candlestick chart with volume bars across 5 timeframes, rendered smoothly without SVG performance issues
@@ -82,11 +82,11 @@ Plans:
   2. Tapping each of the 5 timeframe buttons (1D, 5D, 1M, 6M, 1Y) loads and renders the correct historical data
   3. Volume bars are visible below the price chart for all timeframes
   4. Scrolling through 240+ candles on the 1Y chart maintains smooth animation with no visible jank on a mid-range Android device
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 04-01: TWSE historical data endpoints integration and multi-timeframe data fetch
-- [ ] 04-02: DetailScreen with react-native-wagmi-charts candlestick and react-native-gifted-charts volume bars
+- [ ] 04-01-PLAN.md — historicalService (FinMind + TWSE OHLCV fetch), chartStore (Zustand cache), types, unit tests
+- [ ] 04-02-PLAN.md — CandleChart, VolumeBar, TimeframeSelector, ChartSkeleton components, DetailScreen wiring
 
 ### Phase 5: Settings
 **Goal**: Users can store their MiniMax API key securely so the AI analysis feature can function, with the key never appearing in plaintext in any file or log
