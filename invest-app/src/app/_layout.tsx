@@ -12,12 +12,19 @@ import { useWatchlistStore } from '../features/watchlist/store/watchlistStore';
 export default function RootLayout() {
   const { success, error } = useMigrations(db, migrations);
 
+  // Hydrate watchlist from SQLite after migration succeeds, then start polling
   useEffect(() => {
-    const symbols = useWatchlistStore.getState().items.map(i => i.symbol);
-    if (symbols.length > 0 && isMarketOpen()) {
-      useQuoteStore.getState().startPolling(symbols);
-    }
+    if (!success) return;
+    useWatchlistStore.getState().loadFromDb().then(() => {
+      const symbols = useWatchlistStore.getState().items.map(i => i.symbol);
+      if (symbols.length > 0 && isMarketOpen()) {
+        useQuoteStore.getState().startPolling(symbols);
+      }
+    });
+  }, [success]);
 
+  // Handle foreground/background transitions
+  useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
       const syms = useWatchlistStore.getState().items.map(i => i.symbol);
       if (state === 'active' && syms.length > 0 && isMarketOpen()) {
