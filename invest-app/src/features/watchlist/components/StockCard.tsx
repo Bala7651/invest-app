@@ -15,6 +15,7 @@ interface StockCardProps {
   item: WatchlistItem;
   quote: Quote | undefined;
   onPress: () => void;
+  onLongPress?: () => void;
 }
 
 export function formatChange(change: number, changePct: number): string {
@@ -22,7 +23,7 @@ export function formatChange(change: number, changePct: number): string {
   return `${sign}${change.toFixed(2)} (${sign}${changePct.toFixed(2)}%)`;
 }
 
-export function StockCard({ item, quote, onPress }: StockCardProps) {
+export function StockCard({ item, quote, onPress, onLongPress }: StockCardProps) {
   const priceDisplay = quote?.price != null ? quote.price.toFixed(2) : '—';
   const changeDisplay =
     quote?.price != null
@@ -38,6 +39,7 @@ export function StockCard({ item, quote, onPress }: StockCardProps) {
   return (
     <Pressable
       onPress={onPress}
+      onLongPress={onLongPress}
       className="bg-surface border border-border rounded-lg px-4 py-3 mb-2 flex-row items-center justify-between"
     >
       <View className="flex-1">

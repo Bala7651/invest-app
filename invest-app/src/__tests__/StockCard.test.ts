@@ -18,28 +18,28 @@ describe('formatChange', () => {
   });
 });
 
+function priceDisplay(price: number | null): string {
+  return price != null ? price.toFixed(2) : '—';
+}
+
+function changeDisplay(price: number | null, change: number, changePct: number): string {
+  return price != null ? formatChange(change, changePct) : 'Waiting for market open';
+}
+
 describe('StockCard price display logic', () => {
   it('shows formatted price when price is provided', () => {
-    const price = 595.0;
-    const display = price != null ? price.toFixed(2) : '—';
-    expect(display).toBe('595.00');
+    expect(priceDisplay(595.0)).toBe('595.00');
   });
 
   it('shows dash when price is null', () => {
-    const price = null;
-    const display = price != null ? price.toFixed(2) : '—';
-    expect(display).toBe('—');
+    expect(priceDisplay(null)).toBe('—');
   });
 
   it('shows waiting message when price is null', () => {
-    const price = null;
-    const changeDisplay = price != null ? formatChange(5, 0.85) : 'Waiting for market open';
-    expect(changeDisplay).toBe('Waiting for market open');
+    expect(changeDisplay(null, 5, 0.85)).toBe('Waiting for market open');
   });
 
   it('shows formatted change when price is provided', () => {
-    const price = 595.0;
-    const changeDisplay = price != null ? formatChange(5, 0.85) : 'Waiting for market open';
-    expect(changeDisplay).toBe('+5.00 (+0.85%)');
+    expect(changeDisplay(595.0, 5, 0.85)).toBe('+5.00 (+0.85%)');
   });
 });
