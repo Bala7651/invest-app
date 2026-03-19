@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Completed 03-01: Watchlist data layer"
-last_updated: "2026-03-19T03:49:38Z"
+stopped_at: "Completed 03-02: Watchlist UI components and WatchlistPage"
+last_updated: "2026-03-19T03:58:16.488Z"
 last_activity: "2026-03-19 — Completed 03-01: watchlistService CRUD, watchlistStore SQLite sync, stocks.json, searchStocks, _layout hydration"
 progress:
   total_phases: 10
-  completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
+  completed_phases: 3
+  total_plans: 7
+  completed_plans: 7
   percent: 12
 ---
 
@@ -55,6 +55,7 @@ Progress: [███░░░░░░░] 12%
 | Phase 02-data-layer P02 | 15 | 2 tasks | 3 files |
 | Phase 02-data-layer P03 | 3 | 2 tasks | 2 files |
 | Phase 03-watchlist P01 | 3 | 2 tasks | 7 files |
+| Phase 03-watchlist P02 | 4 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -86,6 +87,9 @@ Recent decisions affecting current work:
 - [Phase 03-01]: stocks.json uses 公司簡稱 (short name) not 公司名稱 (full name) — enables common abbreviation search (台積電 not 台灣積體電路製造股份有限公司)
 - [Phase 03-01]: _layout.tsx split into hydration useEffect (success-triggered) + AppState useEffect (always-on) — polling starts after data loaded
 - [Phase 03-01]: Duplicate guard in addItem uses pre-insert check not catch-after-SQLite-error
+- [Phase 03-watchlist]: onReorder event is { from, to } not { fromIndex, toIndex } — react-native-reorderable-list v0.18 actual API
+- [Phase 03-watchlist]: No ReorderableListItem in v0.18 — drag via useReorderableDrag hook inside renderItem; SwipeableCard is local sub-component for co-located gesture logic
+- [Phase 03-watchlist]: Test helper functions used for null-price narrowing in StockCard.test.ts — avoids TypeScript strict mode narrowing-to-never on const null literals
 
 ### Pending Todos
 
@@ -100,6 +104,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-19T03:49:38Z
-Stopped at: Completed 03-01: Watchlist data layer
-Resume file: .planning/phases/03-watchlist/03-01-SUMMARY.md
+Last session: 2026-03-19T03:58:16.484Z
+Stopped at: Completed 03-02: Watchlist UI components and WatchlistPage
+Resume file: None
