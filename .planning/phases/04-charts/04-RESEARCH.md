@@ -29,7 +29,7 @@
 - FinMind API as primary source for TWSE historical OHLCV data
 - Fallback: direct TWSE endpoints where available
 - Cache fetched data in memory only (no SQLite table for historical data)
-- Timeframe granularity: 1D uses 5-min intervals, 5D uses 30-min intervals, 1M/6M/1Y use daily candles
+- Timeframe granularity: All timeframes use daily candles for v1 (1D shows last trading day, 5D shows last 5 trading days, 1M/6M/1Y show respective periods). Intraday 5-min/30-min intervals deferred to v2 when Fugle API key integration is available.
 - Rate limiting: respect FinMind's limits, use existing request queue pattern from Phase 2
 - Chart should feel like a Bloomberg terminal chart — clean gridlines, no decorative gradients
 - Volume bars use green/red matching candle direction (up day = green, down day = red)
