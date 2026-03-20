@@ -66,7 +66,7 @@ completed: 2026-03-20
 - **Duration:** 4 min
 - **Started:** 2026-03-20T01:32:11Z
 - **Completed:** 2026-03-20T01:36:29Z
-- **Tasks:** 2 of 3 (Task 3 is checkpoint:human-verify)
+- **Tasks:** 3 of 3 (Task 3 checkpoint:human-verify — approved)
 - **Files modified:** 8
 
 ## Accomplishments
@@ -82,8 +82,9 @@ Each task was committed atomically:
 
 1. **Task 1: Chart sub-components and test stubs** - `df3b1e5` (feat)
 2. **Task 2: Wire detail screen with Bloomberg header** - `4745866` (feat)
+3. **Task 3: Visual verification checkpoint** - approved by user (no code commit)
 
-**Plan metadata:** (pending — after checkpoint approval)
+**Plan metadata:** `ba0ec85` (docs: complete chart detail screen plan)
 
 ## Files Created/Modified
 - `invest-app/src/features/charts/components/CandleChart.tsx` - wagmi CandlestickChart wrapper with CandleDataBridge for crosshair callbacks
@@ -120,15 +121,32 @@ Each task was committed atomically:
 ## Issues Encountered
 - wagmi-charts `useCandleData()` returns `Readonly<SharedValue<TCandle>>` not a plain object — requires Reanimated worklet pattern to bridge to React state. Resolved by discovering actual types in node_modules and using `useAnimatedReaction`.
 
+## Checkpoint Verification Outcome
+
+**Status:** Approved by user on 2026-03-20
+
+**User-reported issues (documented as known issues for follow-up):**
+
+1. **Tap-and-hold crosshair does not work** — The crosshair gesture interaction is not triggering on device. The `CandleDataBridge` + `useAnimatedReaction` pattern compiles correctly but the press-and-hold gesture may not be registered by wagmi-charts on the current device/Expo version. Deferred to a future fix task.
+
+2. **No API key settings screen** — User noted there is no settings screen for API key input. This is by design; Phase 5 (Settings) will implement secure API key storage and the settings UI. Not a bug.
+
+3. **Market not open** — Market data not loading because market is closed. Expected behavior — the app correctly handles non-trading hours. Not a bug.
+
+4. **SafeArea header/bottom padding missing** — Buttons appear too high/low and overall layout spreads too far without proper safe area insets. The detail screen uses `pt-12` as a manual status bar offset rather than `SafeAreaView`. This causes layout issues on devices with notch or home indicator. Deferred to Phase 10 (Polish) or a dedicated layout fix.
+
+**Assessment:** Items 2 and 3 are not bugs. Items 1 (crosshair gesture) and 4 (SafeArea padding) are real issues deferred to future phases. Core chart rendering, navigation, timeframe switching, and volume bars are functional.
+
 ## Self-Check: PASSED
 
 ## User Setup Required
 None - no external service configuration required.
 
 ## Next Phase Readiness
-- Detail screen complete, awaiting visual verification (Task 3 checkpoint)
-- Phase 5 (Search) can build on the detail screen navigation pattern established here
+- Detail screen visually verified and approved by user
+- Phase 5 (Settings) is unblocked — depends only on Phase 1, ready to execute
 - Phase 6 (AI Analysis) and Phase 9 (Price Alerts) will add sections to the detail screen below the chart area
+- **Known issues to address in future phases:** crosshair gesture not triggering on device; SafeArea padding missing from detail screen header/footer
 
 ---
 *Phase: 04-charts*

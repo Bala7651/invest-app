@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Completed 04-charts-02: chart components, detail screen — awaiting checkpoint:human-verify"
-last_updated: "2026-03-20T01:38:08.212Z"
-last_activity: "2026-03-20 — Completed 04-01: historicalService FinMind+TWSE, chartStore Zustand cache, OHLCVPoint types, 19 tests"
+stopped_at: "Completed 04-02: chart detail screen checkpoint approved — Phase 4 complete, ready for Phase 5"
+last_updated: "2026-03-20T02:00:00Z"
+last_activity: "2026-03-20 — Completed 04-02: CandleChart, VolumeBar, TimeframeSelector, ChartSkeleton, detail screen wired — checkpoint approved"
 progress:
   total_phases: 10
   completed_phases: 4
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** Real-time Taiwan stock tracking with AI-powered investment analysis in a cyberpunk mobile interface
-**Current focus:** Phase 4 — Charts
+**Current focus:** Phase 5 — Settings
 
 ## Current Position
 
-Phase: 4 of 10 (Charts)
-Plan: 1 of 2 in current phase (04-01 complete)
-Status: In progress
-Last activity: 2026-03-20 — Completed 04-01: historicalService FinMind+TWSE, chartStore Zustand cache, OHLCVPoint types, 19 tests
+Phase: 5 of 10 (Settings) — next to execute
+Plan: Phase 4 complete (2/2 plans done)
+Status: Phase 4 complete, ready for Phase 5
+Last activity: 2026-03-20 — Completed 04-02: CandleChart, VolumeBar, TimeframeSelector, ChartSkeleton, detail screen wired — checkpoint approved
 
 Progress: [█████████░] 89%
 
@@ -110,9 +110,11 @@ None yet.
 - [Phase 6]: News data source unresolved (MarketAux free tier vs FinMind vs RSS) — must resolve before Phase 6 begins; AI sentiment analysis requires real news input
 - [Phase 8]: expo-background-task Android timing reliability on battery-saver devices is "best effort" — manual trigger button is required fallback, not optional
 - [Phase 9]: Android battery optimization prompt requires deep-link to system settings (ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS) — verify Expo bare workflow permissions allow this
+- [04-02 deferred]: Crosshair tap-and-hold gesture not triggering on device — CandleDataBridge + useAnimatedReaction pattern compiles but gesture may not register under current wagmi-charts/Expo version
+- [04-02 deferred]: Detail screen SafeArea padding missing — pt-12 manual offset insufficient; needs SafeAreaView for notch/home-indicator devices — defer to Phase 10 Polish
 
 ## Session Continuity
 
-Last session: 2026-03-20T01:38:08.209Z
-Stopped at: Completed 04-charts-02: chart components, detail screen — awaiting checkpoint:human-verify
+Last session: 2026-03-20T02:00:00Z
+Stopped at: Completed 04-02 — Phase 4 Charts complete. Checkpoint approved by user. Two issues deferred: crosshair gesture + SafeArea padding. Ready for Phase 5 Settings.
 Resume file: None
