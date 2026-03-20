@@ -1,22 +1,137 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Pressable, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Pressable, Text, View, useWindowDimensions } from 'react-native';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import { CandleChart } from '../../features/charts/components/CandleChart';
+import { ChartSkeleton } from '../../features/charts/components/ChartSkeleton';
+import { TimeframeSelector } from '../../features/charts/components/TimeframeSelector';
+import { VolumeBar } from '../../features/charts/components/VolumeBar';
+import { useChartStore } from '../../features/charts/store/chartStore';
+import { Timeframe } from '../../features/charts/types';
+import { useQuoteStore } from '../../features/market/quoteStore';
+import { formatChange } from '../../features/watchlist/components/StockCard';
 
 export default function DetailScreen() {
   const { symbol } = useLocalSearchParams<{ symbol: string }>();
   const router = useRouter();
+  const { width } = useWindowDimensions();
+
+  const quote = useQuoteStore(s => s.quotes[symbol]);
+  const { fetchCandles, getCandles, loading, errors } = useChartStore();
+
+  const [timeframe, setTimeframe] = useState<Timeframe>('1D');
+  const [crosshairPrice, setCrosshairPrice] = useState<number | null>(null);
+
+  const key = `${symbol}:${timeframe}`;
+  const candles = getCandles(symbol, timeframe);
+  const isLoading = loading[key] ?? false;
+  const error = errors[key] ?? null;
+
+  useEffect(() => {
+    fetchCandles(symbol, timeframe);
+  }, [symbol, timeframe]);
+
+  const displayPrice =
+    crosshairPrice !== null
+      ? crosshairPrice.toFixed(2)
+      : quote?.price != null
+        ? quote.price.toFixed(2)
+        : '—';
+
+  const changeDisplay =
+    quote?.price != null ? formatChange(quote.change, quote.changePct) : '—';
+  const changeColorClass =
+    quote?.price != null
+      ? quote.change >= 0
+        ? 'text-stock-up'
+        : 'text-stock-down'
+      : 'text-muted';
+
+  const horizontalPadding = 32;
+  const chartWidth = width - horizontalPadding;
+  const chartHeight = 260;
+  const volumeHeight = 80;
+
   return (
-    <View className="flex-1 bg-bg px-4 pt-12">
-      <View className="flex-row items-center mb-6">
-        <Pressable onPress={() => router.back()} className="mr-4">
-          <Text className="text-primary text-base">Back</Text>
-        </Pressable>
-        <Text className="text-text text-2xl font-bold">Stock: {symbol}</Text>
+    <View className="flex-1 bg-bg" style={{ paddingTop: 48 }}>
+      {/* Bloomberg-style header */}
+      <View className="flex-row items-center justify-between px-4 mb-4">
+        <View className="flex-row items-center">
+          <Pressable onPress={() => router.back()} className="mr-4 py-1">
+            <Text className="text-primary text-base">Back</Text>
+          </Pressable>
+          <View>
+            <Text className="text-primary font-bold text-lg">{symbol}</Text>
+            {quote?.name ? (
+              <Text className="text-muted text-sm">{quote.name}</Text>
+            ) : null}
+          </View>
+        </View>
+        <View className="items-end">
+          <Text className="text-text font-semibold text-xl">{displayPrice}</Text>
+          <Text className={`${changeColorClass} text-sm`}>{changeDisplay}</Text>
+        </View>
       </View>
-      <View className="bg-surface rounded-lg p-4 border border-border mb-3">
-        <Text className="text-muted text-sm">Chart placeholder — 1D/5D/1M/6M/1Y</Text>
-      </View>
-      <View className="bg-surface rounded-lg p-4 border border-border">
-        <Text className="text-secondary text-base">Price chart will render here in Phase 2</Text>
+
+      {/* Chart area */}
+      <View className="flex-1 px-4">
+        {isLoading && !candles ? (
+          <ChartSkeleton height={chartHeight + volumeHeight + 16} />
+        ) : error && !candles ? (
+          <View
+            style={{ height: chartHeight + volumeHeight + 16 }}
+            className="items-center justify-center"
+          >
+            <Text className="text-stock-down text-sm mb-3">{error}</Text>
+            <Pressable
+              onPress={() => {
+                useChartStore.setState(s => ({
+                  errors: { ...s.errors, [key]: null },
+                  cache: (() => {
+                    const c = { ...s.cache };
+                    delete c[key];
+                    return c;
+                  })(),
+                }));
+                fetchCandles(symbol, timeframe);
+              }}
+              className="bg-surface px-4 py-2 rounded-lg border border-border"
+            >
+              <Text className="text-primary text-sm">Retry</Text>
+            </Pressable>
+          </View>
+        ) : candles && candles.length > 0 ? (
+          <Animated.View entering={FadeIn.duration(300)} exiting={FadeOut.duration(200)}>
+            {/* Candlestick chart */}
+            <View className="border border-border rounded-lg overflow-hidden mb-1">
+              <CandleChart
+                data={candles}
+                height={chartHeight}
+                onCandleChange={candle => {
+                  setCrosshairPrice(candle ? candle.close : null);
+                }}
+              />
+            </View>
+            {/* Volume bars */}
+            <View
+              className="border-t border-border"
+              style={{ height: volumeHeight, marginBottom: 12 }}
+            >
+              <VolumeBar data={candles} height={volumeHeight} width={chartWidth} />
+            </View>
+          </Animated.View>
+        ) : (
+          <ChartSkeleton height={chartHeight + volumeHeight + 16} />
+        )}
+
+        {/* Timeframe selector */}
+        <View style={{ marginTop: 8 }}>
+          <TimeframeSelector
+            active={timeframe}
+            onSelect={setTimeframe}
+            loading={isLoading}
+          />
+        </View>
       </View>
     </View>
   );
