@@ -98,11 +98,11 @@ Plans:
   3. User can update the AI model name (default shown as "MiniMax-M2.5")
   4. The stored API key cannot be found in plaintext in the SQLite database or any local file (only in expo-secure-store keychain)
   5. All required API configuration fields are present on the settings screen
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 05-01: expo-secure-store integration, settings schema, SettingsStore
-- [ ] 05-02: SettingsScreen UI with API key input, model name field, save/load logic
+- [ ] 05-01-PLAN.md — expo-secure-store integration, settingsStore extension with SecureStore persistence, unit tests
+- [ ] 05-02-PLAN.md — SettingsScreen UI (ApiKeyInput, GlowPillSelector), HamburgerDrawer on home screen
 
 ### Phase 6: AI Analysis
 **Goal**: Users can swipe left from the home screen to see AI-powered investment analysis for all watchlist stocks, grounded in real TWSE data, with no hallucinated figures
