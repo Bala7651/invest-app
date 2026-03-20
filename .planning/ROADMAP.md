@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Foundation** - Project scaffold, architecture layers, SQLite schema, NativeWind cyberpunk theme primitives, gitignore (completed 2026-03-18)
 - [x] **Phase 2: Data Layer** - TWSE OpenAPI client with rate-limit queue, market-hours polling guard, quote stores, non-trading-day handling (completed 2026-03-18)
 - [x] **Phase 3: Watchlist** - Home screen watchlist with stock search, add/remove, persist to SQLite, price cards (completed 2026-03-19)
-- [ ] **Phase 4: Charts** - Stock detail view with candlestick chart, 5 timeframes, volume bars, smooth Skia rendering
+- [x] **Phase 4: Charts** - Stock detail view with candlestick chart, 5 timeframes, volume bars, smooth Skia rendering (completed 2026-03-20)
 - [ ] **Phase 5: Settings** - Settings page with MiniMax API key input, secure storage, AI model name config
 - [ ] **Phase 6: AI Analysis** - AI analysis page with 4 sections (sentiment, technical, recommendation, risk), MiniMax M2.5 integration, swipeable navigation
 - [ ] **Phase 7: APK Build** - EAS Build signed Android APK, keystore backup, secret audit, real device verification
@@ -194,7 +194,7 @@ Note: Phase 5 (Settings) depends only on Phase 1 and can be built in parallel wi
 | 1. Foundation | 2/2 | Complete   | 2026-03-18 |
 | 2. Data Layer | 3/3 | Complete   | 2026-03-18 |
 | 3. Watchlist | 2/2 | Complete   | 2026-03-19 |
-| 4. Charts | 1/2 | In Progress|  |
+| 4. Charts | 2/2 | Complete   | 2026-03-20 |
 | 5. Settings | 0/2 | Not started | - |
 | 6. AI Analysis | 0/3 | Not started | - |
 | 7. APK Build | 0/2 | Not started | - |

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Completed 04-charts-01: historicalService, types, chartStore, 19 tests"
-last_updated: "2026-03-20T01:29:24.477Z"
+stopped_at: "Completed 04-charts-02: chart components, detail screen — awaiting checkpoint:human-verify"
+last_updated: "2026-03-20T01:38:08.212Z"
 last_activity: "2026-03-20 — Completed 04-01: historicalService FinMind+TWSE, chartStore Zustand cache, OHLCVPoint types, 19 tests"
 progress:
   total_phases: 10
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 9
-  completed_plans: 8
-  percent: 12
+  completed_plans: 9
+  percent: 89
 ---
 
 # Project State
@@ -57,6 +57,7 @@ Progress: [█████████░] 89%
 | Phase 03-watchlist P01 | 3 | 2 tasks | 7 files |
 | Phase 03-watchlist P02 | 4 | 2 tasks | 6 files |
 | Phase 04-charts P01 | 6 | 2 tasks | 6 files |
+| Phase 04-charts P02 | 4 | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -95,6 +96,9 @@ Recent decisions affecting current work:
 - [Phase 04-charts]: FinMind TaiwanStockPrice primary for 1M/6M/1Y; TWSE STOCK_DAY fallback and primary for 1D/5D
 - [Phase 04-charts]: @shopify/react-native-skia skipped (npm EFBIG); Plan 02 will use non-Skia volume bar approach
 - [Phase 04-charts]: historicalService uses separate RequestQueue (3s spacing) — never shares with stockService queue
+- [Phase 04-charts]: VolumeBar uses React Native View layout instead of Skia Canvas — Skia was skipped in Plan 01 due to npm EFBIG
+- [Phase 04-charts]: useAnimatedReaction + runOnJS used in CandleDataBridge to bridge wagmi SharedValue crosshair data to React state for header price update
+- [Phase 04-charts]: crosshairPrice local state pattern: null = show live price, number = show touched candle close
 
 ### Pending Todos
 
@@ -109,6 +113,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-20T01:29:24.473Z
-Stopped at: Completed 04-charts-01: historicalService, types, chartStore, 19 tests
+Last session: 2026-03-20T01:38:08.209Z
+Stopped at: Completed 04-charts-02: chart components, detail screen — awaiting checkpoint:human-verify
 Resume file: None
