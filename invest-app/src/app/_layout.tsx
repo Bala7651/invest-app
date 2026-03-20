@@ -8,6 +8,7 @@ import migrations from '../../drizzle/migrations';
 import { useQuoteStore } from '../features/market/quoteStore';
 import { isMarketOpen } from '../features/market/marketHours';
 import { useWatchlistStore } from '../features/watchlist/store/watchlistStore';
+import { useSettingsStore } from '../features/settings/store/settingsStore';
 
 export default function RootLayout() {
   const { success, error } = useMigrations(db, migrations);
@@ -15,6 +16,7 @@ export default function RootLayout() {
   // Hydrate watchlist from SQLite after migration succeeds, then start polling
   useEffect(() => {
     if (!success) return;
+    useSettingsStore.getState().loadFromSecureStore();
     useWatchlistStore.getState().loadFromDb().then(() => {
       const symbols = useWatchlistStore.getState().items.map(i => i.symbol);
       if (symbols.length > 0 && isMarketOpen()) {
