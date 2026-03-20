@@ -14,6 +14,7 @@ import { EmptyWatchlist } from '../features/watchlist/components/EmptyWatchlist'
 import { SearchModal } from '../features/watchlist/components/SearchModal';
 import { StockCard } from '../features/watchlist/components/StockCard';
 import { WatchlistItem, useWatchlistStore } from '../features/watchlist/store/watchlistStore';
+import { HamburgerDrawer, useDrawer } from '../features/settings/components/HamburgerDrawer';
 
 function SwipeableCard({ item }: { item: WatchlistItem }) {
   const router = useRouter();
@@ -57,6 +58,7 @@ function SwipeableCard({ item }: { item: WatchlistItem }) {
 function WatchlistPage() {
   const items = useWatchlistStore(s => s.items);
   const [searchVisible, setSearchVisible] = useState(false);
+  const { openDrawer } = useDrawer();
 
   function handleReorder({ from, to }: ReorderableListReorderEvent) {
     useWatchlistStore.getState().reorderItems(from, to);
@@ -70,7 +72,16 @@ function WatchlistPage() {
     <View className="flex-1 bg-bg px-4 pt-12">
       <View className="mb-4">
         <View className="flex-row items-center justify-between">
-          <Text className="text-text text-2xl font-bold">Watchlist</Text>
+          <View className="flex-row items-center">
+            <Pressable onPress={openDrawer} className="mr-3 py-1">
+              <View style={{ gap: 4 }}>
+                <View style={{ width: 20, height: 2, backgroundColor: '#e0e0e0' }} />
+                <View style={{ width: 20, height: 2, backgroundColor: '#e0e0e0' }} />
+                <View style={{ width: 20, height: 2, backgroundColor: '#e0e0e0' }} />
+              </View>
+            </Pressable>
+            <Text className="text-text text-2xl font-bold">Watchlist</Text>
+          </View>
           <Pressable onPress={() => setSearchVisible(true)}>
             <Text className="text-primary text-base">+ Add</Text>
           </Pressable>
@@ -117,13 +128,15 @@ function AnalysisPage() {
 
 export default function HomeScreen() {
   return (
-    <PagerView style={{ flex: 1 }} initialPage={0}>
-      <View key="0" style={{ flex: 1 }}>
-        <WatchlistPage />
-      </View>
-      <View key="1" style={{ flex: 1 }}>
-        <AnalysisPage />
-      </View>
-    </PagerView>
+    <HamburgerDrawer>
+      <PagerView style={{ flex: 1 }} initialPage={0}>
+        <View key="0" style={{ flex: 1 }}>
+          <WatchlistPage />
+        </View>
+        <View key="1" style={{ flex: 1 }}>
+          <AnalysisPage />
+        </View>
+      </PagerView>
+    </HamburgerDrawer>
   );
 }
