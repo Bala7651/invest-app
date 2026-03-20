@@ -25,9 +25,9 @@
 ### Charts
 
 - [ ] **CHRT-01**: User can tap a stock to see a detail view with candlestick chart
-- [ ] **CHRT-02**: Chart supports 5 timeframes: 1 Day, 5 Days, 1 Month, 6 Months, 1 Year
+- [x] **CHRT-02**: Chart supports 5 timeframes: 1 Day, 5 Days, 1 Month, 6 Months, 1 Year
 - [ ] **CHRT-03**: Volume bars displayed below the price chart
-- [ ] **CHRT-04**: Chart renders smoothly (Skia-based, no SVG performance cliff)
+- [x] **CHRT-04**: Chart renders smoothly (Skia-based, no SVG performance cliff)
 
 ### AI Analysis
 
@@ -118,9 +118,9 @@
 | DATA-04 | Phase 2 | Complete |
 | DATA-05 | Phase 2 | Complete |
 | CHRT-01 | Phase 4 | Pending |
-| CHRT-02 | Phase 4 | Pending |
+| CHRT-02 | Phase 4 | Complete |
 | CHRT-03 | Phase 4 | Pending |
-| CHRT-04 | Phase 4 | Pending |
+| CHRT-04 | Phase 4 | Complete |
 | AI-01 | Phase 6 | Pending |
 | AI-02 | Phase 6 | Pending |
 | AI-03 | Phase 6 | Pending |

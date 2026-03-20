@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 4 context gathered
-last_updated: "2026-03-19T11:37:41.471Z"
-last_activity: "2026-03-19 — Completed 03-01: watchlistService CRUD, watchlistStore SQLite sync, stocks.json, searchStocks, _layout hydration"
+stopped_at: "Completed 04-charts-01: historicalService, types, chartStore, 19 tests"
+last_updated: "2026-03-20T01:29:24.477Z"
+last_activity: "2026-03-20 — Completed 04-01: historicalService FinMind+TWSE, chartStore Zustand cache, OHLCVPoint types, 19 tests"
 progress:
   total_phases: 10
   completed_phases: 3
-  total_plans: 7
-  completed_plans: 7
+  total_plans: 9
+  completed_plans: 8
   percent: 12
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** Real-time Taiwan stock tracking with AI-powered investment analysis in a cyberpunk mobile interface
-**Current focus:** Phase 3 — Watchlist
+**Current focus:** Phase 4 — Charts
 
 ## Current Position
 
-Phase: 3 of 10 (Watchlist)
-Plan: 1 of 3 in current phase (03-01 complete)
+Phase: 4 of 10 (Charts)
+Plan: 1 of 2 in current phase (04-01 complete)
 Status: In progress
-Last activity: 2026-03-19 — Completed 03-01: watchlistService CRUD, watchlistStore SQLite sync, stocks.json, searchStocks, _layout hydration
+Last activity: 2026-03-20 — Completed 04-01: historicalService FinMind+TWSE, chartStore Zustand cache, OHLCVPoint types, 19 tests
 
-Progress: [███░░░░░░░] 12%
+Progress: [█████████░] 89%
 
 ## Performance Metrics
 
@@ -56,6 +56,7 @@ Progress: [███░░░░░░░] 12%
 | Phase 02-data-layer P03 | 3 | 2 tasks | 2 files |
 | Phase 03-watchlist P01 | 3 | 2 tasks | 7 files |
 | Phase 03-watchlist P02 | 4 | 2 tasks | 6 files |
+| Phase 04-charts P01 | 6 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,10 @@ Recent decisions affecting current work:
 - [Phase 03-watchlist]: onReorder event is { from, to } not { fromIndex, toIndex } — react-native-reorderable-list v0.18 actual API
 - [Phase 03-watchlist]: No ReorderableListItem in v0.18 — drag via useReorderableDrag hook inside renderItem; SwipeableCard is local sub-component for co-located gesture logic
 - [Phase 03-watchlist]: Test helper functions used for null-price narrowing in StockCard.test.ts — avoids TypeScript strict mode narrowing-to-never on const null literals
+- [Phase 04-charts]: All timeframes (1D/5D/1M/6M/1Y) use daily candles for v1 — intraday deferred to v2
+- [Phase 04-charts]: FinMind TaiwanStockPrice primary for 1M/6M/1Y; TWSE STOCK_DAY fallback and primary for 1D/5D
+- [Phase 04-charts]: @shopify/react-native-skia skipped (npm EFBIG); Plan 02 will use non-Skia volume bar approach
+- [Phase 04-charts]: historicalService uses separate RequestQueue (3s spacing) — never shares with stockService queue
 
 ### Pending Todos
 
@@ -97,13 +102,13 @@ None yet.
 
 ### Blockers/Concerns
 
-- [Phase 2]: TWSE historical endpoint paths for 1D/5D/1M/6M/1Y OHLCV need confirmation during implementation — only 35 of 143 endpoints are community-documented
+- [RESOLVED 04-01]: TWSE STOCK_DAY endpoint confirmed for historical OHLCV; FinMind TaiwanStockPrice confirmed as primary for 1M+ timeframes
 - [Phase 6]: News data source unresolved (MarketAux free tier vs FinMind vs RSS) — must resolve before Phase 6 begins; AI sentiment analysis requires real news input
 - [Phase 8]: expo-background-task Android timing reliability on battery-saver devices is "best effort" — manual trigger button is required fallback, not optional
 - [Phase 9]: Android battery optimization prompt requires deep-link to system settings (ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS) — verify Expo bare workflow permissions allow this
 
 ## Session Continuity
 
-Last session: 2026-03-19T11:37:41.467Z
-Stopped at: Phase 4 context gathered
-Resume file: .planning/phases/04-charts/04-CONTEXT.md
+Last session: 2026-03-20T01:29:24.473Z
+Stopped at: Completed 04-charts-01: historicalService, types, chartStore, 19 tests
+Resume file: None
