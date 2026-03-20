@@ -1,18 +1,21 @@
 import { useSettingsStore } from '../settingsStore';
-
-const mockSetItemAsync = jest.fn().mockResolvedValue(undefined);
-const mockGetItemAsync = jest.fn().mockResolvedValue(null);
-const mockDeleteItemAsync = jest.fn().mockResolvedValue(undefined);
+import * as SecureStore from 'expo-secure-store';
 
 jest.mock('expo-secure-store', () => ({
-  setItemAsync: mockSetItemAsync,
-  getItemAsync: mockGetItemAsync,
-  deleteItemAsync: mockDeleteItemAsync,
+  setItemAsync: jest.fn().mockResolvedValue(undefined),
+  getItemAsync: jest.fn().mockResolvedValue(null),
+  deleteItemAsync: jest.fn().mockResolvedValue(undefined),
 }));
+
+const mockSetItemAsync = SecureStore.setItemAsync as jest.Mock;
+const mockGetItemAsync = SecureStore.getItemAsync as jest.Mock;
+const mockDeleteItemAsync = SecureStore.deleteItemAsync as jest.Mock;
 
 beforeEach(() => {
   jest.clearAllMocks();
   mockGetItemAsync.mockResolvedValue(null);
+  mockSetItemAsync.mockResolvedValue(undefined);
+  mockDeleteItemAsync.mockResolvedValue(undefined);
   useSettingsStore.setState({
     apiKey: '',
     modelName: 'MiniMax-M2.5',
@@ -100,8 +103,8 @@ describe('deleteApiKey', () => {
 });
 
 describe('setModelName', () => {
-  it('updates state.modelName', () => {
-    useSettingsStore.getState().setModelName('custom-model');
+  it('updates state.modelName', async () => {
+    await useSettingsStore.getState().setModelName('custom-model');
     expect(useSettingsStore.getState().modelName).toBe('custom-model');
   });
 
@@ -112,8 +115,8 @@ describe('setModelName', () => {
 });
 
 describe('setBaseUrl', () => {
-  it('updates state.baseUrl', () => {
-    useSettingsStore.getState().setBaseUrl('https://custom.url/v1');
+  it('updates state.baseUrl', async () => {
+    await useSettingsStore.getState().setBaseUrl('https://custom.url/v1');
     expect(useSettingsStore.getState().baseUrl).toBe('https://custom.url/v1');
   });
 

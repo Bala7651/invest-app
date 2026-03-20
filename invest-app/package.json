@@ -5,8 +5,8 @@
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
     "test": "jest"
@@ -26,6 +26,7 @@
     "expo-image": "~55.0.6",
     "expo-linking": "~55.0.7",
     "expo-router": "~55.0.6",
+    "expo-secure-store": "~55.0.9",
     "expo-splash-screen": "~55.0.11",
     "expo-sqlite": "~55.0.11",
     "expo-status-bar": "~55.0.4",
