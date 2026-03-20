@@ -195,7 +195,7 @@ Note: Phase 5 (Settings) depends only on Phase 1 and can be built in parallel wi
 | 2. Data Layer | 3/3 | Complete   | 2026-03-18 |
 | 3. Watchlist | 2/2 | Complete   | 2026-03-19 |
 | 4. Charts | 2/2 | Complete   | 2026-03-20 |
-| 5. Settings | 0/2 | Not started | - |
+| 5. Settings | 1/2 | In Progress|  |
 | 6. AI Analysis | 0/3 | Not started | - |
 | 7. APK Build | 0/2 | Not started | - |
 | 8. Daily Summary | 0/2 | Not started | - |

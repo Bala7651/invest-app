@@ -60,9 +60,9 @@
 ### Settings
 
 - [ ] **SETT-01**: User can access settings via top-right icon on home page
-- [ ] **SETT-02**: User can input/update MiniMax API key
-- [ ] **SETT-03**: User can configure AI model name (default: MiniMax-M2.5)
-- [ ] **SETT-04**: API keys stored securely (expo-secure-store, not plaintext)
+- [x] **SETT-02**: User can input/update MiniMax API key
+- [x] **SETT-03**: User can configure AI model name (default: MiniMax-M2.5)
+- [x] **SETT-04**: API keys stored securely (expo-secure-store, not plaintext)
 - [ ] **SETT-05**: Settings page includes all required API configuration fields
 
 ### UI/UX
@@ -141,9 +141,9 @@
 | SUMM-03 | Phase 8 | Pending |
 | SUMM-04 | Phase 8 | Pending |
 | SETT-01 | Phase 5 | Pending |
-| SETT-02 | Phase 5 | Pending |
-| SETT-03 | Phase 5 | Pending |
-| SETT-04 | Phase 5 | Pending |
+| SETT-02 | Phase 5 | Complete |
+| SETT-03 | Phase 5 | Complete |
+| SETT-04 | Phase 5 | Complete |
 | SETT-05 | Phase 5 | Pending |
 | UI-01 | Phase 1 | Complete |
 | UI-02 | Phase 6 | Pending |

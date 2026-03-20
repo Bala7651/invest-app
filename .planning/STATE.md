@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Phase 5 context gathered
-last_updated: "2026-03-20T17:28:53.929Z"
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-03-20T21:27:41.101Z"
 last_activity: "2026-03-20 — Completed 04-02: CandleChart, VolumeBar, TimeframeSelector, ChartSkeleton, detail screen wired — checkpoint approved"
 progress:
   total_phases: 10
   completed_phases: 4
-  total_plans: 9
-  completed_plans: 9
+  total_plans: 11
+  completed_plans: 10
   percent: 89
 ---
 
@@ -58,6 +58,7 @@ Progress: [█████████░] 89%
 | Phase 03-watchlist P02 | 4 | 2 tasks | 6 files |
 | Phase 04-charts P01 | 6 | 2 tasks | 6 files |
 | Phase 04-charts P02 | 4 | 2 tasks | 8 files |
+| Phase 05-settings P01 | 5 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -99,6 +100,9 @@ Recent decisions affecting current work:
 - [Phase 04-charts]: VolumeBar uses React Native View layout instead of Skia Canvas — Skia was skipped in Plan 01 due to npm EFBIG
 - [Phase 04-charts]: useAnimatedReaction + runOnJS used in CandleDataBridge to bridge wagmi SharedValue crosshair data to React state for header price update
 - [Phase 04-charts]: crosshairPrice local state pattern: null = show live price, number = show touched candle close
+- [Phase 05-settings]: Named imports from expo-secure-store required for Jest mock compatibility — namespace import caused TypeError
+- [Phase 05-settings]: setModelName and setBaseUrl are async — persist to SecureStore so preferences survive app restarts
+- [Phase 05-settings]: loadFromSecureStore fires fire-and-forget in _layout.tsx hydration useEffect — parallel with watchlist loadFromDb, non-blocking
 
 ### Pending Todos
 
@@ -115,6 +119,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-20T17:28:53.925Z
-Stopped at: Phase 5 context gathered
-Resume file: .planning/phases/05-settings/05-CONTEXT.md
+Last session: 2026-03-20T21:27:41.097Z
+Stopped at: Completed 05-01-PLAN.md
+Resume file: None
