@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: milestone
-status: in-progress
-stopped_at: "Completed 10-01: Sparkline charts and glow animation"
-last_updated: "2026-03-22T20:35:47Z"
+status: completed
+stopped_at: "Completed 10-02: Responsive layout polish, SafeArea fixes, pull-to-refresh, cyberpunk empty state"
+last_updated: "2026-03-21T20:41:54.577Z"
 last_activity: "2026-03-22 — Completed 10-01: SVG sparklines + Reanimated glow flash on watchlist cards, 241 tests pass"
 progress:
   total_phases: 10
-  completed_phases: 9
-  total_plans: 20
-  completed_plans: 19
+  completed_phases: 8
+  total_plans: 22
+  completed_plans: 20
   percent: 98
 ---
 
@@ -68,6 +68,7 @@ Progress: [██████████] 98%
 | Phase 09-price-alerts P01 | 20 | 2 tasks | 12 files |
 | Phase 09-price-alerts P02 | 10 | 2 tasks | 11 files |
 | Phase 10-polish P01 | 5 | 2 tasks | 7 files |
+| Phase 10-polish P02 | 12 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -138,6 +139,9 @@ Recent decisions affecting current work:
 - [Phase 10-01]: computeSparklinePoints exported from SparklineChart for unit testing coordinate normalization without SVG rendering
 - [Phase 10-01]: tickHistory resets on stopPolling — final fetch accumulates then stopPolling clears; post-stop state is {}
 - [Phase 10-01]: flashColor derived from quote.change at React render time, captured as closure value in useAnimatedStyle worklet
+- [Phase 10-polish]: forceRefresh merges into existing quotes and appends to tickHistory to avoid losing polling data
+- [Phase 10-polish]: Tablet centering uses conditional wrapper View with maxWidth:540 alignSelf:center when width>=600
+- [Phase 10-polish]: RefreshControl disabled during drag via onDragStart/onDragEnd to prevent gesture conflict with ReorderableList
 
 ### Pending Todos
 
@@ -154,6 +158,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T20:35:47Z
-Stopped at: Completed 10-01: Sparkline charts and glow animation
-Resume file: .planning/phases/10-polish/10-01-SUMMARY.md
+Last session: 2026-03-21T20:41:54.572Z
+Stopped at: Completed 10-02: Responsive layout polish, SafeArea fixes, pull-to-refresh, cyberpunk empty state
+Resume file: None
