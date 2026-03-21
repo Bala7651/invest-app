@@ -8,6 +8,7 @@ import ReorderableList, {
 } from 'react-native-reorderable-list';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import PagerView from 'react-native-pager-view';
+import { AnalysisScreen } from '../features/analysis/components/AnalysisScreen';
 import { MarketStatusBar } from '../features/market/MarketStatusBar';
 import { useQuoteStore } from '../features/market/quoteStore';
 import { EmptyWatchlist } from '../features/watchlist/components/EmptyWatchlist';
@@ -112,29 +113,20 @@ function WatchlistPage() {
   );
 }
 
-function AnalysisPage() {
-  return (
-    <View className="flex-1 bg-bg px-4 pt-12">
-      <Text className="text-primary text-2xl font-bold mb-4">AI Analysis</Text>
-      <View className="bg-surface rounded-lg p-4 border border-border mb-3">
-        <Text className="text-muted text-sm">MiniMax M2.5 powered analysis</Text>
-      </View>
-      <View className="bg-surface rounded-lg p-4 border border-border">
-        <Text className="text-secondary text-base">News sentiment, technical analysis, and investment recommendations will appear here.</Text>
-      </View>
-    </View>
-  );
-}
-
 export default function HomeScreen() {
+  const [activePage, setActivePage] = useState(0);
   return (
     <HamburgerDrawer>
-      <PagerView style={{ flex: 1 }} initialPage={0}>
+      <PagerView
+        style={{ flex: 1 }}
+        initialPage={0}
+        onPageSelected={e => setActivePage(e.nativeEvent.position)}
+      >
         <View key="0" style={{ flex: 1 }}>
           <WatchlistPage />
         </View>
         <View key="1" style={{ flex: 1 }}>
-          <AnalysisPage />
+          <AnalysisScreen isActive={activePage === 1} />
         </View>
       </PagerView>
     </HamburgerDrawer>
