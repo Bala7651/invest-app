@@ -22,6 +22,7 @@ import { WatchlistItem, useWatchlistStore } from '../features/watchlist/store/wa
 function SwipeableCard({ item }: { item: WatchlistItem }) {
   const router = useRouter();
   const quotes = useQuoteStore(s => s.quotes);
+  const tickHistory = useQuoteStore(s => s.tickHistory);
   const drag = useReorderableDrag();
 
   function renderRightActions() {
@@ -46,6 +47,7 @@ function SwipeableCard({ item }: { item: WatchlistItem }) {
       <StockCard
         item={item}
         quote={quotes[item.symbol]}
+        tickHistory={tickHistory[item.symbol]}
         onPress={() => router.push(`/detail/${item.symbol}`)}
         onLongPress={async () => {
           try {
