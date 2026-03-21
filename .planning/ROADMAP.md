@@ -115,12 +115,12 @@ Plans:
   4. The analysis for a stock contains the actual current price and price change figures sourced from TWSE (not fabricated by the model) — verifiable by comparing to watchlist card values
   5. A "Not financial advice" disclaimer is visible on the AI analysis page
   6. When no API key is configured, the AI page prompts the user to add a key in Settings rather than showing an error
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 06-01: AIService (minimaxApi.ts) with structured prompt construction and typed response parsing
-- [ ] 06-02: AIScreen layout with four analysis sections per stock, loading skeleton, error handling
-- [ ] 06-03: PagerView swipeable navigation container (home <-> AI analysis) and UI-02 gesture setup
+- [ ] 06-01-PLAN.md — Types, minimaxApi service (prompt construction, JSON parsing), analysisStore (TTL cache), unit tests
+- [ ] 06-02-PLAN.md — AnalysisScreen UI (expandable cards, skeleton loading, error handling, no-key prompt, disclaimer)
+- [ ] 06-03-PLAN.md — PagerView isActive wiring in index.tsx, full-flow human verification checkpoint
 
 ### Phase 7: APK Build
 **Goal**: A signed, installable Android APK is produced that passes a secret audit — no API keys or credentials are embedded in the bundle
