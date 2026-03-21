@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.7
+milestone: v0.9
 milestone_name: milestone
 status: completed
-stopped_at: Completed 09-01-PLAN.md
-last_updated: "2026-03-21T15:55:44.335Z"
-last_activity: "2026-03-20 — Completed 04-02: CandleChart, VolumeBar, TimeframeSelector, ChartSkeleton, detail screen wired — checkpoint approved"
+stopped_at: Completed 09-02-PLAN.md
+last_updated: "2026-03-22T00:01:29Z"
+last_activity: "2026-03-22 — Completed 09-02: Alert UI components, foreground monitoring, battery settings, 224 tests pass"
 progress:
   total_phases: 10
-  completed_phases: 6
+  completed_phases: 9
   total_plans: 20
-  completed_plans: 17
-  percent: 89
+  completed_plans: 18
+  percent: 95
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** Real-time Taiwan stock tracking with AI-powered investment analysis in a cyberpunk mobile interface
-**Current focus:** Phase 5 — Settings
+**Current focus:** Phase 10 — Polish
 
 ## Current Position
 
-Phase: 5 of 10 (Settings) — next to execute
-Plan: Phase 4 complete (2/2 plans done)
-Status: Phase 4 complete, ready for Phase 5
-Last activity: 2026-03-20 — Completed 04-02: CandleChart, VolumeBar, TimeframeSelector, ChartSkeleton, detail screen wired — checkpoint approved
+Phase: 9 of 10 (Price Alerts) — complete
+Plan: Phase 9 complete (2/2 plans done)
+Status: Phase 9 complete, ready for Phase 10
+Last activity: 2026-03-22 — Completed 09-02: Alert UI components, foreground monitoring, battery settings, 224 tests pass
 
-Progress: [█████████░] 89%
+Progress: [█████████░] 95%
 
 ## Performance Metrics
 
@@ -66,6 +66,7 @@ Progress: [█████████░] 89%
 | Phase 08-daily-summary P01 | 3 | 2 tasks | 4 files |
 | Phase 08-daily-summary P02 | 2 | 2 tasks | 4 files |
 | Phase 09-price-alerts P01 | 20 | 2 tasks | 12 files |
+| Phase 09-price-alerts P02 | 10 | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -128,6 +129,10 @@ Recent decisions affecting current work:
 - [Phase 09-price-alerts]: TIME_INTERVAL trigger with seconds:1 for background notifications (trigger:null unreliable from WorkManager per expo-notifications issue #21267)
 - [Phase 09-price-alerts]: TaskManager.defineTask at module top level (not inside function) — WorkManager requires early registration
 - [Phase 09-price-alerts]: Background task calls getQuotes directly from stockService — not from quoteStore (isolated JS context)
+- [Phase 09-02]: checkAlerts wrapped in .catch(() => {}) in quoteStore tick — alert check failures must never break quote polling
+- [Phase 09-02]: alertTask imported as bare module-level side-effect in _layout.tsx — ensures defineTask executes before any async initialization
+- [Phase 09-02]: quoteStore.test.ts mocks alertMonitor module — SQLite unavailable in Jest, mock breaks import chain
+- [Phase 09-02]: Notifications.setNotificationHandler placed at _layout.tsx module level outside component — foreground handler must register before any notification arrives
 
 ### Pending Todos
 
@@ -144,6 +149,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T15:55:44.330Z
-Stopped at: Completed 09-01-PLAN.md
+Last session: 2026-03-22T00:01:29Z
+Stopped at: Completed 09-02-PLAN.md
 Resume file: None

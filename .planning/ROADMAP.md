@@ -20,7 +20,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 6: AI Analysis** - AI analysis page with 4 sections (sentiment, technical, recommendation, risk), MiniMax M2.5 integration, swipeable navigation (completed 2026-03-21)
 - [x] **Phase 7: APK Build** - Release keystore signing, Gradle release build, secret audit, real device verification (completed 2026-03-21)
 - [x] **Phase 8: Daily Summary** - Foreground daily summary generation at 12:30, SQLite storage with 2-week auto-purge, 4th PagerView page (completed 2026-03-21)
-- [ ] **Phase 9: Price Alerts** - Price alert setup from chart detail page, WorkManager background monitoring, push notifications, alert management screen
+- [x] **Phase 9: Price Alerts** - Price alert setup from chart detail page, WorkManager background monitoring, push notifications, alert management screen (completed 2026-03-22)
 - [ ] **Phase 10: Polish** - Sparkline mini charts on watchlist cards, cyberpunk glow animations, responsive layout refinement
 
 ## Phase Details
@@ -165,8 +165,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 09-01-PLAN.md — Schema + migration, alertService CRUD, alertMonitor condition checker, alertTask background worker, alertStore
-- [ ] 09-02-PLAN.md — AlertModal + AlertsListModal UI, detail/home screen bell icons, foreground check wiring, battery optimization in Settings
+- [x] 09-01-PLAN.md — Schema + migration, alertService CRUD, alertMonitor condition checker, alertTask background worker, alertStore
+- [x] 09-02-PLAN.md — AlertModal + AlertsListModal UI, detail/home screen bell icons, foreground check wiring, battery optimization in Settings
 
 ### Phase 10: Polish
 **Goal**: The watchlist home screen gains sparkline mini charts for at-a-glance price trends, and the overall UI is refined to be responsive across different Android screen sizes
@@ -199,5 +199,5 @@ Note: Phase 5 (Settings) depends only on Phase 1 and can be built in parallel wi
 | 6. AI Analysis | 2/3 | In Progress|  |
 | 7. APK Build | 2/2 | Complete   | 2026-03-21 |
 | 8. Daily Summary | 2/2 | Complete   | 2026-03-21 |
-| 9. Price Alerts | 1/2 | In Progress|  |
+| 9. Price Alerts | 2/2 | Complete   | 2026-03-22 |
 | 10. Polish | 0/2 | Not started | - |
