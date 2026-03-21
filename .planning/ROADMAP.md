@@ -16,9 +16,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Data Layer** - TWSE OpenAPI client with rate-limit queue, market-hours polling guard, quote stores, non-trading-day handling (completed 2026-03-18)
 - [x] **Phase 3: Watchlist** - Home screen watchlist with stock search, add/remove, persist to SQLite, price cards (completed 2026-03-19)
 - [x] **Phase 4: Charts** - Stock detail view with candlestick chart, 5 timeframes, volume bars, smooth Skia rendering (completed 2026-03-20)
-- [ ] **Phase 5: Settings** - Settings page with MiniMax API key input, secure storage, AI model name config
-- [ ] **Phase 6: AI Analysis** - AI analysis page with 4 sections (sentiment, technical, recommendation, risk), MiniMax M2.5 integration, swipeable navigation
-- [ ] **Phase 7: APK Build** - EAS Build signed Android APK, keystore backup, secret audit, real device verification
+- [x] **Phase 5: Settings** - Settings page with MiniMax API key input, secure storage, AI model name config (completed 2026-03-21)
+- [x] **Phase 6: AI Analysis** - AI analysis page with 4 sections (sentiment, technical, recommendation, risk), MiniMax M2.5 integration, swipeable navigation (completed 2026-03-21)
+- [ ] **Phase 7: APK Build** - Release keystore signing, Gradle release build, secret audit, real device verification
 - [ ] **Phase 8: Daily Summary** - Background task for 12:30 daily summary generation, SQLite storage with 2-week auto-purge
 - [ ] **Phase 9: Price Alerts** - Price alert setup from chart detail page, WorkManager background monitoring, push notifications, alert management screen
 - [ ] **Phase 10: Polish** - Sparkline mini charts on watchlist cards, cyberpunk glow animations, responsive layout refinement
@@ -127,15 +127,15 @@ Plans:
 **Depends on**: Phase 6
 **Requirements**: UI-04
 **Success Criteria** (what must be TRUE):
-  1. `eas build -p android --profile preview` completes without errors and produces a downloadable `.apk` file
+  1. Local Gradle `assembleRelease` with release keystore completes without errors and produces an `.apk` file
   2. The APK installs and runs on a real Android device (not just emulator)
   3. A grep of the APK's extracted bundle files finds no MiniMax API key string
   4. The keystore file is backed up outside the repository
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 07-01: EAS Build config, app signing, APK production and real-device smoke test
-- [ ] 07-02: Security audit — source grep for secrets, APK inspection, keystore backup verification
+- [ ] 07-01-PLAN.md — Release keystore generation, Gradle signingConfigs.release, APK build, audit script
+- [ ] 07-02-PLAN.md — Keystore backup, GitHub Release v0.7.0 upload, real-device smoke test checkpoint
 
 ### Phase 8: Daily Summary
 **Goal**: The app automatically generates and stores a daily AI market summary at 12:30 Taiwan time, purging entries older than 2 weeks, with a manual fallback trigger
