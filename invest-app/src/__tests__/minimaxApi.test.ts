@@ -117,7 +117,7 @@ describe('callMiniMax', () => {
     await callMiniMax('2330', mockQuote, credentials);
 
     expect(global.fetch).toHaveBeenCalledWith(
-      'https://api.minimax.io/v1/text/chatcompletion_v2',
+      'https://api.minimax.io/v1/chat/completions',
       expect.any(Object)
     );
   });
@@ -133,7 +133,7 @@ describe('callMiniMax', () => {
     await callMiniMax('2330', mockQuote, { ...credentials, baseUrl: 'https://api.minimax.io/v1/' });
 
     expect(global.fetch).toHaveBeenCalledWith(
-      'https://api.minimax.io/v1/text/chatcompletion_v2',
+      'https://api.minimax.io/v1/chat/completions',
       expect.any(Object)
     );
   });
@@ -152,7 +152,7 @@ describe('callMiniMax', () => {
     expect(options.headers['Authorization']).toBe('Bearer test-api-key');
   });
 
-  it('sends correct body with model, messages, temperature, max_completion_tokens', async () => {
+  it('sends correct body with model, messages, temperature, max_tokens', async () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
@@ -166,7 +166,7 @@ describe('callMiniMax', () => {
     const body = JSON.parse(options.body);
     expect(body.model).toBe('MiniMax-M2.5');
     expect(body.temperature).toBe(0.3);
-    expect(body.max_completion_tokens).toBe(600);
+    expect(body.max_tokens).toBe(600);
     expect(body.messages).toHaveLength(2);
     expect(body.messages[0].role).toBe('system');
     expect(body.messages[1].role).toBe('user');

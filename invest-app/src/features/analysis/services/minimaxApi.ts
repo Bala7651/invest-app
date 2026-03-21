@@ -44,29 +44,36 @@ export async function callMiniMax(
   credentials: { apiKey: string; modelName: string; baseUrl: string }
 ): Promise<AnalysisResult> {
   const prompt = buildPrompt(symbol, quote);
-  const url = `${credentials.baseUrl.replace(/\/$/, '')}/text/chatcompletion_v2`;
+  const url = `${credentials.baseUrl.replace(/\/$/, '')}/chat/completions`;
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${credentials.apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: credentials.modelName,
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: prompt },
-      ],
-      temperature: 0.3,
-      max_completion_tokens: 600,
-    }),
-    signal: AbortSignal.timeout(30_000),
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30_000);
 
-  if (!res.ok) throw new Error(`MiniMax HTTP ${res.status}`);
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${credentials.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: credentials.modelName,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: prompt },
+        ],
+        temperature: 0.3,
+        max_tokens: 600,
+      }),
+      signal: controller.signal,
+    });
 
-  const data = await res.json();
-  const content = data.choices?.[0]?.message?.content ?? '';
-  return parseAnalysisResponse(content);
+    if (!res.ok) throw new Error(`MiniMax HTTP ${res.status}`);
+
+    const data = await res.json();
+    const content = data.choices?.[0]?.message?.content ?? '';
+    return parseAnalysisResponse(content);
+  } finally {
+    clearTimeout(timer);
+  }
 }

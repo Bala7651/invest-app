@@ -116,7 +116,7 @@ function WatchlistPage() {
 export default function HomeScreen() {
   const [activePage, setActivePage] = useState(0);
   return (
-    <HamburgerDrawer>
+    <HamburgerDrawer edgeSwipeEnabled={activePage === 0}>
       <PagerView
         style={{ flex: 1 }}
         initialPage={0}
