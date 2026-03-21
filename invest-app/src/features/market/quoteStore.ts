@@ -15,6 +15,7 @@ interface Quote {
 
 interface QuoteState {
   quotes: Record<string, Quote>;
+  tickHistory: Record<string, number[]>;
   polling: boolean;
   lastError: string | null;
   _intervalId: ReturnType<typeof setInterval> | null;
@@ -24,6 +25,7 @@ interface QuoteState {
 
 export const useQuoteStore = create<QuoteState>((set, get) => ({
   quotes: {},
+  tickHistory: {},
   polling: false,
   lastError: null,
   _intervalId: null,
@@ -55,7 +57,14 @@ export const useQuoteStore = create<QuoteState>((set, get) => ({
               fetchedAt,
             };
           }
-          set({ quotes: { ...get().quotes, ...quotes } });
+          const tickHistory = { ...get().tickHistory };
+          for (const q of raw) {
+            if (q.price !== null) {
+              const prev = tickHistory[q.symbol] ?? [];
+              tickHistory[q.symbol] = [...prev, q.price];
+            }
+          }
+          set({ quotes: { ...get().quotes, ...quotes }, tickHistory });
         } catch (e) {
           set({ lastError: String(e) });
         }
@@ -80,7 +89,14 @@ export const useQuoteStore = create<QuoteState>((set, get) => ({
             fetchedAt,
           };
         }
-        set({ quotes: { ...get().quotes, ...quotes } });
+        const tickHistory = { ...get().tickHistory };
+        for (const q of raw) {
+          if (q.price !== null) {
+            const prev = tickHistory[q.symbol] ?? [];
+            tickHistory[q.symbol] = [...prev, q.price];
+          }
+        }
+        set({ quotes: { ...get().quotes, ...quotes }, tickHistory });
         checkAlerts(quotes).catch(() => {});
       } catch (e) {
         set({ lastError: String(e) });
@@ -98,6 +114,6 @@ export const useQuoteStore = create<QuoteState>((set, get) => ({
     if (_intervalId !== null) {
       clearInterval(_intervalId);
     }
-    set({ polling: false, _intervalId: null });
+    set({ polling: false, _intervalId: null, tickHistory: {} });
   },
 }));

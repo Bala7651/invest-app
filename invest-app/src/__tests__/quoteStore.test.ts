@@ -267,7 +267,8 @@ describe('quoteStore tickHistory', () => {
     expect(useQuoteStore.getState().tickHistory).toEqual({});
   });
 
-  test('tickHistory accumulates in final fetch when market closes mid-session', async () => {
+  test('tickHistory resets after final fetch when market closes mid-session', async () => {
+    // When market closes mid-session, final fetch runs then stopPolling resets tickHistory
     mockIsMarketOpen
       .mockReturnValueOnce(true)   // startPolling guard
       .mockReturnValueOnce(false); // tick's check -> final fetch + stop
@@ -279,8 +280,9 @@ describe('quoteStore tickHistory', () => {
       await Promise.resolve();
     });
 
-    // Final fetch should still accumulate tickHistory before stop
+    // stopPolling is called after final fetch, so tickHistory is reset to {}
     const tickHistory = useQuoteStore.getState().tickHistory;
-    expect(tickHistory['2330']).toEqual([1000]);
+    expect(tickHistory).toEqual({});
+    expect(useQuoteStore.getState().polling).toBe(false);
   });
 });
