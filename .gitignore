@@ -1,0 +1,5 @@
+# APK release files — uploaded to GitHub Releases, not committed to repo
+*.apk
+
+# macOS
+.DS_Store
