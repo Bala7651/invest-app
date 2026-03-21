@@ -9,6 +9,7 @@ import ReorderableList, {
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import PagerView from 'react-native-pager-view';
 import { AnalysisScreen } from '../features/analysis/components/AnalysisScreen';
+import { SummaryScreen } from '../features/summary/components/SummaryScreen';
 import { MarketStatusBar } from '../features/market/MarketStatusBar';
 import { useQuoteStore } from '../features/market/quoteStore';
 import { EmptyWatchlist } from '../features/watchlist/components/EmptyWatchlist';
@@ -140,6 +141,9 @@ export default function HomeScreen() {
       </View>
       <View key="2" style={{ flex: 1 }}>
         <AnalysisScreen isActive={activePage === 2} />
+      </View>
+      <View key="3" style={{ flex: 1 }}>
+        <SummaryScreen isActive={activePage === 3} />
       </View>
     </PagerView>
   );

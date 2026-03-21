@@ -9,6 +9,8 @@ import { useQuoteStore } from '../features/market/quoteStore';
 import { isMarketOpen } from '../features/market/marketHours';
 import { useWatchlistStore } from '../features/watchlist/store/watchlistStore';
 import { useSettingsStore } from '../features/settings/store/settingsStore';
+import { isCatchUpNeeded, getTodayISO, hasSummaryForDate } from '../features/summary/services/summaryService';
+import { useSummaryStore } from '../features/summary/store/summaryStore';
 
 export default function RootLayout() {
   const { success, error } = useMigrations(db, migrations);
@@ -21,6 +23,17 @@ export default function RootLayout() {
       const symbols = useWatchlistStore.getState().items.map(i => i.symbol);
       if (symbols.length > 0 && isMarketOpen()) {
         useQuoteStore.getState().startPolling(symbols);
+      }
+      if (isCatchUpNeeded()) {
+        const todayISO = getTodayISO();
+        hasSummaryForDate(todayISO).then(has => {
+          if (!has) {
+            const { apiKey, modelName, baseUrl } = useSettingsStore.getState();
+            if (apiKey) {
+              useSummaryStore.getState().generateToday({ apiKey, modelName, baseUrl });
+            }
+          }
+        });
       }
     });
   }, [success]);
