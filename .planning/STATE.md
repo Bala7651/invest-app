@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: milestone
 status: completed
-stopped_at: Completed 07-apk-build/07-02-PLAN.md
-last_updated: "2026-03-21T12:52:33.300Z"
+stopped_at: Completed 08-daily-summary/08-01-PLAN.md
+last_updated: "2026-03-21T14:12:10.360Z"
 last_activity: "2026-03-20 — Completed 04-02: CandleChart, VolumeBar, TimeframeSelector, ChartSkeleton, detail screen wired — checkpoint approved"
 progress:
   total_phases: 10
   completed_phases: 5
-  total_plans: 16
-  completed_plans: 14
+  total_plans: 18
+  completed_plans: 15
   percent: 89
 ---
 
@@ -63,6 +63,7 @@ Progress: [█████████░] 89%
 | Phase 06-ai-analysis P02 | 2 | 2 tasks | 4 files |
 | Phase 07-apk-build P01 | 4 | 2 tasks | 4 files |
 | Phase 07-apk-build P02 | 2 | 2 tasks | 3 files |
+| Phase 08-daily-summary P01 | 3 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -118,6 +119,9 @@ Recent decisions affecting current work:
 - [Phase 07-apk-build]: versionName bumped to 0.7.0; keystore credentials in gitignored gradle.properties, never in source
 - [Phase 07-apk-build]: Keystore backed up to ~/invest-app-release.keystore outside git repo for safety
 - [Phase 07-apk-build]: GitHub Release v0.7.0 created per project memory: upload APK after each phase
+- [Phase 08-daily-summary]: [Phase 08-01]: callSummaryMiniMax built separately — plain text response, max_tokens 300 (vs 600 for analysis), same fetch pattern
+- [Phase 08-daily-summary]: [Phase 08-01]: Delete-then-insert upsert pattern for daily_summaries — no unique constraint, explicit delete prevents duplicates on re-generate
+- [Phase 08-daily-summary]: [Phase 08-01]: isCatchUpNeeded and hasSummaryForDate exported from service layer — _layout.tsx Plan 02 catch-up uses them directly
 
 ### Pending Todos
 
@@ -134,6 +138,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T12:48:32.206Z
-Stopped at: Completed 07-apk-build/07-02-PLAN.md
+Last session: 2026-03-21T14:12:10.355Z
+Stopped at: Completed 08-daily-summary/08-01-PLAN.md
 Resume file: None

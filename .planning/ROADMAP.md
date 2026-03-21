@@ -198,6 +198,6 @@ Note: Phase 5 (Settings) depends only on Phase 1 and can be built in parallel wi
 | 5. Settings | 1/2 | In Progress|  |
 | 6. AI Analysis | 2/3 | In Progress|  |
 | 7. APK Build | 2/2 | Complete   | 2026-03-21 |
-| 8. Daily Summary | 0/2 | Not started | - |
+| 8. Daily Summary | 1/2 | In Progress|  |
 | 9. Price Alerts | 0/2 | Not started | - |
 | 10. Polish | 0/2 | Not started | - |

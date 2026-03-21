@@ -52,10 +52,10 @@
 
 ### Daily Summary
 
-- [ ] **SUMM-01**: App auto-generates daily market summary at 12:30 (1 hour before close)
-- [ ] **SUMM-02**: Summary covers all watchlist stocks and overall market index
-- [ ] **SUMM-03**: Summaries stored in local SQLite database
-- [ ] **SUMM-04**: Summaries older than 2 weeks are auto-purged
+- [x] **SUMM-01**: App auto-generates daily market summary at 12:30 (1 hour before close)
+- [x] **SUMM-02**: Summary covers all watchlist stocks and overall market index
+- [x] **SUMM-03**: Summaries stored in local SQLite database
+- [x] **SUMM-04**: Summaries older than 2 weeks are auto-purged
 
 ### Settings
 
@@ -136,10 +136,10 @@
 | ALRT-05 | Phase 9 | Pending |
 | ALRT-06 | Phase 9 | Pending |
 | ALRT-07 | Phase 9 | Pending |
-| SUMM-01 | Phase 8 | Pending |
-| SUMM-02 | Phase 8 | Pending |
-| SUMM-03 | Phase 8 | Pending |
-| SUMM-04 | Phase 8 | Pending |
+| SUMM-01 | Phase 8 | Complete |
+| SUMM-02 | Phase 8 | Complete |
+| SUMM-03 | Phase 8 | Complete |
+| SUMM-04 | Phase 8 | Complete |
 | SETT-01 | Phase 5 | Pending |
 | SETT-02 | Phase 5 | Complete |
 | SETT-03 | Phase 5 | Complete |
