@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: milestone
 status: completed
-stopped_at: Completed 08-daily-summary/08-01-PLAN.md
-last_updated: "2026-03-21T14:12:10.360Z"
+stopped_at: Completed 08-daily-summary/08-02-PLAN.md
+last_updated: "2026-03-21T14:16:01.867Z"
 last_activity: "2026-03-20 — Completed 04-02: CandleChart, VolumeBar, TimeframeSelector, ChartSkeleton, detail screen wired — checkpoint approved"
 progress:
   total_phases: 10
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 18
-  completed_plans: 15
+  completed_plans: 16
   percent: 89
 ---
 
@@ -64,6 +64,7 @@ Progress: [█████████░] 89%
 | Phase 07-apk-build P01 | 4 | 2 tasks | 4 files |
 | Phase 07-apk-build P02 | 2 | 2 tasks | 3 files |
 | Phase 08-daily-summary P01 | 3 | 2 tasks | 4 files |
+| Phase 08-daily-summary P02 | 2 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -122,6 +123,7 @@ Recent decisions affecting current work:
 - [Phase 08-daily-summary]: [Phase 08-01]: callSummaryMiniMax built separately — plain text response, max_tokens 300 (vs 600 for analysis), same fetch pattern
 - [Phase 08-daily-summary]: [Phase 08-01]: Delete-then-insert upsert pattern for daily_summaries — no unique constraint, explicit delete prevents duplicates on re-generate
 - [Phase 08-daily-summary]: [Phase 08-01]: isCatchUpNeeded and hasSummaryForDate exported from service layer — _layout.tsx Plan 02 catch-up uses them directly
+- [Phase 08-daily-summary]: SummaryScreen lazy-loads on first isActive=true via useRef flag; catch-up trigger fires inside watchlist loadFromDb().then() chain to ensure watchlist items are populated before generation
 
 ### Pending Todos
 
@@ -138,6 +140,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T14:12:10.355Z
-Stopped at: Completed 08-daily-summary/08-01-PLAN.md
+Last session: 2026-03-21T14:16:01.863Z
+Stopped at: Completed 08-daily-summary/08-02-PLAN.md
 Resume file: None

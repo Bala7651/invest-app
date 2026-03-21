@@ -19,7 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 5: Settings** - Settings page with MiniMax API key input, secure storage, AI model name config (completed 2026-03-21)
 - [x] **Phase 6: AI Analysis** - AI analysis page with 4 sections (sentiment, technical, recommendation, risk), MiniMax M2.5 integration, swipeable navigation (completed 2026-03-21)
 - [x] **Phase 7: APK Build** - Release keystore signing, Gradle release build, secret audit, real device verification (completed 2026-03-21)
-- [ ] **Phase 8: Daily Summary** - Foreground daily summary generation at 12:30, SQLite storage with 2-week auto-purge, 4th PagerView page
+- [x] **Phase 8: Daily Summary** - Foreground daily summary generation at 12:30, SQLite storage with 2-week auto-purge, 4th PagerView page (completed 2026-03-21)
 - [ ] **Phase 9: Price Alerts** - Price alert setup from chart detail page, WorkManager background monitoring, push notifications, alert management screen
 - [ ] **Phase 10: Polish** - Sparkline mini charts on watchlist cards, cyberpunk glow animations, responsive layout refinement
 
@@ -198,6 +198,6 @@ Note: Phase 5 (Settings) depends only on Phase 1 and can be built in parallel wi
 | 5. Settings | 1/2 | In Progress|  |
 | 6. AI Analysis | 2/3 | In Progress|  |
 | 7. APK Build | 2/2 | Complete   | 2026-03-21 |
-| 8. Daily Summary | 1/2 | In Progress|  |
+| 8. Daily Summary | 2/2 | Complete   | 2026-03-21 |
 | 9. Price Alerts | 0/2 | Not started | - |
 | 10. Polish | 0/2 | Not started | - |
