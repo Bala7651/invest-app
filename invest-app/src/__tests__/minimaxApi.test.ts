@@ -1,0 +1,204 @@
+import { buildPrompt, parseAnalysisResponse, callMiniMax } from '../features/analysis/services/minimaxApi';
+import { AnalysisResult } from '../features/analysis/types';
+
+const mockQuote = {
+  name: 'Taiwan Semiconductor',
+  price: 850.5,
+  change: 12.5,
+  changePct: 1.49,
+  prevClose: 838.0,
+  volume: 25000000,
+};
+
+const mockResult: AnalysisResult = {
+  sentimentScore: 72,
+  sentimentLabel: 'Bullish',
+  sentimentSummary: 'Market sentiment is positive.',
+  technicalSummary: 'Stock shows strong momentum.',
+  recommendation: 'Buy',
+  recommendationReasoning: 'Fundamentals are solid.',
+  riskScore: 35,
+  riskExplanation: 'Moderate risk due to market volatility.',
+  overallScore: 70,
+};
+
+describe('buildPrompt', () => {
+  it('contains the symbol', () => {
+    const prompt = buildPrompt('2330', mockQuote);
+    expect(prompt).toContain('2330');
+  });
+
+  it('contains the stock name', () => {
+    const prompt = buildPrompt('2330', mockQuote);
+    expect(prompt).toContain('Taiwan Semiconductor');
+  });
+
+  it('injects exact price value', () => {
+    const prompt = buildPrompt('2330', mockQuote);
+    expect(prompt).toContain('850.5');
+  });
+
+  it('injects exact change value', () => {
+    const prompt = buildPrompt('2330', mockQuote);
+    expect(prompt).toContain('12.50');
+  });
+
+  it('injects exact prevClose value', () => {
+    const prompt = buildPrompt('2330', mockQuote);
+    expect(prompt).toContain('838');
+  });
+
+  it('injects exact volume value', () => {
+    const prompt = buildPrompt('2330', mockQuote);
+    expect(prompt).toContain('25000000');
+  });
+
+  it('handles null price gracefully', () => {
+    const quoteWithNullPrice = { ...mockQuote, price: null };
+    const prompt = buildPrompt('2330', quoteWithNullPrice);
+    expect(prompt).toContain('unavailable');
+  });
+});
+
+describe('parseAnalysisResponse', () => {
+  it('extracts JSON from markdown code block', () => {
+    const content = `\`\`\`json\n${JSON.stringify(mockResult)}\n\`\`\``;
+    const result = parseAnalysisResponse(content);
+    expect(result.sentimentScore).toBe(72);
+    expect(result.sentimentLabel).toBe('Bullish');
+    expect(result.recommendation).toBe('Buy');
+  });
+
+  it('extracts JSON from code block without language tag', () => {
+    const content = `\`\`\`\n${JSON.stringify(mockResult)}\n\`\`\``;
+    const result = parseAnalysisResponse(content);
+    expect(result.overallScore).toBe(70);
+  });
+
+  it('extracts bare JSON object without code block', () => {
+    const content = JSON.stringify(mockResult);
+    const result = parseAnalysisResponse(content);
+    expect(result.riskScore).toBe(35);
+  });
+
+  it('throws Error with "No JSON found" when content has no JSON', () => {
+    expect(() => parseAnalysisResponse('This is just text with no JSON at all.')).toThrow('No JSON found');
+  });
+
+  it('throws on malformed JSON inside code block', () => {
+    const content = '```json\n{ "sentimentScore": 72, "broken": \n```';
+    expect(() => parseAnalysisResponse(content)).toThrow();
+  });
+});
+
+describe('callMiniMax', () => {
+  const credentials = {
+    apiKey: 'test-api-key',
+    modelName: 'MiniMax-M2.5',
+    baseUrl: 'https://api.minimax.io/v1',
+  };
+
+  beforeEach(() => {
+    global.fetch = jest.fn();
+  });
+
+  afterEach(() => {
+    jest.resetAllMocks();
+  });
+
+  it('sends POST to the correct URL', async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        choices: [{ message: { content: JSON.stringify(mockResult) } }],
+      }),
+    });
+
+    await callMiniMax('2330', mockQuote, credentials);
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'https://api.minimax.io/v1/text/chatcompletion_v2',
+      expect.any(Object)
+    );
+  });
+
+  it('sends POST to the correct URL with trailing slash in baseUrl', async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        choices: [{ message: { content: JSON.stringify(mockResult) } }],
+      }),
+    });
+
+    await callMiniMax('2330', mockQuote, { ...credentials, baseUrl: 'https://api.minimax.io/v1/' });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'https://api.minimax.io/v1/text/chatcompletion_v2',
+      expect.any(Object)
+    );
+  });
+
+  it('sends Bearer auth header', async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        choices: [{ message: { content: JSON.stringify(mockResult) } }],
+      }),
+    });
+
+    await callMiniMax('2330', mockQuote, credentials);
+
+    const [, options] = (global.fetch as jest.Mock).mock.calls[0];
+    expect(options.headers['Authorization']).toBe('Bearer test-api-key');
+  });
+
+  it('sends correct body with model, messages, temperature, max_completion_tokens', async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        choices: [{ message: { content: JSON.stringify(mockResult) } }],
+      }),
+    });
+
+    await callMiniMax('2330', mockQuote, credentials);
+
+    const [, options] = (global.fetch as jest.Mock).mock.calls[0];
+    const body = JSON.parse(options.body);
+    expect(body.model).toBe('MiniMax-M2.5');
+    expect(body.temperature).toBe(0.3);
+    expect(body.max_completion_tokens).toBe(600);
+    expect(body.messages).toHaveLength(2);
+    expect(body.messages[0].role).toBe('system');
+    expect(body.messages[1].role).toBe('user');
+  });
+
+  it('returns parsed AnalysisResult on success', async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        choices: [{ message: { content: `\`\`\`json\n${JSON.stringify(mockResult)}\n\`\`\`` } }],
+      }),
+    });
+
+    const result = await callMiniMax('2330', mockQuote, credentials);
+    expect(result.recommendation).toBe('Buy');
+  });
+
+  it('throws on non-ok HTTP response with status code in message', async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+    });
+
+    await expect(callMiniMax('2330', mockQuote, credentials)).rejects.toThrow('401');
+  });
+
+  it('throws on non-ok HTTP response with 500 status code in message', async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+    });
+
+    await expect(callMiniMax('2330', mockQuote, credentials)).rejects.toThrow('500');
+  });
+});

@@ -1,0 +1,72 @@
+import { AnalysisResult } from '../types';
+
+const SYSTEM_PROMPT = `You are a Taiwan stock market analyst.
+ALWAYS respond with a single JSON object in a markdown code block. No other text.
+Required fields:
+- sentimentScore: number 0-100 (100 = extremely bullish)
+- sentimentLabel: "Bullish" | "Neutral" | "Bearish"
+- sentimentSummary: string (1-2 sentences, market/news context)
+- technicalSummary: string (2-3 sentences, plain language)
+- recommendation: "Buy" | "Hold" | "Sell"
+- recommendationReasoning: string (2-3 sentences)
+- riskScore: number 0-100 (100 = highest risk)
+- riskExplanation: string (1-2 sentences)
+- overallScore: number 0-100`;
+
+export interface QuoteData {
+  name: string;
+  price: number | null;
+  change: number;
+  changePct: number;
+  prevClose: number;
+  volume: number;
+}
+
+export function buildPrompt(symbol: string, quote: QuoteData): string {
+  return `Analyze Taiwan stock ${symbol} (${quote.name}).
+REAL MARKET DATA (use exactly these figures, do not fabricate):
+- Current price: ${quote.price ?? 'unavailable'} TWD
+- Price change: ${quote.change >= 0 ? '+' : ''}${quote.change.toFixed(2)} (${quote.changePct.toFixed(2)}%)
+- Previous close: ${quote.prevClose} TWD
+- Volume: ${quote.volume ?? 'unavailable'}
+Provide your analysis as a JSON object.`;
+}
+
+export function parseAnalysisResponse(content: string): AnalysisResult {
+  const match = content.match(/```(?:json)?\s*([\s\S]*?)```/) ?? content.match(/(\{[\s\S]*\})/);
+  if (!match) throw new Error('No JSON found in response');
+  return JSON.parse(match[1]) as AnalysisResult;
+}
+
+export async function callMiniMax(
+  symbol: string,
+  quote: QuoteData,
+  credentials: { apiKey: string; modelName: string; baseUrl: string }
+): Promise<AnalysisResult> {
+  const prompt = buildPrompt(symbol, quote);
+  const url = `${credentials.baseUrl.replace(/\/$/, '')}/text/chatcompletion_v2`;
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${credentials.apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: credentials.modelName,
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: prompt },
+      ],
+      temperature: 0.3,
+      max_completion_tokens: 600,
+    }),
+    signal: AbortSignal.timeout(30_000),
+  });
+
+  if (!res.ok) throw new Error(`MiniMax HTTP ${res.status}`);
+
+  const data = await res.json();
+  const content = data.choices?.[0]?.message?.content ?? '';
+  return parseAnalysisResponse(content);
+}
