@@ -55,7 +55,7 @@ export function HamburgerDrawer({ children }: HamburgerDrawerProps) {
         drawerType={DrawerType.FRONT}
         drawerWidth={260}
         overlayColor="rgba(0,0,0,0.6)"
-        edgeWidth={30}
+        edgeWidth={0}
         renderNavigationView={() => <DrawerContent closeDrawer={closeDrawer} />}
       >
         {children}
