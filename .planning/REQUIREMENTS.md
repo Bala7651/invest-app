@@ -12,7 +12,7 @@
 - [x] **WTCH-03**: User can remove a stock from the watchlist
 - [x] **WTCH-04**: Watchlist persists across app restarts (SQLite)
 - [x] **WTCH-05**: Each watchlist card shows stock name, code, current price, price change (delta + percent)
-- [ ] **WTCH-06**: Each watchlist card shows a sparkline mini chart of the day's price trend
+- [x] **WTCH-06**: Each watchlist card shows a sparkline mini chart of the day's price trend
 
 ### Market Data
 
@@ -111,7 +111,7 @@
 | WTCH-03 | Phase 3 | Complete |
 | WTCH-04 | Phase 3 | Complete |
 | WTCH-05 | Phase 3 | Complete |
-| WTCH-06 | Phase 10 | Pending |
+| WTCH-06 | Phase 10 | Complete |
 | DATA-01 | Phase 2 | Complete |
 | DATA-02 | Phase 2 | Complete |
 | DATA-03 | Phase 2 | Complete |
