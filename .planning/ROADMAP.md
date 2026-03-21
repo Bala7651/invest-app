@@ -19,7 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 5: Settings** - Settings page with MiniMax API key input, secure storage, AI model name config (completed 2026-03-21)
 - [x] **Phase 6: AI Analysis** - AI analysis page with 4 sections (sentiment, technical, recommendation, risk), MiniMax M2.5 integration, swipeable navigation (completed 2026-03-21)
 - [x] **Phase 7: APK Build** - Release keystore signing, Gradle release build, secret audit, real device verification (completed 2026-03-21)
-- [ ] **Phase 8: Daily Summary** - Background task for 12:30 daily summary generation, SQLite storage with 2-week auto-purge
+- [ ] **Phase 8: Daily Summary** - Foreground daily summary generation at 12:30, SQLite storage with 2-week auto-purge, 4th PagerView page
 - [ ] **Phase 9: Price Alerts** - Price alert setup from chart detail page, WorkManager background monitoring, push notifications, alert management screen
 - [ ] **Phase 10: Polish** - Sparkline mini charts on watchlist cards, cyberpunk glow animations, responsive layout refinement
 
@@ -138,19 +138,19 @@ Plans:
 - [ ] 07-02-PLAN.md — Keystore backup, GitHub Release v0.7.0 upload, real-device smoke test checkpoint
 
 ### Phase 8: Daily Summary
-**Goal**: The app automatically generates and stores a daily AI market summary at 12:30 Taiwan time, purging entries older than 2 weeks, with a manual fallback trigger
+**Goal**: The app auto-generates and stores a daily AI market summary at 12:30 Taiwan time (foreground catch-up), purging entries older than 2 weeks, with a manual fallback trigger and a dedicated PagerView page
 **Depends on**: Phase 6
 **Requirements**: SUMM-01, SUMM-02, SUMM-03, SUMM-04
 **Success Criteria** (what must be TRUE):
-  1. With the app backgrounded during market hours, a new daily summary row appears in the SQLite database for the current date between 12:25 and 13:05 (accounting for Android background task timing imprecision)
+  1. When app is open past 12:30 on a market day and no summary exists, auto-catch-up generates a summary for today
   2. The stored summary includes data for all currently watched stocks plus the overall TWSE index
-  3. After inserting a summary, any rows older than 14 days are automatically deleted — observable via SQLite inspector
-  4. Tapping a "Generate Summary Now" button manually triggers summary generation when automatic scheduling fails
-**Plans**: TBD
+  3. After inserting a summary, any rows older than 14 days are automatically deleted
+  4. Tapping a "Generate Now" button manually triggers summary generation
+**Plans**: 2 plans
 
 Plans:
-- [ ] 08-01: SummaryService with AI summary generation, SQLite insert, and 14-day auto-purge
-- [ ] 08-02: expo-background-task registration with time-window check and manual trigger button
+- [ ] 08-01-PLAN.md — SummaryService (TWIX fetch, AI calls, SQLite CRUD, 14-day purge), summaryStore, types, unit tests
+- [ ] 08-02-PLAN.md — SummaryScreen UI (date cards, Generate Now, progress), PagerView 4th page, _layout catch-up trigger
 
 ### Phase 9: Price Alerts
 **Goal**: Users can set a target price on any stock from its chart detail page and receive a push notification when that price is crossed, with all active alerts persisted and manageable
