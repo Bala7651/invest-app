@@ -8,6 +8,8 @@ import ReorderableList, {
 } from 'react-native-reorderable-list';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import PagerView from 'react-native-pager-view';
+import { AlertsListModal } from '../features/alerts/components/AlertsListModal';
+import { useAlertStore } from '../features/alerts/store/alertStore';
 import { AnalysisScreen } from '../features/analysis/components/AnalysisScreen';
 import { SummaryScreen } from '../features/summary/components/SummaryScreen';
 import { MarketStatusBar } from '../features/market/MarketStatusBar';
@@ -59,6 +61,8 @@ function SwipeableCard({ item }: { item: WatchlistItem }) {
 function WatchlistPage() {
   const items = useWatchlistStore(s => s.items);
   const [searchVisible, setSearchVisible] = useState(false);
+  const [alertsListVisible, setAlertsListVisible] = useState(false);
+  const alertCount = useAlertStore(s => s.activeCount());
   const router = useRouter();
 
   function handleReorder({ from, to }: ReorderableListReorderEvent) {
@@ -83,12 +87,24 @@ function WatchlistPage() {
             </Pressable>
             <Text className="text-text text-2xl font-bold">Watchlist</Text>
           </View>
-          <Pressable onPress={() => setSearchVisible(true)}>
-            <Text className="text-primary text-base">+ Add</Text>
-          </Pressable>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <Pressable onPress={() => setAlertsListVisible(true)} style={{ position: 'relative' }}>
+              <Text style={{ fontSize: 20 }}>🔔</Text>
+              {alertCount > 0 ? (
+                <View style={{ position: 'absolute', top: -4, right: -4, backgroundColor: '#00e5ff', borderRadius: 8, minWidth: 16, paddingHorizontal: 2, alignItems: 'center' }}>
+                  <Text style={{ color: '#050508', fontSize: 10, fontWeight: 'bold' }}>{alertCount}</Text>
+                </View>
+              ) : null}
+            </Pressable>
+            <Pressable onPress={() => setSearchVisible(true)}>
+              <Text className="text-primary text-base">+ Add</Text>
+            </Pressable>
+          </View>
         </View>
         <MarketStatusBar />
       </View>
+
+      <AlertsListModal visible={alertsListVisible} onClose={() => setAlertsListVisible(false)} />
 
       <Pressable
         onPress={() => setSearchVisible(true)}

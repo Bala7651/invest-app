@@ -2,6 +2,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Pressable, Text, View, useWindowDimensions } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import { AlertModal } from '../../features/alerts/components/AlertModal';
+import { AlertStatusBar } from '../../features/alerts/components/AlertStatusBar';
 import { CandleChart } from '../../features/charts/components/CandleChart';
 import { ChartSkeleton } from '../../features/charts/components/ChartSkeleton';
 import { TimeframeSelector } from '../../features/charts/components/TimeframeSelector';
@@ -21,6 +23,7 @@ export default function DetailScreen() {
 
   const [timeframe, setTimeframe] = useState<Timeframe>('1D');
   const [crosshairPrice, setCrosshairPrice] = useState<number | null>(null);
+  const [alertModalVisible, setAlertModalVisible] = useState(false);
 
   const key = `${symbol}:${timeframe}`;
   const candles = getCandles(symbol, timeframe);
@@ -67,11 +70,28 @@ export default function DetailScreen() {
             ) : null}
           </View>
         </View>
-        <View className="items-end">
-          <Text className="text-text font-semibold text-xl">{displayPrice}</Text>
-          <Text className={`${changeColorClass} text-sm`}>{changeDisplay}</Text>
+        <View className="items-end flex-row" style={{ gap: 12, alignItems: 'flex-start' }}>
+          <View className="items-end">
+            <Text className="text-text font-semibold text-xl">{displayPrice}</Text>
+            <Text className={`${changeColorClass} text-sm`}>{changeDisplay}</Text>
+          </View>
+          <Pressable
+            testID="alert-bell-icon"
+            onPress={() => setAlertModalVisible(true)}
+            style={{ paddingTop: 2 }}
+          >
+            <Text style={{ fontSize: 20 }}>🔔</Text>
+          </Pressable>
         </View>
       </View>
+
+      <AlertModal
+        visible={alertModalVisible}
+        onClose={() => setAlertModalVisible(false)}
+        symbol={symbol}
+        name={quote?.name ?? symbol}
+        currentPrice={quote?.price ?? null}
+      />
 
       {/* Chart area */}
       <View className="flex-1 px-4">
@@ -132,6 +152,9 @@ export default function DetailScreen() {
             loading={isLoading}
           />
         </View>
+
+        {/* Alert status bar */}
+        <AlertStatusBar symbol={symbol} onPress={() => setAlertModalVisible(true)} />
       </View>
     </View>
   );
