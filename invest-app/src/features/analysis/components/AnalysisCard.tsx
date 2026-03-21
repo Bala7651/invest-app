@@ -40,9 +40,9 @@ function riskColor(score: number): string {
   return '#00E676';
 }
 
-function badgeColor(rec: 'Buy' | 'Hold' | 'Sell'): string {
-  if (rec === 'Buy') return '#00E676';
-  if (rec === 'Hold') return '#FFB300';
+function badgeColor(rec: string): string {
+  if (rec === 'Buy' || rec === '買入') return '#00E676';
+  if (rec === 'Hold' || rec === '持有') return '#FFB300';
   return '#FF1744';
 }
 
@@ -117,7 +117,7 @@ export function AnalysisCard({ symbol, name, quote, result, loading, error, onRe
       {result && !loading && !error && (
         <Animated.View style={expandStyle}>
           <View className="border-t border-border mt-3 pt-3">
-            <Text className="text-primary font-semibold mb-1">News Sentiment</Text>
+            <Text className="text-primary font-semibold mb-1">市場情緒</Text>
             <Text style={{ color: scoreColor(result.sentimentScore) }} className="text-sm font-semibold">
               {result.sentimentScore}/100 — {result.sentimentLabel}
             </Text>
@@ -125,12 +125,12 @@ export function AnalysisCard({ symbol, name, quote, result, loading, error, onRe
           </View>
 
           <View className="border-t border-border mt-3 pt-3">
-            <Text className="text-primary font-semibold mb-1">Technical Analysis</Text>
+            <Text className="text-primary font-semibold mb-1">技術分析</Text>
             <Text className="text-muted text-sm">{result.technicalSummary}</Text>
           </View>
 
           <View className="border-t border-border mt-3 pt-3">
-            <Text className="text-primary font-semibold mb-1">Recommendation</Text>
+            <Text className="text-primary font-semibold mb-1">投資建議</Text>
             <Text style={{ color: badgeColor(result.recommendation) }} className="text-sm font-semibold">
               {result.recommendation}
             </Text>
@@ -138,7 +138,7 @@ export function AnalysisCard({ symbol, name, quote, result, loading, error, onRe
           </View>
 
           <View className="border-t border-border mt-3 pt-3">
-            <Text className="text-primary font-semibold mb-1">Risk Assessment</Text>
+            <Text className="text-primary font-semibold mb-1">風險評估</Text>
             <Text style={{ color: riskColor(result.riskScore) }} className="text-sm font-semibold">
               {result.riskScore}/100
             </Text>

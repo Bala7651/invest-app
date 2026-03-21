@@ -57,11 +57,11 @@ export function AnalysisScreen({ isActive }: AnalysisScreenProps) {
   return (
     <View className="flex-1">
       <ScrollView className="flex-1 px-4 pt-4" contentContainerStyle={{ paddingBottom: 16 }}>
-        <Text className="text-primary text-2xl font-bold mb-4">AI Analysis</Text>
+        <Text className="text-primary text-2xl font-bold mb-4">AI 分析</Text>
 
         {items.length === 0 ? (
           <Text className="text-muted text-center mt-8">
-            Add stocks to your watchlist first
+            請先將股票加入自選清單
           </Text>
         ) : (
           items.map(item => {
@@ -104,7 +104,7 @@ export function AnalysisScreen({ isActive }: AnalysisScreenProps) {
       </ScrollView>
 
       <View className="bg-bg border-t border-border py-2">
-        <Text className="text-muted text-xs text-center">Not financial advice</Text>
+        <Text className="text-muted text-xs text-center">本內容不構成投資建議</Text>
       </View>
     </View>
   );

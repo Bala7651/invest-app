@@ -152,7 +152,7 @@ describe('callMiniMax', () => {
     expect(options.headers['Authorization']).toBe('Bearer test-api-key');
   });
 
-  it('sends correct body with model, messages, temperature, max_tokens', async () => {
+  it('sends correct body with model, messages, temperature, max_tokens, Chinese prompt', async () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
       json: async () => ({

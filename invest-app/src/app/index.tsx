@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import ReorderableList, {
   ReorderableListReorderEvent,
@@ -15,7 +15,6 @@ import { EmptyWatchlist } from '../features/watchlist/components/EmptyWatchlist'
 import { SearchModal } from '../features/watchlist/components/SearchModal';
 import { StockCard } from '../features/watchlist/components/StockCard';
 import { WatchlistItem, useWatchlistStore } from '../features/watchlist/store/watchlistStore';
-import { HamburgerDrawer, useDrawer } from '../features/settings/components/HamburgerDrawer';
 
 function SwipeableCard({ item }: { item: WatchlistItem }) {
   const router = useRouter();
@@ -59,7 +58,7 @@ function SwipeableCard({ item }: { item: WatchlistItem }) {
 function WatchlistPage() {
   const items = useWatchlistStore(s => s.items);
   const [searchVisible, setSearchVisible] = useState(false);
-  const { openDrawer } = useDrawer();
+  const router = useRouter();
 
   function handleReorder({ from, to }: ReorderableListReorderEvent) {
     useWatchlistStore.getState().reorderItems(from, to);
@@ -74,7 +73,7 @@ function WatchlistPage() {
       <View className="mb-4">
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center">
-            <Pressable onPress={openDrawer} className="mr-3 py-1">
+            <Pressable onPress={() => router.push('/settings')} className="mr-3 py-1">
               <View style={{ gap: 4 }}>
                 <View style={{ width: 20, height: 2, backgroundColor: '#e0e0e0' }} />
                 <View style={{ width: 20, height: 2, backgroundColor: '#e0e0e0' }} />
@@ -114,22 +113,33 @@ function WatchlistPage() {
 }
 
 export default function HomeScreen() {
-  const [activePage, setActivePage] = useState(0);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const router = useRouter();
+  const pagerRef = useRef<PagerView>(null);
+  const [activePage, setActivePage] = useState(1);
+
+  function handlePageSelected(e: { nativeEvent: { position: number } }) {
+    const page = e.nativeEvent.position;
+    if (page === 0) {
+      pagerRef.current?.setPage(1);
+      router.push('/settings');
+    } else {
+      setActivePage(page);
+    }
+  }
+
   return (
     <PagerView
+      ref={pagerRef}
       style={{ flex: 1 }}
-      initialPage={0}
-      scrollEnabled={!drawerOpen}
-      onPageSelected={e => setActivePage(e.nativeEvent.position)}
+      initialPage={1}
+      onPageSelected={handlePageSelected}
     >
-      <View key="0" style={{ flex: 1 }}>
-        <HamburgerDrawer onDrawerStateChange={setDrawerOpen}>
-          <WatchlistPage />
-        </HamburgerDrawer>
-      </View>
+      <View key="0" style={{ flex: 1 }} />
       <View key="1" style={{ flex: 1 }}>
-        <AnalysisScreen isActive={activePage === 1} />
+        <WatchlistPage />
+      </View>
+      <View key="2" style={{ flex: 1 }}>
+        <AnalysisScreen isActive={activePage === 2} />
       </View>
     </PagerView>
   );
