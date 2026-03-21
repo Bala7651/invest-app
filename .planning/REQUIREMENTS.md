@@ -70,7 +70,7 @@
 - [x] **UI-01**: Dark cyberpunk theme — deep dark background, neon accent colors, glow effects
 - [ ] **UI-02**: Swipeable horizontal page navigation (home <-> AI analysis) like phone home screen
 - [ ] **UI-03**: Responsive layout for Android devices
-- [ ] **UI-04**: App builds as Android APK
+- [x] **UI-04**: App builds as Android APK
 
 ## v2 Requirements
 
@@ -148,7 +148,7 @@
 | UI-01 | Phase 1 | Complete |
 | UI-02 | Phase 6 | Pending |
 | UI-03 | Phase 10 | Pending |
-| UI-04 | Phase 7 | Pending |
+| UI-04 | Phase 7 | Complete |
 
 **Coverage:**
 - v1 requirements: 43 total
