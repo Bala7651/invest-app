@@ -1,3 +1,4 @@
+import { startActivityAsync, ActivityAction } from 'expo-intent-launcher';
 import { useRef, useState } from 'react';
 import { Animated, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -115,6 +116,28 @@ export default function SettingsScreen() {
             onSelect={setGlowLevel}
           />
         </View>
+
+        {/* Alerts section — Android only */}
+        {Platform.OS === 'android' ? (
+          <>
+            <Text className="text-muted text-xs uppercase tracking-widest mb-3">Alerts</Text>
+            <View className="bg-surface border border-border rounded-lg mb-4">
+              <Pressable
+                testID="battery-optimization-row"
+                onPress={() => startActivityAsync(ActivityAction.IGNORE_BATTERY_OPTIMIZATION_SETTINGS)}
+                className="p-4"
+              >
+                <View className="flex-row items-center justify-between">
+                  <View style={{ flex: 1 }}>
+                    <Text className="text-text text-base">Battery Optimization</Text>
+                    <Text className="text-muted text-xs mt-1">Disable for reliable background price alerts</Text>
+                  </View>
+                  <Text className="text-primary text-sm">Open Settings</Text>
+                </View>
+              </Pressable>
+            </View>
+          </>
+        ) : null}
       </ScrollView>
     </KeyboardAvoidingView>
   );

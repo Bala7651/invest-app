@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { checkAlerts } from '../alerts/services/alertMonitor';
 import { getQuotes } from '../../services/stockService';
 import { isMarketOpen } from './marketHours';
 
@@ -80,6 +81,7 @@ export const useQuoteStore = create<QuoteState>((set, get) => ({
           };
         }
         set({ quotes: { ...get().quotes, ...quotes } });
+        checkAlerts(quotes).catch(() => {});
       } catch (e) {
         set({ lastError: String(e) });
       }

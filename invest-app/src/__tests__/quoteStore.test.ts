@@ -10,6 +10,10 @@ jest.mock('../features/market/marketHours', () => ({
   isMarketOpen: jest.fn(),
 }));
 
+jest.mock('../features/alerts/services/alertMonitor', () => ({
+  checkAlerts: jest.fn().mockResolvedValue(undefined),
+}));
+
 import { getQuotes } from '../services/stockService';
 import { isMarketOpen } from '../features/market/marketHours';
 
