@@ -18,7 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 4: Charts** - Stock detail view with candlestick chart, 5 timeframes, volume bars, smooth Skia rendering (completed 2026-03-20)
 - [x] **Phase 5: Settings** - Settings page with MiniMax API key input, secure storage, AI model name config (completed 2026-03-21)
 - [x] **Phase 6: AI Analysis** - AI analysis page with 4 sections (sentiment, technical, recommendation, risk), MiniMax M2.5 integration, swipeable navigation (completed 2026-03-21)
-- [ ] **Phase 7: APK Build** - Release keystore signing, Gradle release build, secret audit, real device verification
+- [x] **Phase 7: APK Build** - Release keystore signing, Gradle release build, secret audit, real device verification (completed 2026-03-21)
 - [ ] **Phase 8: Daily Summary** - Background task for 12:30 daily summary generation, SQLite storage with 2-week auto-purge
 - [ ] **Phase 9: Price Alerts** - Price alert setup from chart detail page, WorkManager background monitoring, push notifications, alert management screen
 - [ ] **Phase 10: Polish** - Sparkline mini charts on watchlist cards, cyberpunk glow animations, responsive layout refinement
@@ -197,7 +197,7 @@ Note: Phase 5 (Settings) depends only on Phase 1 and can be built in parallel wi
 | 4. Charts | 2/2 | Complete   | 2026-03-20 |
 | 5. Settings | 1/2 | In Progress|  |
 | 6. AI Analysis | 2/3 | In Progress|  |
-| 7. APK Build | 0/2 | Not started | - |
+| 7. APK Build | 2/2 | Complete   | 2026-03-21 |
 | 8. Daily Summary | 0/2 | Not started | - |
 | 9. Price Alerts | 0/2 | Not started | - |
 | 10. Polish | 0/2 | Not started | - |

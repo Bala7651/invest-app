@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: milestone
 status: completed
-stopped_at: Completed 07-apk-build/07-01-PLAN.md
-last_updated: "2026-03-21T10:51:31.955Z"
+stopped_at: Completed 07-apk-build/07-02-PLAN.md
+last_updated: "2026-03-21T12:48:32.210Z"
 last_activity: "2026-03-20 — Completed 04-02: CandleChart, VolumeBar, TimeframeSelector, ChartSkeleton, detail screen wired — checkpoint approved"
 progress:
   total_phases: 10
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 16
-  completed_plans: 13
+  completed_plans: 14
   percent: 89
 ---
 
@@ -62,6 +62,7 @@ Progress: [█████████░] 89%
 | Phase 06-ai-analysis P01 | 2 | 2 tasks | 5 files |
 | Phase 06-ai-analysis P02 | 2 | 2 tasks | 4 files |
 | Phase 07-apk-build P01 | 4 | 2 tasks | 4 files |
+| Phase 07-apk-build P02 | 2 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -115,6 +116,8 @@ Recent decisions affecting current work:
 - [Phase 07-apk-build]: audit-apk.sh requires ulimit -f unlimited — 97MB APK exceeds default 32MB shell file size limit
 - [Phase 07-apk-build]: APK uses v2/v3 signing scheme; use apksigner verify --print-certs not keytool -printcert -jarfile to confirm release cert
 - [Phase 07-apk-build]: versionName bumped to 0.7.0; keystore credentials in gitignored gradle.properties, never in source
+- [Phase 07-apk-build]: Keystore backed up to ~/invest-app-release.keystore outside git repo for safety
+- [Phase 07-apk-build]: GitHub Release v0.7.0 created per project memory: upload APK after each phase
 
 ### Pending Todos
 
@@ -131,6 +134,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T10:51:31.952Z
-Stopped at: Completed 07-apk-build/07-01-PLAN.md
+Last session: 2026-03-21T12:48:32.206Z
+Stopped at: Completed 07-apk-build/07-02-PLAN.md
 Resume file: None
