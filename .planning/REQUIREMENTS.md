@@ -43,12 +43,12 @@
 ### Price Alerts
 
 - [ ] **ALRT-01**: User can enable price alert from the chart detail page via top-right icon
-- [ ] **ALRT-02**: User can set a target price (above or below current) to trigger notification
+- [x] **ALRT-02**: User can set a target price (above or below current) to trigger notification
 - [ ] **ALRT-03**: When alert is first enabled, app prompts user to disable battery optimization (Android)
-- [ ] **ALRT-04**: App monitors prices in background and sends push notification when target price is reached
-- [ ] **ALRT-05**: Background monitoring is battery-efficient (uses Android WorkManager with smart intervals)
+- [x] **ALRT-04**: App monitors prices in background and sends push notification when target price is reached
+- [x] **ALRT-05**: Background monitoring is battery-efficient (uses Android WorkManager with smart intervals)
 - [ ] **ALRT-06**: User can view and manage all active price alerts
-- [ ] **ALRT-07**: Alert persists in SQLite and survives app restart
+- [x] **ALRT-07**: Alert persists in SQLite and survives app restart
 
 ### Daily Summary
 
@@ -130,12 +130,12 @@
 | AI-07 | Phase 6 | Complete |
 | AI-08 | Phase 6 | Complete |
 | ALRT-01 | Phase 9 | Pending |
-| ALRT-02 | Phase 9 | Pending |
+| ALRT-02 | Phase 9 | Complete |
 | ALRT-03 | Phase 9 | Pending |
-| ALRT-04 | Phase 9 | Pending |
-| ALRT-05 | Phase 9 | Pending |
+| ALRT-04 | Phase 9 | Complete |
+| ALRT-05 | Phase 9 | Complete |
 | ALRT-06 | Phase 9 | Pending |
-| ALRT-07 | Phase 9 | Pending |
+| ALRT-07 | Phase 9 | Complete |
 | SUMM-01 | Phase 8 | Complete |
 | SUMM-02 | Phase 8 | Complete |
 | SUMM-03 | Phase 8 | Complete |
