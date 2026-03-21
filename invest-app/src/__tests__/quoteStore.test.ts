@@ -57,6 +57,7 @@ beforeEach(() => {
     polling: false,
     lastError: null,
     _intervalId: null,
+    tickHistory: {},
   });
 });
 
@@ -200,5 +201,86 @@ describe('quoteStore polling lifecycle', () => {
     // price=null => change=0, changePct=0
     expect(q2317.change).toBe(0);
     expect(q2317.changePct).toBe(0);
+  });
+});
+
+describe('quoteStore tickHistory', () => {
+  test('tickHistory accumulates price on each tick', async () => {
+    await act(async () => {
+      useQuoteStore.getState().startPolling(SYMBOLS);
+      await Promise.resolve();
+    });
+
+    const tickHistory = useQuoteStore.getState().tickHistory;
+    // 2330 has price=1000 -> should be in tickHistory
+    expect(tickHistory['2330']).toEqual([1000]);
+  });
+
+  test('tickHistory skips null prices', async () => {
+    await act(async () => {
+      useQuoteStore.getState().startPolling(SYMBOLS);
+      await Promise.resolve();
+    });
+
+    const tickHistory = useQuoteStore.getState().tickHistory;
+    // 2317 has price=null -> should not be in tickHistory
+    expect(tickHistory['2317']).toBeUndefined();
+  });
+
+  test('tickHistory accumulates across multiple ticks', async () => {
+    mockGetQuotes
+      .mockResolvedValueOnce([
+        { ...MOCK_QUOTES[0], price: 1000 },
+        { ...MOCK_QUOTES[1], price: null },
+      ])
+      .mockResolvedValueOnce([
+        { ...MOCK_QUOTES[0], price: 1005 },
+        { ...MOCK_QUOTES[1], price: null },
+      ]);
+
+    await act(async () => {
+      useQuoteStore.getState().startPolling(SYMBOLS);
+      await Promise.resolve();
+    });
+
+    // Trigger second tick via setInterval
+    await act(async () => {
+      jest.advanceTimersByTime(30_000);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const tickHistory = useQuoteStore.getState().tickHistory;
+    expect(tickHistory['2330']).toEqual([1000, 1005]);
+  });
+
+  test('tickHistory resets to empty object on stopPolling', async () => {
+    await act(async () => {
+      useQuoteStore.getState().startPolling(SYMBOLS);
+      await Promise.resolve();
+    });
+
+    expect(useQuoteStore.getState().tickHistory['2330']).toEqual([1000]);
+
+    useQuoteStore.getState().stopPolling();
+
+    expect(useQuoteStore.getState().tickHistory).toEqual({});
+  });
+
+  test('tickHistory accumulates in final fetch when market closes mid-session', async () => {
+    mockIsMarketOpen
+      .mockReturnValueOnce(true)   // startPolling guard
+      .mockReturnValueOnce(false); // tick's check -> final fetch + stop
+
+    await act(async () => {
+      useQuoteStore.getState().startPolling(SYMBOLS);
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    // Final fetch should still accumulate tickHistory before stop
+    const tickHistory = useQuoteStore.getState().tickHistory;
+    expect(tickHistory['2330']).toEqual([1000]);
   });
 });
