@@ -176,11 +176,11 @@ Plans:
   1. Each watchlist card displays a small sparkline chart showing the current day's price trend without replacing the price/delta text
   2. The app layout displays correctly without overflow or truncation on a 5-inch phone screen (e.g. 1080x1920) and a 6.7-inch phone screen (e.g. 1080x2400)
   3. Cyberpunk neon glow animations pulse on price updates (observable as a brief color flash on the price value)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 10-01: Sparkline mini chart component integrated into StockCard
-- [ ] 10-02: Responsive layout audit, neon glow animation on price update, final visual polish pass
+- [ ] 10-01-PLAN.md — SparklineChart SVG component, quoteStore tickHistory, StockCard sparkline + glow flash integration
+- [ ] 10-02-PLAN.md — SafeArea fixes, pull-to-refresh, tablet centering, empty state polish, neon visual accents
 
 ## Progress
 
