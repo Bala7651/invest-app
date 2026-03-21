@@ -1,7 +1,8 @@
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, RefreshControl, Text, View, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ReorderableList, {
   ReorderableListReorderEvent,
   useReorderableDrag,
@@ -64,19 +65,33 @@ function WatchlistPage() {
   const items = useWatchlistStore(s => s.items);
   const [searchVisible, setSearchVisible] = useState(false);
   const [alertsListVisible, setAlertsListVisible] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshEnabled, setRefreshEnabled] = useState(true);
   const alertCount = useAlertStore(s => s.activeCount());
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 600;
 
   function handleReorder({ from, to }: ReorderableListReorderEvent) {
     useWatchlistStore.getState().reorderItems(from, to);
+  }
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    const symbols = items.map(i => i.symbol);
+    if (symbols.length > 0) {
+      await useQuoteStore.getState().forceRefresh(symbols);
+    }
+    setRefreshing(false);
   }
 
   function renderItem({ item }: { item: WatchlistItem }) {
     return <SwipeableCard item={item} />;
   }
 
-  return (
-    <View className="flex-1 bg-bg px-4 pt-12">
+  const content = (
+    <View className="flex-1 bg-bg px-4" style={{ paddingTop: insets.top }}>
       <View className="mb-4">
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center">
@@ -103,6 +118,7 @@ function WatchlistPage() {
             </Pressable>
           </View>
         </View>
+        <View style={{ height: 1, backgroundColor: '#4D7CFF', opacity: 0.6, marginTop: 4 }} />
         <MarketStatusBar />
       </View>
 
@@ -123,12 +139,36 @@ function WatchlistPage() {
           keyExtractor={item => item.symbol}
           renderItem={renderItem}
           onReorder={handleReorder}
+          onDragStart={() => setRefreshEnabled(false)}
+          onDragEnd={() => setRefreshEnabled(true)}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              enabled={refreshEnabled}
+              colors={['#4D7CFF']}
+              tintColor="#4D7CFF"
+              progressBackgroundColor="#0D0D14"
+            />
+          }
         />
       )}
 
       <SearchModal visible={searchVisible} onClose={() => setSearchVisible(false)} />
     </View>
   );
+
+  if (isTablet) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#050508' }}>
+        <View style={{ maxWidth: 540, alignSelf: 'center', width: '100%', flex: 1 }}>
+          {content}
+        </View>
+      </View>
+    );
+  }
+
+  return content;
 }
 
 export default function HomeScreen() {

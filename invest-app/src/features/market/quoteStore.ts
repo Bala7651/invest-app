@@ -21,6 +21,7 @@ interface QuoteState {
   _intervalId: ReturnType<typeof setInterval> | null;
   startPolling: (symbols: string[]) => void;
   stopPolling: () => void;
+  forceRefresh: (symbols: string[]) => Promise<void>;
 }
 
 export const useQuoteStore = create<QuoteState>((set, get) => ({
@@ -115,5 +116,33 @@ export const useQuoteStore = create<QuoteState>((set, get) => ({
       clearInterval(_intervalId);
     }
     set({ polling: false, _intervalId: null, tickHistory: {} });
+  },
+
+  async forceRefresh(symbols: string[]) {
+    try {
+      const raw = await getQuotes(symbols);
+      const fetchedAt = Date.now();
+      const quotes: Record<string, Quote> = {};
+      const tickHistory = { ...get().tickHistory };
+      for (const q of raw) {
+        const change = q.price !== null ? q.price - q.prevClose : 0;
+        const changePct = q.price !== null ? (change / q.prevClose) * 100 : 0;
+        quotes[q.symbol] = {
+          symbol: q.symbol,
+          name: q.name,
+          price: q.price,
+          prevClose: q.prevClose,
+          change,
+          changePct,
+          fetchedAt,
+        };
+        if (q.price !== null) {
+          tickHistory[q.symbol] = [...(tickHistory[q.symbol] ?? []), q.price];
+        }
+      }
+      set({ quotes: { ...get().quotes, ...quotes }, tickHistory });
+    } catch (e) {
+      set({ lastError: String(e) });
+    }
   },
 }));

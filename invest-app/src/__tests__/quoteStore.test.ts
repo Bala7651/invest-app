@@ -204,6 +204,74 @@ describe('quoteStore polling lifecycle', () => {
   });
 });
 
+describe('quoteStore forceRefresh', () => {
+  test('forceRefresh fetches quotes and updates store', async () => {
+    await act(async () => {
+      await useQuoteStore.getState().forceRefresh(SYMBOLS);
+    });
+
+    const quotes = useQuoteStore.getState().quotes;
+    expect(quotes['2330']).toBeDefined();
+    expect(quotes['2330'].price).toBe(1000);
+    expect(quotes['2317']).toBeDefined();
+    expect(mockGetQuotes).toHaveBeenCalledWith(SYMBOLS);
+  });
+
+  test('forceRefresh updates tickHistory with new prices', async () => {
+    await act(async () => {
+      await useQuoteStore.getState().forceRefresh(SYMBOLS);
+    });
+
+    const tickHistory = useQuoteStore.getState().tickHistory;
+    expect(tickHistory['2330']).toEqual([1000]);
+    // 2317 has null price, should not be added
+    expect(tickHistory['2317']).toBeUndefined();
+  });
+
+  test('forceRefresh appends to existing tickHistory', async () => {
+    useQuoteStore.setState({ tickHistory: { '2330': [990] } });
+
+    await act(async () => {
+      await useQuoteStore.getState().forceRefresh(['2330']);
+    });
+
+    const tickHistory = useQuoteStore.getState().tickHistory;
+    expect(tickHistory['2330']).toEqual([990, 1000]);
+  });
+
+  test('forceRefresh works while polling is active', async () => {
+    await act(async () => {
+      useQuoteStore.getState().startPolling(SYMBOLS);
+      await Promise.resolve();
+    });
+
+    expect(useQuoteStore.getState().polling).toBe(true);
+
+    mockGetQuotes.mockResolvedValueOnce([
+      { ...MOCK_QUOTES[0], price: 1010 },
+      { ...MOCK_QUOTES[1] },
+    ]);
+
+    await act(async () => {
+      await useQuoteStore.getState().forceRefresh(SYMBOLS);
+    });
+
+    const quotes = useQuoteStore.getState().quotes;
+    expect(quotes['2330'].price).toBe(1010);
+    expect(useQuoteStore.getState().polling).toBe(true);
+  });
+
+  test('forceRefresh sets lastError on fetch failure', async () => {
+    mockGetQuotes.mockRejectedValueOnce(new Error('Network error'));
+
+    await act(async () => {
+      await useQuoteStore.getState().forceRefresh(SYMBOLS);
+    });
+
+    expect(useQuoteStore.getState().lastError).toBe('Error: Network error');
+  });
+});
+
 describe('quoteStore tickHistory', () => {
   test('tickHistory accumulates price on each tick', async () => {
     await act(async () => {
