@@ -37,8 +37,8 @@
 - [ ] **AI-04**: Each stock's AI section includes technical analysis summary in plain language
 - [ ] **AI-05**: Each stock's AI section includes Buy/Hold/Sell recommendation with reasoning
 - [ ] **AI-06**: Each stock's AI section includes risk assessment score with explanation
-- [ ] **AI-07**: AI prompts are grounded with real TWSE data (no hallucinated figures)
-- [ ] **AI-08**: AI analysis uses MiniMax M2.5 via OpenAI-compatible API (api.minimax.io/v1)
+- [x] **AI-07**: AI prompts are grounded with real TWSE data (no hallucinated figures)
+- [x] **AI-08**: AI analysis uses MiniMax M2.5 via OpenAI-compatible API (api.minimax.io/v1)
 
 ### Price Alerts
 
@@ -127,8 +127,8 @@
 | AI-04 | Phase 6 | Pending |
 | AI-05 | Phase 6 | Pending |
 | AI-06 | Phase 6 | Pending |
-| AI-07 | Phase 6 | Pending |
-| AI-08 | Phase 6 | Pending |
+| AI-07 | Phase 6 | Complete |
+| AI-08 | Phase 6 | Complete |
 | ALRT-01 | Phase 9 | Pending |
 | ALRT-02 | Phase 9 | Pending |
 | ALRT-03 | Phase 9 | Pending |

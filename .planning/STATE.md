@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Phase 6 context gathered
-last_updated: "2026-03-21T08:49:56.495Z"
+stopped_at: Completed 06-ai-analysis/06-01-PLAN.md
+last_updated: "2026-03-21T09:20:11.476Z"
 last_activity: "2026-03-20 — Completed 04-02: CandleChart, VolumeBar, TimeframeSelector, ChartSkeleton, detail screen wired — checkpoint approved"
 progress:
   total_phases: 10
   completed_phases: 4
-  total_plans: 11
-  completed_plans: 10
+  total_plans: 14
+  completed_plans: 11
   percent: 89
 ---
 
@@ -59,6 +59,7 @@ Progress: [█████████░] 89%
 | Phase 04-charts P01 | 6 | 2 tasks | 6 files |
 | Phase 04-charts P02 | 4 | 2 tasks | 8 files |
 | Phase 05-settings P01 | 5 | 2 tasks | 4 files |
+| Phase 06-ai-analysis P01 | 2 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -103,6 +104,9 @@ Recent decisions affecting current work:
 - [Phase 05-settings]: Named imports from expo-secure-store required for Jest mock compatibility — namespace import caused TypeError
 - [Phase 05-settings]: setModelName and setBaseUrl are async — persist to SecureStore so preferences survive app restarts
 - [Phase 05-settings]: loadFromSecureStore fires fire-and-forget in _layout.tsx hydration useEffect — parallel with watchlist loadFromDb, non-blocking
+- [Phase 06-ai-analysis]: Use /text/chatcompletion_v2 (MiniMax native) not /chat/completions in minimaxApi
+- [Phase 06-ai-analysis]: Prompt-based JSON extraction (not response_format json_schema — unsupported by M2.5)
+- [Phase 06-ai-analysis]: cachedAt stored separately in analysisStore — mirrors chartStore, keeps TTL check clean
 
 ### Pending Todos
 
@@ -119,6 +123,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T08:49:56.490Z
-Stopped at: Phase 6 context gathered
-Resume file: .planning/phases/06-ai-analysis/06-CONTEXT.md
+Last session: 2026-03-21T09:20:11.472Z
+Stopped at: Completed 06-ai-analysis/06-01-PLAN.md
+Resume file: None
