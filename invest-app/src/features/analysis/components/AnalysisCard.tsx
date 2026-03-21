@@ -58,7 +58,7 @@ export function AnalysisCard({ symbol, name, quote, result, loading, error, onRe
   function toggleExpand() {
     const next = !expanded;
     setExpanded(next);
-    maxHeight.value = withTiming(next ? 500 : 0, { duration: 250 });
+    maxHeight.value = withTiming(next ? 2000 : 0, { duration: 250 });
   }
 
   const priceDisplay = quote?.price != null ? quote.price.toFixed(2) : '—';

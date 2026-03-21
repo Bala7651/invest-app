@@ -115,20 +115,22 @@ function WatchlistPage() {
 
 export default function HomeScreen() {
   const [activePage, setActivePage] = useState(0);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   return (
-    <HamburgerDrawer edgeSwipeEnabled={activePage === 0}>
-      <PagerView
-        style={{ flex: 1 }}
-        initialPage={0}
-        onPageSelected={e => setActivePage(e.nativeEvent.position)}
-      >
-        <View key="0" style={{ flex: 1 }}>
+    <PagerView
+      style={{ flex: 1 }}
+      initialPage={0}
+      scrollEnabled={!drawerOpen}
+      onPageSelected={e => setActivePage(e.nativeEvent.position)}
+    >
+      <View key="0" style={{ flex: 1 }}>
+        <HamburgerDrawer onDrawerStateChange={setDrawerOpen}>
           <WatchlistPage />
-        </View>
-        <View key="1" style={{ flex: 1 }}>
-          <AnalysisScreen isActive={activePage === 1} />
-        </View>
-      </PagerView>
-    </HamburgerDrawer>
+        </HamburgerDrawer>
+      </View>
+      <View key="1" style={{ flex: 1 }}>
+        <AnalysisScreen isActive={activePage === 1} />
+      </View>
+    </PagerView>
   );
 }

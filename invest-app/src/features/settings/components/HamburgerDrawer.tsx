@@ -15,7 +15,7 @@ export function useDrawer() {
 
 interface HamburgerDrawerProps {
   children: React.ReactNode;
-  edgeSwipeEnabled?: boolean;
+  onDrawerStateChange?: (isOpen: boolean) => void;
 }
 
 function DrawerContent({ closeDrawer }: { closeDrawer: () => void }) {
@@ -38,7 +38,7 @@ function DrawerContent({ closeDrawer }: { closeDrawer: () => void }) {
   );
 }
 
-export function HamburgerDrawer({ children, edgeSwipeEnabled = false }: HamburgerDrawerProps) {
+export function HamburgerDrawer({ children, onDrawerStateChange }: HamburgerDrawerProps) {
   const drawerRef = useRef<DrawerLayoutMethods>(null);
 
   function openDrawer() {
@@ -56,7 +56,9 @@ export function HamburgerDrawer({ children, edgeSwipeEnabled = false }: Hamburge
         drawerType={DrawerType.FRONT}
         drawerWidth={260}
         overlayColor="rgba(0,0,0,0.6)"
-        edgeWidth={edgeSwipeEnabled ? 30 : 0}
+        edgeWidth={40}
+        onDrawerOpen={() => onDrawerStateChange?.(true)}
+        onDrawerClose={() => onDrawerStateChange?.(false)}
         renderNavigationView={() => <DrawerContent closeDrawer={closeDrawer} />}
       >
         {children}
