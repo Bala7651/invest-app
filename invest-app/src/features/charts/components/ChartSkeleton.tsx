@@ -25,8 +25,7 @@ export function ChartSkeleton({ height }: ChartSkeletonProps) {
   return (
     <View style={{ height }}>
       <Animated.View
-        style={[{ flex: 1, borderRadius: 8 }, animatedStyle]}
-        className="bg-surface"
+        style={[{ flex: 1, borderRadius: 8, backgroundColor: 'rgba(77, 124, 255, 0.12)' }, animatedStyle]}
       />
     </View>
   );
