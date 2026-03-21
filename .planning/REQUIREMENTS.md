@@ -32,11 +32,11 @@
 ### AI Analysis
 
 - [ ] **AI-01**: User can swipe left from home page to AI analysis page
-- [ ] **AI-02**: AI analysis page shows analysis for all watchlist stocks
-- [ ] **AI-03**: Each stock's AI section includes news sentiment analysis (bullish/bearish score)
-- [ ] **AI-04**: Each stock's AI section includes technical analysis summary in plain language
-- [ ] **AI-05**: Each stock's AI section includes Buy/Hold/Sell recommendation with reasoning
-- [ ] **AI-06**: Each stock's AI section includes risk assessment score with explanation
+- [x] **AI-02**: AI analysis page shows analysis for all watchlist stocks
+- [x] **AI-03**: Each stock's AI section includes news sentiment analysis (bullish/bearish score)
+- [x] **AI-04**: Each stock's AI section includes technical analysis summary in plain language
+- [x] **AI-05**: Each stock's AI section includes Buy/Hold/Sell recommendation with reasoning
+- [x] **AI-06**: Each stock's AI section includes risk assessment score with explanation
 - [x] **AI-07**: AI prompts are grounded with real TWSE data (no hallucinated figures)
 - [x] **AI-08**: AI analysis uses MiniMax M2.5 via OpenAI-compatible API (api.minimax.io/v1)
 
@@ -122,11 +122,11 @@
 | CHRT-03 | Phase 4 | Complete |
 | CHRT-04 | Phase 4 | Complete |
 | AI-01 | Phase 6 | Pending |
-| AI-02 | Phase 6 | Pending |
-| AI-03 | Phase 6 | Pending |
-| AI-04 | Phase 6 | Pending |
-| AI-05 | Phase 6 | Pending |
-| AI-06 | Phase 6 | Pending |
+| AI-02 | Phase 6 | Complete |
+| AI-03 | Phase 6 | Complete |
+| AI-04 | Phase 6 | Complete |
+| AI-05 | Phase 6 | Complete |
+| AI-06 | Phase 6 | Complete |
 | AI-07 | Phase 6 | Complete |
 | AI-08 | Phase 6 | Complete |
 | ALRT-01 | Phase 9 | Pending |

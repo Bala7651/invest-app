@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 06-ai-analysis/06-01-PLAN.md
-last_updated: "2026-03-21T09:20:11.476Z"
+stopped_at: Completed 06-ai-analysis/06-02-PLAN.md
+last_updated: "2026-03-21T09:23:57.956Z"
 last_activity: "2026-03-20 — Completed 04-02: CandleChart, VolumeBar, TimeframeSelector, ChartSkeleton, detail screen wired — checkpoint approved"
 progress:
   total_phases: 10
   completed_phases: 4
   total_plans: 14
-  completed_plans: 11
+  completed_plans: 12
   percent: 89
 ---
 
@@ -60,6 +60,7 @@ Progress: [█████████░] 89%
 | Phase 04-charts P02 | 4 | 2 tasks | 8 files |
 | Phase 05-settings P01 | 5 | 2 tasks | 4 files |
 | Phase 06-ai-analysis P01 | 2 | 2 tasks | 5 files |
+| Phase 06-ai-analysis P02 | 2 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -107,6 +108,9 @@ Recent decisions affecting current work:
 - [Phase 06-ai-analysis]: Use /text/chatcompletion_v2 (MiniMax native) not /chat/completions in minimaxApi
 - [Phase 06-ai-analysis]: Prompt-based JSON extraction (not response_format json_schema — unsupported by M2.5)
 - [Phase 06-ai-analysis]: cachedAt stored separately in analysisStore — mirrors chartStore, keeps TTL check clean
+- [Phase 06-ai-analysis]: volume: 0 injected when building QuoteData from quoteStore Quote — quoteStore lacks volume field, minimaxApi QuoteData requires it
+- [Phase 06-ai-analysis]: AnalysisCard loading shows AnalysisSkeleton inline below header — keeps stock identity visible during loading
+- [Phase 06-ai-analysis]: sticky disclaimer footer as sibling View after ScrollView (not absolute) for reliable layout
 
 ### Pending Todos
 
@@ -123,6 +127,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T09:20:11.472Z
-Stopped at: Completed 06-ai-analysis/06-01-PLAN.md
+Last session: 2026-03-21T09:23:57.952Z
+Stopped at: Completed 06-ai-analysis/06-02-PLAN.md
 Resume file: None
