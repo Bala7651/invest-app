@@ -162,11 +162,11 @@ Plans:
   3. On first alert creation, the app shows a prompt asking the user to disable Android battery optimization, linking to system settings
   4. Alerts for all watched stocks survive app restart — after reopening, the same alerts are present and continue monitoring
   5. From the alert management screen, user can view all active alerts and delete any one of them; deleted alerts stop triggering notifications
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 09-01: AlertStore, SQLite alerts table, CRUD operations, AlertService with WorkManager-backed background price check
-- [ ] 09-02: Alert icon + setup modal on DetailScreen, battery optimization prompt, AlertsScreen (management list)
+- [ ] 09-01-PLAN.md — Schema + migration, alertService CRUD, alertMonitor condition checker, alertTask background worker, alertStore
+- [ ] 09-02-PLAN.md — AlertModal + AlertsListModal UI, detail/home screen bell icons, foreground check wiring, battery optimization in Settings
 
 ### Phase 10: Polish
 **Goal**: The watchlist home screen gains sparkline mini charts for at-a-glance price trends, and the overall UI is refined to be responsive across different Android screen sizes
