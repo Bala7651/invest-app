@@ -1,7 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Pressable, Text, View, useWindowDimensions } from 'react-native';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { AlertModal } from '../../features/alerts/components/AlertModal';
 import { AlertStatusBar } from '../../features/alerts/components/AlertStatusBar';
 import { CandleChart } from '../../features/charts/components/CandleChart';
@@ -118,7 +117,7 @@ export default function DetailScreen() {
             </Pressable>
           </View>
         ) : candles && candles.length > 0 ? (
-          <Animated.View entering={FadeIn.duration(300)} exiting={FadeOut.duration(200)}>
+          <View>
             {/* Candlestick chart */}
             <View className="border border-border rounded-lg overflow-hidden mb-1">
               <CandleChart
@@ -133,7 +132,7 @@ export default function DetailScreen() {
             >
               <VolumeBar data={candles} height={volumeHeight} width={chartWidth} />
             </View>
-          </Animated.View>
+          </View>
         ) : (
           <ChartSkeleton height={chartHeight + volumeHeight + 16} />
         )}
