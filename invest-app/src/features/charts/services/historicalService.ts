@@ -46,11 +46,17 @@ function parseCommaNumber(s: string): number {
   return parseFloat(s.replace(/,/g, ''));
 }
 
+function timeoutSignal(ms: number): AbortSignal {
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), ms);
+  return controller.signal;
+}
+
 async function fetchFinMindDaily(stockId: string, startDate: string): Promise<OHLCVPoint[]> {
   const url = `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=${stockId}&start_date=${startDate}`;
   const res = await fetch(url, {
     headers: { 'User-Agent': 'invest-app/1.0' },
-    signal: AbortSignal.timeout(10_000),
+    signal: timeoutSignal(10_000),
   });
   if (!res.ok) throw new Error(`FinMind HTTP ${res.status}`);
   const data = await res.json();
@@ -70,7 +76,7 @@ async function fetchTWSEMonthly(stockId: string, year: number, month: number): P
   const url = `https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=${year}${mm}01&stockNo=${stockId}`;
   const res = await fetch(url, {
     headers: { 'User-Agent': 'invest-app/1.0' },
-    signal: AbortSignal.timeout(10_000),
+    signal: timeoutSignal(10_000),
   });
   if (!res.ok) throw new Error(`TWSE HTTP ${res.status}`);
   const data = await res.json();
