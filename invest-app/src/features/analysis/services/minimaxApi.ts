@@ -33,7 +33,9 @@ Provide your analysis as a JSON object.`;
 }
 
 export function parseAnalysisResponse(content: string): AnalysisResult {
-  const match = content.match(/```(?:json)?\s*([\s\S]*?)```/) ?? content.match(/(\{[\s\S]*\})/);
+  // MiniMax reasoning models wrap thinking in <think>...</think> — strip it first
+  const cleaned = content.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+  const match = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/) ?? cleaned.match(/(\{[\s\S]*\})/);
   if (!match) throw new Error('No JSON found in response');
   return JSON.parse(match[1]) as AnalysisResult;
 }

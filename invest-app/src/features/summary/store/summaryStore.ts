@@ -4,6 +4,7 @@ import { useQuoteStore } from '../../market/quoteStore';
 import {
   getTodayISO,
   fetchTWIX,
+  fetchLatestQuoteForSummary,
   buildSummaryPrompt,
   buildIndexSummaryPrompt,
   callSummaryMiniMax,
@@ -55,7 +56,8 @@ export const useSummaryStore = create<SummaryState>((set, get) => ({
       const indexData = await fetchTWIX();
       if (indexData) {
         const userPrompt = buildIndexSummaryPrompt(indexData);
-        const content = await callSummaryMiniMax('TWSE', userPrompt, credentials);
+        const raw = await callSummaryMiniMax('TWSE', userPrompt, credentials);
+        const content = raw.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
         await upsertSummary('TWSE', date, content);
       } else {
         await upsertSummary('TWSE', date, `${ERROR_PREFIX}無法取得大盤資料`);
@@ -71,12 +73,16 @@ export const useSummaryStore = create<SummaryState>((set, get) => ({
     // Step 2: Per-stock loop (sequential)
     for (const item of watchlistItems) {
       try {
+        // Always try fresh TWSE data first; fall back to in-memory quote
         const q = quotes[item.symbol];
-        const quoteData = q
-          ? { price: q.price, change: q.change, changePct: q.changePct, prevClose: q.prevClose }
-          : { price: null, change: 0, changePct: 0, prevClose: 0 };
+        const freshQuote = await fetchLatestQuoteForSummary(item.symbol);
+        const quoteData = freshQuote
+          ?? (q ? { price: q.price, change: q.change, changePct: q.changePct, prevClose: q.prevClose }
+               : { price: null, change: 0, changePct: 0, prevClose: 0 });
         const userPrompt = buildSummaryPrompt(item.symbol, item.name, quoteData);
-        const content = await callSummaryMiniMax(item.symbol, userPrompt, credentials);
+        const raw = await callSummaryMiniMax(item.symbol, userPrompt, credentials);
+        // Strip <think> reasoning blocks from MiniMax reasoning models
+        const content = raw.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
         await upsertSummary(item.symbol, date, content);
       } catch (e) {
         const msg = String(e);

@@ -6,6 +6,12 @@ import { Credentials, SummaryEntry } from '../types';
 
 const CUTOFF_DAYS = 14;
 
+function timeoutSignal(ms: number): AbortSignal {
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), ms);
+  return controller.signal;
+}
+
 // ---------------------------------------------------------------------------
 // Date helpers (Taipei timezone — never use toISOString which is UTC)
 // ---------------------------------------------------------------------------
@@ -67,7 +73,7 @@ export async function fetchTWIX(): Promise<{ close: number; change: number; chan
   try {
     const res = await fetch('https://openapi.twse.com.tw/v1/exchangeReport/MI_INDEX', {
       headers: { 'User-Agent': 'invest-app/1.0' },
-      signal: AbortSignal.timeout(10_000),
+      signal: timeoutSignal(6_000),
     });
     if (!res.ok) return null;
     const data: TWIXEntry[] = await res.json();
@@ -79,6 +85,37 @@ export async function fetchTWIX(): Promise<{ close: number; change: number; chan
       change: sign * parseFloat(taiex['漲跌點數']),
       changePct: sign * parseFloat(taiex['漲跌百分比']),
     };
+  } catch {
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Fresh quote from TWSE (used by summary so market-closed state still works)
+// ---------------------------------------------------------------------------
+
+export async function fetchLatestQuoteForSummary(symbol: string): Promise<SummaryQuoteData | null> {
+  const now = new Date();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const url = `https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=${now.getFullYear()}${mm}01&stockNo=${symbol}`;
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'invest-app/1.0' },
+      signal: timeoutSignal(6_000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data.data || data.data.length < 2) return null;
+    const rows: string[][] = data.data;
+    const latest = rows[rows.length - 1];
+    const prev = rows[rows.length - 2];
+    const parseNum = (s: string) => parseFloat(s.replace(/,/g, ''));
+    const close = parseNum(latest[6]);
+    const prevClose = parseNum(prev[6]);
+    if (isNaN(close) || isNaN(prevClose)) return null;
+    const change = close - prevClose;
+    const changePct = prevClose !== 0 ? (change / prevClose) * 100 : 0;
+    return { price: close, change, changePct, prevClose };
   } catch {
     return null;
   }
