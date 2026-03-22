@@ -109,8 +109,8 @@ export function EmptyWatchlist({ onAddPress }: EmptyWatchlistProps) {
   return (
     <View className="flex-1 items-center justify-center px-6">
       <NeonChartIcon />
-      <Text className="text-text text-lg font-semibold mb-2">Add stocks to start tracking</Text>
-      <Text className="text-muted text-sm mb-8 text-center">Search by code or name</Text>
+      <Text className="text-text text-lg font-semibold mb-2">新增股票開始追蹤</Text>
+      <Text className="text-muted text-sm mb-8 text-center">輸入代號或名稱搜尋</Text>
       <Pressable
         onPress={onAddPress}
         style={{
@@ -122,7 +122,7 @@ export function EmptyWatchlist({ onAddPress }: EmptyWatchlistProps) {
           backgroundColor: 'rgba(77, 124, 255, 0.08)',
         }}
       >
-        <Text style={{ color: '#4D7CFF', fontWeight: '600', fontSize: 15 }}>Add Stock</Text>
+        <Text style={{ color: '#4D7CFF', fontWeight: '600', fontSize: 15 }}>新增股票</Text>
       </Pressable>
     </View>
   );

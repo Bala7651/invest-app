@@ -39,7 +39,7 @@ export function StockCard({ item, quote, tickHistory, onPress, onLongPress }: St
   const changeDisplay =
     quote?.price != null
       ? formatChange(quote.change, quote.changePct)
-      : 'Waiting for market open';
+      : '等待開盤';
   const changeColorClass =
     quote?.price != null
       ? quote.change >= 0

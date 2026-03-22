@@ -63,7 +63,7 @@ export default function DetailScreen() {
       <View className="flex-row items-center justify-between px-4 mb-4">
         <View className="flex-row items-center">
           <Pressable onPress={() => router.back()} className="mr-4 py-1">
-            <Text className="text-primary text-base">Back</Text>
+            <Text className="text-primary text-base">返回</Text>
           </Pressable>
           <View>
             <Text className="text-primary font-bold text-lg">{symbol}</Text>
@@ -119,7 +119,7 @@ export default function DetailScreen() {
               }}
               className="bg-surface px-4 py-2 rounded-lg border border-border"
             >
-              <Text className="text-primary text-sm">Retry</Text>
+              <Text className="text-primary text-sm">重試</Text>
             </Pressable>
           </View>
         ) : candles && candles.length > 0 ? (

@@ -29,7 +29,7 @@ function SwipeableCard({ item }: { item: WatchlistItem }) {
   function renderRightActions() {
     return (
       <View className="bg-stock-down justify-center items-center w-20 rounded-r-lg mb-2">
-        <Text className="text-bg font-semibold text-base">Delete</Text>
+        <Text className="text-bg font-semibold text-base">刪除</Text>
       </View>
     );
   }
@@ -102,7 +102,7 @@ function WatchlistPage() {
                 <View style={{ width: 20, height: 2, backgroundColor: '#e0e0e0' }} />
               </View>
             </Pressable>
-            <Text className="text-text text-2xl font-bold">Watchlist</Text>
+            <Text className="text-text text-2xl font-bold">自選清單</Text>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <Pressable onPress={() => setAlertsListVisible(true)} style={{ position: 'relative' }}>
@@ -114,7 +114,7 @@ function WatchlistPage() {
               ) : null}
             </Pressable>
             <Pressable onPress={() => setSearchVisible(true)}>
-              <Text className="text-primary text-base">+ Add</Text>
+              <Text className="text-primary text-base">+ 新增</Text>
             </Pressable>
           </View>
         </View>
@@ -128,7 +128,7 @@ function WatchlistPage() {
         onPress={() => setSearchVisible(true)}
         className="bg-surface border border-border rounded-lg px-4 py-3 mb-4 flex-row items-center"
       >
-        <Text className="text-muted text-base flex-1">Search stocks...</Text>
+        <Text className="text-muted text-base flex-1">搜尋股票...</Text>
       </Pressable>
 
       {items.length === 0 ? (

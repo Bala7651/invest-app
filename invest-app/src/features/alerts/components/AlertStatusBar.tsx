@@ -21,12 +21,12 @@ export function AlertStatusBar({ symbol, onPress }: AlertStatusBarProps) {
     <Pressable onPress={onPress} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6, paddingHorizontal: 4 }}>
       {hasUpper ? (
         <Text style={{ color: alert.upper_status === 'active' ? '#00e5ff' : '#555', fontSize: 12 }}>
-          ↑{alert.upper_price} {alert.upper_status === 'active' ? 'Active' : 'Triggered'}
+          ↑{alert.upper_price} {alert.upper_status === 'active' ? '監控中' : '已觸發'}
         </Text>
       ) : null}
       {hasLower ? (
         <Text style={{ color: alert.lower_status === 'active' ? '#00e5ff' : '#555', fontSize: 12 }}>
-          ↓{alert.lower_price} {alert.lower_status === 'active' ? 'Active' : 'Triggered'}
+          ↓{alert.lower_price} {alert.lower_status === 'active' ? '監控中' : '已觸發'}
         </Text>
       ) : null}
     </Pressable>

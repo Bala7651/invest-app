@@ -35,13 +35,13 @@ export default function RootLayout() {
     useSettingsStore.getState().loadFromSecureStore();
     useAlertStore.getState().loadFromDb();
     Notifications.setNotificationChannelAsync('price-alerts', {
-      name: 'Price Alerts',
+      name: '價格提醒',
       importance: AndroidImportance.HIGH,
       vibrationPattern: [0, 250, 250, 250],
       sound: 'default',
     });
     Notifications.setNotificationChannelAsync('monitoring-status', {
-      name: 'Monitoring Status',
+      name: '監控狀態',
       importance: AndroidImportance.LOW,
     });
     useWatchlistStore.getState().loadFromDb().then(() => {

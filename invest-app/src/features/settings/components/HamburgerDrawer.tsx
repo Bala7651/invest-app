@@ -34,7 +34,7 @@ function DrawerContent({ closeDrawer }: { closeDrawer: () => void }) {
         onPress={handleSettingsPress}
         className="py-4 border-b border-border"
       >
-        <Text className="text-text text-base">Settings</Text>
+        <Text className="text-text text-base">設定</Text>
       </Pressable>
     </View>
   );

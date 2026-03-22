@@ -63,12 +63,12 @@ export function ApiKeyInput() {
 
   function handleClear() {
     Alert.alert(
-      'Clear API Key',
-      'Are you sure you want to delete your API key?',
+      '清除 API 金鑰',
+      '確定要刪除 API 金鑰嗎？',
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: '取消', style: 'cancel' },
         {
-          text: 'Delete',
+          text: '刪除',
           style: 'destructive',
           onPress: async () => {
             await deleteApiKey();
@@ -88,7 +88,7 @@ export function ApiKeyInput() {
         style={{ position: 'absolute', top: -28, left: 0, right: 0, opacity: toastOpacity, zIndex: 10 }}
         pointerEvents="none"
       >
-        <Text className="text-primary text-xs text-center">Saved</Text>
+        <Text className="text-primary text-xs text-center">已儲存</Text>
       </Animated.View>
 
       <View
@@ -104,13 +104,13 @@ export function ApiKeyInput() {
           }}
           onBlur={handleBlur}
           secureTextEntry={!isRevealed}
-          placeholder="Enter API key"
+          placeholder="輸入 API 金鑰"
           placeholderTextColor="#666"
           autoCapitalize="none"
           autoCorrect={false}
         />
         <Pressable onPress={() => setIsRevealed(r => !r)} className="ml-2 px-1">
-          <Text className="text-muted text-sm">{isRevealed ? 'Hide' : 'Show'}</Text>
+          <Text className="text-muted text-sm">{isRevealed ? '隱藏' : '顯示'}</Text>
         </Pressable>
       </View>
 
@@ -121,14 +121,14 @@ export function ApiKeyInput() {
           className="flex-1 bg-surface border border-border rounded-lg py-2 items-center"
         >
           <Text className="text-primary text-sm">
-            {isTesting ? 'Testing...' : testResult === 'success' ? 'Connected' : testResult === 'error' ? 'Failed' : 'Test'}
+            {isTesting ? '測試中...' : testResult === 'success' ? '已連線' : testResult === 'error' ? '失敗' : '測試'}
           </Text>
         </Pressable>
         <Pressable
           onPress={handleClear}
           className="flex-1 bg-surface border border-border rounded-lg py-2 items-center"
         >
-          <Text className="text-stock-down text-sm">Clear</Text>
+          <Text className="text-stock-down text-sm">清除</Text>
         </Pressable>
       </View>
     </View>

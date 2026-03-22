@@ -94,27 +94,27 @@ export default function SettingsScreen() {
       <ScrollView className="flex-1 bg-bg" contentContainerStyle={{ padding: 16, paddingTop: insets.top + 8, paddingBottom: insets.bottom }}>
         <View className="flex-row items-center mb-6">
           <Pressable onPress={() => router.back()} className="mr-4">
-            <Text className="text-primary text-base">Back</Text>
+            <Text className="text-primary text-base">返回</Text>
           </Pressable>
-          <Text className="text-text text-2xl font-bold">Settings</Text>
+          <Text className="text-text text-2xl font-bold">設定</Text>
         </View>
 
-        {/* API Configuration section */}
-        <Text className="text-muted text-xs uppercase tracking-widest mb-3">API Configuration</Text>
+        {/* API 設定 */}
+        <Text className="text-muted text-xs uppercase tracking-widest mb-3">API 設定</Text>
         <View className="bg-surface border border-border rounded-lg p-4 mb-4">
 
-          <Text className="text-muted text-xs mb-1">API Key</Text>
+          <Text className="text-muted text-xs mb-1">API 金鑰</Text>
           <ApiKeyInput />
 
           <DropdownSelect
-            label="AI Provider"
+            label="AI 供應商"
             value={providerName}
             options={AI_PROVIDERS.map(p => p.name)}
             onSelect={handleProviderSelect}
           />
 
           <DropdownSelect
-            label="AI Model"
+            label="AI 模型"
             value={modelName}
             options={currentProvider.models}
             onSelect={handleModelSelect}
@@ -122,9 +122,9 @@ export default function SettingsScreen() {
         </View>
 
         {/* Display section */}
-        <Text className="text-muted text-xs uppercase tracking-widest mb-3">Display</Text>
+        <Text className="text-muted text-xs uppercase tracking-widest mb-3">顯示</Text>
         <View className="bg-surface border border-border rounded-lg p-4 mb-4">
-          <Text className="text-muted text-xs mb-3">Glow Intensity</Text>
+          <Text className="text-muted text-xs mb-3">光暈強度</Text>
           <GlowPillSelector
             active={glowLevel}
             onSelect={setGlowLevel}
@@ -134,7 +134,7 @@ export default function SettingsScreen() {
         {/* Alerts section — Android only */}
         {Platform.OS === 'android' ? (
           <>
-            <Text className="text-muted text-xs uppercase tracking-widest mb-3">Alerts</Text>
+            <Text className="text-muted text-xs uppercase tracking-widest mb-3">提醒</Text>
             <View className="bg-surface border border-border rounded-lg mb-4">
               <Pressable
                 testID="battery-optimization-row"
@@ -143,10 +143,10 @@ export default function SettingsScreen() {
               >
                 <View className="flex-row items-center justify-between">
                   <View style={{ flex: 1 }}>
-                    <Text className="text-text text-base">Battery Optimization</Text>
-                    <Text className="text-muted text-xs mt-1">Disable for reliable background price alerts</Text>
+                    <Text className="text-text text-base">電池最佳化</Text>
+                    <Text className="text-muted text-xs mt-1">關閉以確保背景價格提醒正常運作</Text>
                   </View>
-                  <Text className="text-primary text-sm">Open Settings</Text>
+                  <Text className="text-primary text-sm">開啟設定</Text>
                 </View>
               </Pressable>
             </View>

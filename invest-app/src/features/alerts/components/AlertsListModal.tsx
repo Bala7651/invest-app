@@ -19,7 +19,7 @@ function AlertRow({ alert }: { alert: AlertRow }) {
   function renderRightActions() {
     return (
       <View style={{ backgroundColor: '#cc2222', justifyContent: 'center', alignItems: 'center', width: 72, borderRadius: 8, marginBottom: 8 }}>
-        <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>Delete</Text>
+        <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>刪除</Text>
       </View>
     );
   }
@@ -37,11 +37,11 @@ function AlertRow({ alert }: { alert: AlertRow }) {
           {hasUpper ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Text style={{ color: alert.upper_status === 'active' ? '#00e5ff' : '#555', fontSize: 13 }}>
-                ↑{alert.upper_price} {alert.upper_status === 'active' ? 'Active' : 'Triggered'}
+                ↑{alert.upper_price} {alert.upper_status === 'active' ? '監控中' : '已觸發'}
               </Text>
               {alert.upper_status === 'triggered' ? (
                 <Pressable onPress={() => reEnable(alert.symbol, 'upper')}>
-                  <Text style={{ color: '#00e5ff', fontSize: 11 }}>Re-enable</Text>
+                  <Text style={{ color: '#00e5ff', fontSize: 11 }}>重新啟用</Text>
                 </Pressable>
               ) : null}
             </View>
@@ -49,11 +49,11 @@ function AlertRow({ alert }: { alert: AlertRow }) {
           {hasLower ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Text style={{ color: alert.lower_status === 'active' ? '#00e5ff' : '#555', fontSize: 13 }}>
-                ↓{alert.lower_price} {alert.lower_status === 'active' ? 'Active' : 'Triggered'}
+                ↓{alert.lower_price} {alert.lower_status === 'active' ? '監控中' : '已觸發'}
               </Text>
               {alert.lower_status === 'triggered' ? (
                 <Pressable onPress={() => reEnable(alert.symbol, 'lower')}>
-                  <Text style={{ color: '#00e5ff', fontSize: 11 }}>Re-enable</Text>
+                  <Text style={{ color: '#00e5ff', fontSize: 11 }}>重新啟用</Text>
                 </Pressable>
               ) : null}
             </View>
@@ -88,25 +88,25 @@ export function AlertsListModal({ visible, onClose }: AlertsListModalProps) {
       >
         <Pressable onPress={() => {}} style={{ backgroundColor: '#0d0d14', borderTopWidth: 1, borderTopColor: '#2a2a3a', borderRadius: 16, padding: 24, paddingBottom: 24 + insets.bottom, maxHeight: '80%' }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-            <Text style={{ color: '#e0e0e0', fontSize: 18, fontWeight: 'bold' }}>Price Alerts</Text>
+            <Text style={{ color: '#e0e0e0', fontSize: 18, fontWeight: 'bold' }}>價格提醒</Text>
             <Pressable onPress={onClose}>
               <Text style={{ color: '#888', fontSize: 16 }}>✕</Text>
             </Pressable>
           </View>
 
           {alerts.length === 0 ? (
-            <Text style={{ color: '#555', fontSize: 14, textAlign: 'center', paddingVertical: 32 }}>No alerts set</Text>
+            <Text style={{ color: '#555', fontSize: 14, textAlign: 'center', paddingVertical: 32 }}>尚未設定提醒</Text>
           ) : (
             <>
               {active.length > 0 ? (
                 <>
-                  <Text style={{ color: '#888', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Active</Text>
+                  <Text style={{ color: '#888', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>監控中</Text>
                   {active.map(a => <AlertRow key={a.id} alert={a} />)}
                 </>
               ) : null}
               {triggered.length > 0 ? (
                 <View style={{ opacity: 0.5 }}>
-                  <Text style={{ color: '#888', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Triggered</Text>
+                  <Text style={{ color: '#888', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>已觸發</Text>
                   {triggered.map(a => <AlertRow key={a.id} alert={a} />)}
                 </View>
               ) : null}

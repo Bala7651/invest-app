@@ -109,7 +109,7 @@ export function AnalysisCard({ symbol, name, quote, result, loading, error, onRe
             className="bg-surface border border-border rounded px-4 py-2 self-start"
             onPress={onRetry}
           >
-            <Text className="text-primary text-sm font-semibold">Retry</Text>
+            <Text className="text-primary text-sm font-semibold">重試</Text>
           </Pressable>
         </View>
       )}

@@ -6,15 +6,15 @@ export function NoApiKeyPrompt() {
 
   return (
     <View className="flex-1 items-center justify-center">
-      <Text className="text-primary text-xl font-bold mb-3">AI Analysis</Text>
+      <Text className="text-primary text-xl font-bold mb-3">AI 分析</Text>
       <Text className="text-muted text-center mb-6 px-6">
-        Add your MiniMax API key to unlock AI analysis
+        請先在設定頁面輸入 API 金鑰以啟用 AI 分析
       </Text>
       <Pressable
         className="bg-primary rounded-lg px-6 py-3"
         onPress={() => router.push('/settings')}
       >
-        <Text className="text-bg font-semibold">Go to Settings</Text>
+        <Text className="text-bg font-semibold">前往設定</Text>
       </Pressable>
     </View>
   );

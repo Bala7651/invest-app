@@ -49,7 +49,7 @@ describe('ALRT-03: Battery Optimization setting', () => {
     const source = fs.readFileSync(settingsPath, 'utf-8');
     expect(source).toContain('testID="battery-optimization-row"');
     expect(source).toContain("Platform.OS === 'android'");
-    expect(source).toContain('Battery Optimization');
+    expect(source).toContain('電池最佳化');
     expect(source).toContain('IGNORE_BATTERY_OPTIMIZATION_SETTINGS');
   });
 });

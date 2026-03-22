@@ -79,25 +79,25 @@ it('computeStatus returns open=true with "Open" label during market hours', () =
   const d = taipeiTime(2026, 3, 17, 10, 0);
   const status = computeStatus(d);
   expect(status.open).toBe(true);
-  expect(status.label).toMatch(/^Open/);
+  expect(status.label).toMatch(/^開盤中/);
 });
 
 it('computeStatus returns open=false with "Closed" label outside market hours', () => {
   const d = taipeiTime(2026, 3, 17, 14, 0);
   const status = computeStatus(d);
   expect(status.open).toBe(false);
-  expect(status.label).toMatch(/^Closed/);
+  expect(status.label).toMatch(/^休市/);
 });
 
 it('computeStatus open label includes countdown to close', () => {
   // At 10:00 Taipei, 3h 30m to close (13:30)
   const d = taipeiTime(2026, 3, 17, 10, 0);
   const status = computeStatus(d);
-  expect(status.label).toContain('to close');
+  expect(status.label).toContain('距收盤');
 });
 
 it('computeStatus closed label includes next open time', () => {
   const d = taipeiTime(2026, 3, 17, 14, 0);
   const status = computeStatus(d);
-  expect(status.label).toContain('opens');
+  expect(status.label).toContain('開盤');
 });

@@ -87,18 +87,18 @@ export function AlertModal({ visible, onClose, symbol, name, currentPrice }: Ale
       >
         <Pressable onPress={() => {}} style={{ backgroundColor: '#0d0d14', borderTopWidth: 1, borderTopColor: '#2a2a3a', borderRadius: 16, padding: 24, paddingBottom: 24 + insets.bottom }}>
           <Text style={{ color: '#e0e0e0', fontSize: 18, fontWeight: 'bold', marginBottom: 20 }}>
-            Price Alert — {symbol}
+            價格提醒 — {symbol}
           </Text>
 
           {permissionWarning ? (
             <Text style={{ color: '#ff4444', fontSize: 12, marginBottom: 12 }}>
-              Notification permission required for alerts
+              需要通知權限才能使用提醒功能
             </Text>
           ) : null}
 
           {/* Upper target */}
           <View style={{ marginBottom: 16 }}>
-            <Text style={{ color: '#888', fontSize: 12, marginBottom: 6 }}>Upper target</Text>
+            <Text style={{ color: '#888', fontSize: 12, marginBottom: 6 }}>上限目標價</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <TextInput
                 style={{
@@ -124,14 +124,14 @@ export function AlertModal({ visible, onClose, symbol, name, currentPrice }: Ale
             </View>
             {upperInvalid ? (
               <Text style={{ color: '#ff4444', fontSize: 11, marginTop: 4 }}>
-                Must be above current price
+                必須高於目前價格
               </Text>
             ) : null}
           </View>
 
           {/* Lower target */}
           <View style={{ marginBottom: 24 }}>
-            <Text style={{ color: '#888', fontSize: 12, marginBottom: 6 }}>Lower target</Text>
+            <Text style={{ color: '#888', fontSize: 12, marginBottom: 6 }}>下限目標價</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <TextInput
                 style={{
@@ -157,7 +157,7 @@ export function AlertModal({ visible, onClose, symbol, name, currentPrice }: Ale
             </View>
             {lowerInvalid ? (
               <Text style={{ color: '#ff4444', fontSize: 11, marginTop: 4 }}>
-                Must be below current price
+                必須低於目前價格
               </Text>
             ) : null}
           </View>
@@ -167,13 +167,13 @@ export function AlertModal({ visible, onClose, symbol, name, currentPrice }: Ale
               onPress={onClose}
               style={{ flex: 1, borderWidth: 1, borderColor: '#2a2a3a', borderRadius: 8, paddingVertical: 12, alignItems: 'center' }}
             >
-              <Text style={{ color: '#888', fontSize: 15 }}>Cancel</Text>
+              <Text style={{ color: '#888', fontSize: 15 }}>取消</Text>
             </Pressable>
             <Pressable
               onPress={handleSave}
               style={{ flex: 1, backgroundColor: upperInvalid || lowerInvalid ? '#333' : '#00e5ff', borderRadius: 8, paddingVertical: 12, alignItems: 'center' }}
             >
-              <Text style={{ color: upperInvalid || lowerInvalid ? '#555' : '#050508', fontSize: 15, fontWeight: 'bold' }}>Save</Text>
+              <Text style={{ color: upperInvalid || lowerInvalid ? '#555' : '#050508', fontSize: 15, fontWeight: 'bold' }}>儲存</Text>
             </Pressable>
           </View>
         </Pressable>

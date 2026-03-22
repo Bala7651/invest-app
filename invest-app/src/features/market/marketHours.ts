@@ -36,9 +36,9 @@ export function computeStatus(now = new Date()): { open: boolean; label: string 
     const h = Math.floor(remaining / 60);
     const m = remaining % 60;
     const parts: string[] = [];
-    if (h > 0) parts.push(`${h}h`);
-    if (m > 0) parts.push(`${m}m`);
-    return { open: true, label: `Open · ${parts.join(' ')} to close` };
+    if (h > 0) parts.push(`${h}時`);
+    if (m > 0) parts.push(`${m}分`);
+    return { open: true, label: `開盤中 · 距收盤 ${parts.join('')}` };
   }
 
   // Find the next market open: check upcoming days up to 7 days ahead
@@ -47,9 +47,9 @@ export function computeStatus(now = new Date()): { open: boolean; label: string 
     const candidateTaipei = toTaipeiDate(candidate);
     const day = candidateTaipei.getDay();
     if (day !== 0 && day !== 6 && !isHoliday(candidateTaipei)) {
-      return { open: false, label: 'Closed · opens 09:00' };
+      return { open: false, label: '休市 · 09:00 開盤' };
     }
   }
 
-  return { open: false, label: 'Closed' };
+  return { open: false, label: '休市' };
 }

@@ -67,9 +67,9 @@ export function SearchModal({ visible, onClose }: SearchModalProps) {
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
       <View className="flex-1 bg-bg">
         <View className="flex-row items-center justify-between px-4 pb-4 border-b border-border" style={{ paddingTop: insets.top + 8 }}>
-          <Text className="text-text text-xl font-bold">Search Stocks</Text>
+          <Text className="text-text text-xl font-bold">搜尋股票</Text>
           <Pressable onPress={onClose}>
-            <Text className="text-primary text-base">Close</Text>
+            <Text className="text-primary text-base">關閉</Text>
           </Pressable>
         </View>
 
@@ -78,7 +78,7 @@ export function SearchModal({ visible, onClose }: SearchModalProps) {
             ref={inputRef}
             value={query}
             onChangeText={handleQueryChange}
-            placeholder="Search by code or name..."
+            placeholder="輸入股票代號或名稱..."
             placeholderTextColor="#6B7280"
             className="bg-surface text-text border border-border rounded-lg px-3 py-2 text-base"
             keyboardType="default"
@@ -89,7 +89,7 @@ export function SearchModal({ visible, onClose }: SearchModalProps) {
 
         {query.length === 0 ? (
           <View className="flex-1 items-center justify-center">
-            <Text className="text-muted text-base">Type a stock code or company name</Text>
+            <Text className="text-muted text-base">輸入股票代號或公司名稱</Text>
           </View>
         ) : (
           <FlatList

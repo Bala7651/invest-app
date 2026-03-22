@@ -49,7 +49,7 @@ export function SummaryScreen({ isActive }: SummaryScreenProps) {
             className="text-primary text-base"
             style={generating ? { opacity: 0.4 } : undefined}
           >
-            Generate Now
+            立即生成
           </Text>
         </Pressable>
       </View>
