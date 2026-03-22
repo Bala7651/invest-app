@@ -62,7 +62,7 @@ export default function DetailScreen() {
   const volumeHeight = 80;
 
   return (
-    <View className="flex-1 bg-bg" style={{ paddingTop: insets.top + 32, paddingBottom: Math.max(insets.bottom, 8) + 54 }}>
+    <View className="flex-1 bg-bg" style={{ paddingTop: insets.top + 24, paddingBottom: Math.max(insets.bottom, 8) + 54 }}>
       {/* Bloomberg-style header */}
       <View className="flex-row items-center justify-between px-4 mb-4">
         <View className="flex-row items-center">
@@ -128,42 +128,60 @@ export default function DetailScreen() {
           </View>
         ) : candles && candles.length > 0 ? (
           <View>
-            {/* OHLC info bar + legend */}
-            <View style={{ marginBottom: 8 }}>
-              {selectedCandle ? (
-                <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
-                  <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
-                    {new Date(selectedCandle.timestamp).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' })}
-                  </Text>
-                  <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)' }}>
-                    開 <Text style={{ color: '#e0e0e0' }}>{selectedCandle.open.toFixed(2)}</Text>
-                  </Text>
-                  <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)' }}>
-                    高 <Text style={{ color: '#00ff88' }}>{selectedCandle.high.toFixed(2)}</Text>
-                  </Text>
-                  <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)' }}>
-                    低 <Text style={{ color: '#ff3366' }}>{selectedCandle.low.toFixed(2)}</Text>
-                  </Text>
-                  <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)' }}>
-                    收{' '}
-                    <Text style={{ color: selectedCandle.close >= selectedCandle.open ? '#00ff88' : '#ff3366', fontWeight: '600' }}>
-                      {selectedCandle.close.toFixed(2)}
+            {/* OHLC info card */}
+            {selectedCandle ? (() => {
+              const isUp = selectedCandle.close >= selectedCandle.open;
+              const closeColor = isUp ? '#00ff88' : '#ff3366';
+              const periodFirst = candles[0];
+              const periodLast = candles[candles.length - 1];
+              const periodPct = ((periodLast.close - periodFirst.open) / periodFirst.open) * 100;
+              const periodColor = periodPct >= 0 ? '#00ff88' : '#ff3366';
+              const periodSign = periodPct >= 0 ? '+' : '';
+              return (
+                <View style={{ backgroundColor: '#0d0d18', borderRadius: 10, padding: 10, marginBottom: 8 }}>
+                  {/* Date + period change */}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
+                      {new Date(selectedCandle.timestamp).toLocaleDateString('zh-TW', { year: 'numeric', month: 'numeric', day: 'numeric' })}
+                      {'  '}
+                      <Text style={{ color: isUp ? '#00ff88' : '#ff3366' }}>
+                        {isUp ? '▲' : '▼'} {Math.abs(((selectedCandle.close - selectedCandle.open) / selectedCandle.open) * 100).toFixed(2)}%
+                      </Text>
                     </Text>
-                  </Text>
+                    <View style={{ backgroundColor: periodColor + '22', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
+                      <Text style={{ fontSize: 11, color: periodColor, fontWeight: '700' }}>
+                        本期 {periodSign}{periodPct.toFixed(2)}%
+                      </Text>
+                    </View>
+                  </View>
+                  {/* OHLC row */}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <View style={{ alignItems: 'center' }}>
+                      <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginBottom: 2 }}>開盤</Text>
+                      <Text style={{ fontSize: 13, color: '#e0e0e0', fontWeight: '600' }}>{selectedCandle.open.toFixed(2)}</Text>
+                    </View>
+                    <View style={{ alignItems: 'center' }}>
+                      <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginBottom: 2 }}>最高</Text>
+                      <Text style={{ fontSize: 13, color: '#00ff88', fontWeight: '600' }}>{selectedCandle.high.toFixed(2)}</Text>
+                    </View>
+                    <View style={{ alignItems: 'center' }}>
+                      <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginBottom: 2 }}>最低</Text>
+                      <Text style={{ fontSize: 13, color: '#ff3366', fontWeight: '600' }}>{selectedCandle.low.toFixed(2)}</Text>
+                    </View>
+                    <View style={{ alignItems: 'center' }}>
+                      <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginBottom: 2 }}>收盤</Text>
+                      <Text style={{ fontSize: 13, color: closeColor, fontWeight: '700' }}>{selectedCandle.close.toFixed(2)}</Text>
+                    </View>
+                    <View style={{ alignItems: 'center' }}>
+                      <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginBottom: 2 }}>成交量</Text>
+                      <Text style={{ fontSize: 13, color: '#e0e0e0', fontWeight: '600' }}>
+                        {selectedCandle.volume >= 1000 ? `${(selectedCandle.volume / 1000).toFixed(0)}K` : String(selectedCandle.volume)}
+                      </Text>
+                    </View>
+                  </View>
                 </View>
-              ) : null}
-              {/* Legend */}
-              <View style={{ flexDirection: 'row', gap: 12, marginTop: 4 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <View style={{ width: 8, height: 8, backgroundColor: '#00ff88', borderRadius: 1 }} />
-                  <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>收漲（綠）</Text>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <View style={{ width: 8, height: 8, backgroundColor: '#ff3366', borderRadius: 1 }} />
-                  <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>收跌（紅）</Text>
-                </View>
-              </View>
-            </View>
+              );
+            })() : null}
 
             {/* Candlestick chart */}
             <View className="border border-border rounded-lg overflow-hidden mb-1">
@@ -174,11 +192,11 @@ export default function DetailScreen() {
               />
             </View>
             {/* Volume bars */}
-            <View
-              className="border-t border-border"
-              style={{ height: volumeHeight, marginBottom: 12 }}
-            >
-              <VolumeBar data={candles} height={volumeHeight} width={chartWidth} />
+            <View style={{ marginBottom: 12 }}>
+              <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2, paddingLeft: 2 }}>成交量</Text>
+              <View className="border-t border-border" style={{ height: volumeHeight }}>
+                <VolumeBar data={candles} height={volumeHeight} width={chartWidth} />
+              </View>
             </View>
           </View>
         ) : (

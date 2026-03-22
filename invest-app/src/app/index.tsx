@@ -91,7 +91,7 @@ function WatchlistPage() {
   }
 
   const content = (
-    <View className="flex-1 bg-bg px-4" style={{ paddingTop: insets.top + 32, paddingBottom: Math.max(insets.bottom, 8) + 54 }}>
+    <View className="flex-1 bg-bg px-4" style={{ paddingTop: insets.top + 24, paddingBottom: Math.max(insets.bottom, 8) + 54 }}>
       <View className="mb-4">
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center">

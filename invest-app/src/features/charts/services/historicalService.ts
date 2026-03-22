@@ -1,38 +1,10 @@
 import { OHLCVPoint, Timeframe } from '../types';
 
-class RequestQueue {
-  private running = false;
-  private queue: Array<() => Promise<void>> = [];
-  private lastRequestTime = 0;
-
-  enqueue<T>(fn: () => Promise<T>): Promise<T> {
-    return new Promise<T>((resolve, reject) => {
-      this.queue.push(async () => {
-        const elapsed = Date.now() - this.lastRequestTime;
-        const wait = Math.max(0, 3000 - elapsed);
-        if (wait > 0) await new Promise(r => setTimeout(r, wait));
-        try {
-          this.lastRequestTime = Date.now();
-          resolve(await fn());
-        } catch (e) {
-          reject(e);
-        }
-      });
-      if (!this.running) this._drain();
-    });
-  }
-
-  private async _drain() {
-    this.running = true;
-    while (this.queue.length > 0) {
-      const task = this.queue.shift()!;
-      await task();
-    }
-    this.running = false;
-  }
+function timeoutSignal(ms: number): AbortSignal {
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), ms);
+  return controller.signal;
 }
-
-const _queue = new RequestQueue();
 
 export function twseDateToTimestamp(twseDate: string): number {
   const parts = twseDate.split('/');
@@ -46,17 +18,11 @@ function parseCommaNumber(s: string): number {
   return parseFloat(s.replace(/,/g, ''));
 }
 
-function timeoutSignal(ms: number): AbortSignal {
-  const controller = new AbortController();
-  setTimeout(() => controller.abort(), ms);
-  return controller.signal;
-}
-
 async function fetchFinMindDaily(stockId: string, startDate: string): Promise<OHLCVPoint[]> {
   const url = `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=${stockId}&start_date=${startDate}`;
   const res = await fetch(url, {
     headers: { 'User-Agent': 'invest-app/1.0' },
-    signal: timeoutSignal(10_000),
+    signal: timeoutSignal(6_000),
   });
   if (!res.ok) throw new Error(`FinMind HTTP ${res.status}`);
   const data = await res.json();
@@ -76,7 +42,7 @@ async function fetchTWSEMonthly(stockId: string, year: number, month: number): P
   const url = `https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=${year}${mm}01&stockNo=${stockId}`;
   const res = await fetch(url, {
     headers: { 'User-Agent': 'invest-app/1.0' },
-    signal: timeoutSignal(10_000),
+    signal: timeoutSignal(6_000),
   });
   if (!res.ok) throw new Error(`TWSE HTTP ${res.status}`);
   const data = await res.json();
@@ -122,6 +88,7 @@ export function getDateRange(timeframe: Timeframe): string {
   return `${y}-${m}-${d}`;
 }
 
+// Fetch all months in parallel — no queue needed
 async function fetchTWSERange(stockId: string, startDate: string): Promise<OHLCVPoint[]> {
   const start = new Date(startDate);
   const now = new Date();
@@ -131,12 +98,12 @@ async function fetchTWSERange(stockId: string, startDate: string): Promise<OHLCV
     months.push({ year: cur.getFullYear(), month: cur.getMonth() + 1 });
     cur.setMonth(cur.getMonth() + 1);
   }
-  const results: OHLCVPoint[] = [];
-  for (const { year, month } of months) {
-    const points = await _queue.enqueue(() => fetchTWSEMonthly(stockId, year, month));
-    results.push(...points);
-  }
-  return results.filter(p => p.timestamp >= start.getTime());
+  const results = await Promise.all(
+    months.map(({ year, month }) =>
+      fetchTWSEMonthly(stockId, year, month).catch(() => [] as OHLCVPoint[])
+    )
+  );
+  return results.flat().filter(p => p.timestamp >= start.getTime());
 }
 
 export async function fetchCandles(symbol: string, timeframe: Timeframe): Promise<OHLCVPoint[]> {
@@ -144,8 +111,9 @@ export async function fetchCandles(symbol: string, timeframe: Timeframe): Promis
   let points: OHLCVPoint[] = [];
 
   if (timeframe === '1M' || timeframe === '6M' || timeframe === '1Y') {
+    // Try FinMind first (single fast request), fall back to parallel TWSE
     try {
-      points = await _queue.enqueue(() => fetchFinMindDaily(symbol, startDate));
+      points = await fetchFinMindDaily(symbol, startDate);
     } catch {
       points = [];
     }
@@ -153,24 +121,16 @@ export async function fetchCandles(symbol: string, timeframe: Timeframe): Promis
       points = await fetchTWSERange(symbol, startDate);
     }
   } else {
-    // 1D and 5D: use TWSE STOCK_DAY daily candles
+    // 1D and 5D: fetch current + previous month in parallel
     const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth() + 1;
     const prevDate = new Date(now);
     prevDate.setMonth(prevDate.getMonth() - 1);
 
-    const currentMonthPoints = await _queue.enqueue(() =>
-      fetchTWSEMonthly(symbol, currentYear, currentMonth)
-    );
-    points = [...currentMonthPoints];
-
-    if ((timeframe === '5D' || timeframe === '1D') && points.length < 5) {
-      const prevPoints = await _queue.enqueue(() =>
-        fetchTWSEMonthly(symbol, prevDate.getFullYear(), prevDate.getMonth() + 1)
-      );
-      points = [...prevPoints, ...points];
-    }
+    const [currentMonthPoints, prevMonthPoints] = await Promise.all([
+      fetchTWSEMonthly(symbol, now.getFullYear(), now.getMonth() + 1).catch(() => [] as OHLCVPoint[]),
+      fetchTWSEMonthly(symbol, prevDate.getFullYear(), prevDate.getMonth() + 1).catch(() => [] as OHLCVPoint[]),
+    ]);
+    points = [...prevMonthPoints, ...currentMonthPoints];
 
     if (timeframe === '5D') {
       points = points.slice(-5);

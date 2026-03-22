@@ -38,7 +38,7 @@ export function SummaryScreen({ isActive }: SummaryScreenProps) {
   const errorCount = Object.values(errors).filter(e => e !== null).length;
 
   return (
-    <View className="flex-1 bg-bg px-4" style={{ paddingTop: insets.top + 32, paddingBottom: Math.max(insets.bottom, 8) + 54 }}>
+    <View className="flex-1 bg-bg px-4" style={{ paddingTop: insets.top + 24, paddingBottom: Math.max(insets.bottom, 8) + 54 }}>
       <View className="flex-row items-center justify-between mb-4">
         <Text className="text-text text-2xl font-bold">每日摘要</Text>
         <Pressable

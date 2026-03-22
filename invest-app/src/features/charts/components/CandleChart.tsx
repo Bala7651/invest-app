@@ -35,7 +35,7 @@ export function CandleChart({ data, height, onCandleChange }: CandleChartProps) 
 
   const candleWidth = plotWidth / data.length;
   const bodyWidth = Math.max(candleWidth * 0.6, 2);
-  const wickWidth = Math.max(1, bodyWidth * 0.15);
+  const wickWidth = Math.max(1.5, bodyWidth * 0.18);
 
   function priceToY(price: number): number {
     return ((maxPrice - price) / priceRange) * (plotHeight - 10) + 5;
@@ -159,7 +159,7 @@ export function CandleChart({ data, height, onCandleChange }: CandleChartProps) 
                 color: 'rgba(255,255,255,0.38)',
               }}
             >
-              {price.toFixed(1)}
+              {price >= 100 ? price.toFixed(1) : price.toFixed(2)}
             </Text>
           );
         })}

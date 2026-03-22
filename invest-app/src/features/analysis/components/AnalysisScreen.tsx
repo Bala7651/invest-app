@@ -57,7 +57,7 @@ export function AnalysisScreen({ isActive }: AnalysisScreenProps) {
   }
 
   return (
-    <View className="flex-1" style={{ paddingTop: insets.top + 32, paddingBottom: Math.max(insets.bottom, 8) + 54 }}>
+    <View className="flex-1" style={{ paddingTop: insets.top + 24, paddingBottom: Math.max(insets.bottom, 8) + 54 }}>
       <ScrollView className="flex-1 px-4 pt-4" contentContainerStyle={{ paddingBottom: 16 }}>
         <Text className="text-primary text-2xl font-bold mb-4">AI 分析</Text>
 
