@@ -46,8 +46,11 @@ export default function RootLayout() {
     });
     useWatchlistStore.getState().loadFromDb().then(() => {
       const symbols = useWatchlistStore.getState().items.map(i => i.symbol);
-      if (symbols.length > 0 && isMarketOpen()) {
-        useQuoteStore.getState().startPolling(symbols);
+      if (symbols.length > 0) {
+        useQuoteStore.getState().forceRefresh(symbols);
+        if (isMarketOpen()) {
+          useQuoteStore.getState().startPolling(symbols);
+        }
       }
       if (isCatchUpNeeded()) {
         const todayISO = getTodayISO();

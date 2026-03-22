@@ -37,6 +37,8 @@ function CandleDataBridge({ onCandleChange }: CandleDataBridgeProps) {
 }
 
 export function CandleChart({ data, height, onCandleChange }: CandleChartProps) {
+  if (data.length < 2) return null;
+
   const wagmiData = data.map(({ timestamp, open, high, low, close }) => ({
     timestamp,
     open,

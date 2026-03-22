@@ -10,26 +10,44 @@ const CUTOFF_DAYS = 14;
 // Date helpers (Taipei timezone — never use toISOString which is UTC)
 // ---------------------------------------------------------------------------
 
+function toTaipeiParts(now = new Date()): { year: string; month: string; day: string; hour: number; minute: number; dayOfWeek: number } {
+  const fmt = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Taipei',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: 'numeric', minute: '2-digit', hour12: false,
+    weekday: 'short',
+  });
+  const parts = Object.fromEntries(fmt.formatToParts(now).map(p => [p.type, p.value]));
+  const dayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  return {
+    year: parts.year,
+    month: parts.month,
+    day: parts.day,
+    hour: parseInt(parts.hour, 10),
+    minute: parseInt(parts.minute, 10),
+    dayOfWeek: dayMap[parts.weekday] ?? 0,
+  };
+}
+
 export function getTodayISO(): string {
-  const taipeiStr = new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' });
-  const d = new Date(taipeiStr);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const p = toTaipeiParts();
+  return `${p.year}-${p.month}-${p.day}`;
 }
 
 export function getCutoffISO(): string {
-  const taipeiStr = new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' });
-  const d = new Date(taipeiStr);
-  d.setDate(d.getDate() - CUTOFF_DAYS);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const now = new Date();
+  now.setDate(now.getDate() - CUTOFF_DAYS);
+  const p = toTaipeiParts(now);
+  return `${p.year}-${p.month}-${p.day}`;
 }
 
 export function isCatchUpNeeded(): boolean {
-  const taipeiStr = new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' });
-  const taipei = new Date(taipeiStr);
-  const day = taipei.getDay(); // 0=Sun, 6=Sat
-  if (day === 0 || day === 6) return false;
+  const p = toTaipeiParts();
+  if (p.dayOfWeek === 0 || p.dayOfWeek === 6) return false;
+  // Build a Date from parts for holiday check
+  const taipei = new Date(parseInt(p.year), parseInt(p.month) - 1, parseInt(p.day));
   if (isHoliday(taipei)) return false;
-  const mins = taipei.getHours() * 60 + taipei.getMinutes();
+  const mins = p.hour * 60 + p.minute;
   return mins >= 12 * 60 + 30;
 }
 

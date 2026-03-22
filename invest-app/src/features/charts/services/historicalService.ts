@@ -159,7 +159,7 @@ export async function fetchCandles(symbol: string, timeframe: Timeframe): Promis
     );
     points = [...currentMonthPoints];
 
-    if (timeframe === '5D' && points.length < 5) {
+    if ((timeframe === '5D' || timeframe === '1D') && points.length < 5) {
       const prevPoints = await _queue.enqueue(() =>
         fetchTWSEMonthly(symbol, prevDate.getFullYear(), prevDate.getMonth() + 1)
       );
@@ -172,7 +172,8 @@ export async function fetchCandles(symbol: string, timeframe: Timeframe): Promis
     if (timeframe === '5D') {
       points = points.slice(-5);
     } else {
-      points = points.slice(-1);
+      // 1D: show last 2 candles minimum so chart can render
+      points = points.slice(-2);
     }
   }
 
