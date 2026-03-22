@@ -195,9 +195,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 11-01-PLAN.md — Chart pattern recognition: pattern detector service (pure TS, analyzes last N candles), minimaxApi pattern prompt, PatternCard component below volume bars, chartStore pattern cache
-- [ ] 11-02-PLAN.md — Portfolio health: SQLite holdings schema + migration, holdingsStore, PortfolioScreen UI (share input per stock, sector breakdown, AI health score card), 5th PagerView page
-- [ ] 11-03-PLAN.md — AI-enriched alerts: alertMonitor calls MiniMax at trigger time, notification body includes AI sentence, graceful fallback to plain notification on AI failure
+- [ ] 11-01-PLAN.md — Chart pattern recognition: pure TS detectPatterns service (8 patterns, no API), PatternCard component below volume bars, detail screen wiring
+- [ ] 11-02-PLAN.md — Portfolio health: SQLite holdings schema + migration, holdingsService + holdingsStore, portfolioAiService (health score + paragraph), PortfolioScreen 5th PagerView page
+- [ ] 11-03-PLAN.md — AI-enriched alerts: settingsStore aiNotificationsEnabled toggle, alertMonitor conditional MiniMax call (5s timeout + fallback), Settings UI toggle in 提醒 section
 
 ## Progress
 
