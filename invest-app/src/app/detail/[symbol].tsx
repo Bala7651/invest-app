@@ -1,6 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Pressable, Text, View, useWindowDimensions } from 'react-native';
+import { OHLCVPoint } from '../../features/charts/types';
 import { AlertModal } from '../../features/alerts/components/AlertModal';
 import { AlertStatusBar } from '../../features/alerts/components/AlertStatusBar';
 import { CandleChart } from '../../features/charts/components/CandleChart';
@@ -22,6 +23,7 @@ export default function DetailScreen() {
 
   const [timeframe, setTimeframe] = useState<Timeframe>('1D');
   const [alertModalVisible, setAlertModalVisible] = useState(false);
+  const [selectedCandle, setSelectedCandle] = useState<OHLCVPoint | null>(null);
 
   const key = `${symbol}:${timeframe}`;
   const candles = getCandles(symbol, timeframe);
@@ -31,6 +33,12 @@ export default function DetailScreen() {
   useEffect(() => {
     fetchCandles(symbol, timeframe);
   }, [symbol, timeframe]);
+
+  useEffect(() => {
+    if (candles && candles.length > 0) {
+      setSelectedCandle(candles[candles.length - 1]);
+    }
+  }, [candles]);
 
   const displayPrice =
     quote?.price != null
@@ -118,11 +126,49 @@ export default function DetailScreen() {
           </View>
         ) : candles && candles.length > 0 ? (
           <View>
+            {/* OHLC info bar + legend */}
+            <View style={{ marginBottom: 8 }}>
+              {selectedCandle ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+                  <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
+                    {new Date(selectedCandle.timestamp).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' })}
+                  </Text>
+                  <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)' }}>
+                    開 <Text style={{ color: '#e0e0e0' }}>{selectedCandle.open.toFixed(2)}</Text>
+                  </Text>
+                  <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)' }}>
+                    高 <Text style={{ color: '#00ff88' }}>{selectedCandle.high.toFixed(2)}</Text>
+                  </Text>
+                  <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)' }}>
+                    低 <Text style={{ color: '#ff3366' }}>{selectedCandle.low.toFixed(2)}</Text>
+                  </Text>
+                  <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)' }}>
+                    收{' '}
+                    <Text style={{ color: selectedCandle.close >= selectedCandle.open ? '#00ff88' : '#ff3366', fontWeight: '600' }}>
+                      {selectedCandle.close.toFixed(2)}
+                    </Text>
+                  </Text>
+                </View>
+              ) : null}
+              {/* Legend */}
+              <View style={{ flexDirection: 'row', gap: 12, marginTop: 4 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <View style={{ width: 8, height: 8, backgroundColor: '#00ff88', borderRadius: 1 }} />
+                  <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>收漲（綠）</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <View style={{ width: 8, height: 8, backgroundColor: '#ff3366', borderRadius: 1 }} />
+                  <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>收跌（紅）</Text>
+                </View>
+              </View>
+            </View>
+
             {/* Candlestick chart */}
             <View className="border border-border rounded-lg overflow-hidden mb-1">
               <CandleChart
                 data={candles}
                 height={chartHeight}
+                onCandleChange={c => setSelectedCandle(c)}
               />
             </View>
             {/* Volume bars */}
