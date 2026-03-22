@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { createContext, useContext, useRef } from 'react';
-import { Platform, Pressable, StatusBar, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import ReanimatedDrawerLayout, { DrawerLayoutMethods, DrawerType } from 'react-native-gesture-handler/ReanimatedDrawerLayout';
 
 interface DrawerContextValue {
@@ -20,7 +20,6 @@ interface HamburgerDrawerProps {
 
 function DrawerContent({ closeDrawer }: { closeDrawer: () => void }) {
   const router = useRouter();
-  const topPad = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
 
   function handleSettingsPress() {
     closeDrawer();
@@ -28,7 +27,7 @@ function DrawerContent({ closeDrawer }: { closeDrawer: () => void }) {
   }
 
   return (
-    <View style={{ flex: 1, paddingTop: topPad + 8, paddingHorizontal: 16 }} className="bg-surface">
+    <View style={{ flex: 1, paddingTop: 52, paddingHorizontal: 16 }} className="bg-surface">
       <Pressable
         onPress={handleSettingsPress}
         className="py-4 border-b border-border"

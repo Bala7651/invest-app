@@ -2,9 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   FlatList,
   Modal,
-  Platform,
   Pressable,
-  StatusBar,
   Text,
   TextInput,
   View,
@@ -18,7 +16,6 @@ interface SearchModalProps {
 }
 
 export function SearchModal({ visible, onClose }: SearchModalProps) {
-  const topPad = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<StockEntry[]>([]);
   const [addedSymbols, setAddedSymbols] = useState<Set<string>>(new Set());
@@ -67,7 +64,7 @@ export function SearchModal({ visible, onClose }: SearchModalProps) {
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
       <View className="flex-1 bg-bg">
-        <View className="flex-row items-center justify-between px-4 pb-4 border-b border-border" style={{ paddingTop: topPad + 8 }}>
+        <View className="flex-row items-center justify-between px-4 pb-4 border-b border-border" style={{ paddingTop: 52 }}>
           <Text className="text-text text-xl font-bold">搜尋股票</Text>
           <Pressable onPress={onClose}>
             <Text className="text-primary text-base">關閉</Text>

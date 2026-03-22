@@ -11,9 +11,9 @@
       "icon": "./assets/expo.icon"
     },
     "androidStatusBar": {
-      "translucent": false,
+      "translucent": true,
       "barStyle": "light-content",
-      "backgroundColor": "#050508"
+      "backgroundColor": "#00000000"
     },
     "android": {
       "package": "com.hopyky.invest",
