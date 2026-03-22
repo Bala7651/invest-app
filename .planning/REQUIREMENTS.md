@@ -150,11 +150,21 @@
 | UI-03 | Phase 10 | Complete |
 | UI-04 | Phase 7 | Complete |
 
+### AI Intelligence Layer (Phase 11)
+
+- [ ] **AI-11**: Chart pattern recognition — detect candlestick patterns (e.g. 吞噬、錘子、頭肩頂、雙底) from OHLCV data and display pattern name, plain-Chinese explanation, and bullish/neutral/bearish signal below the chart; updates per timeframe
+- [ ] **AI-12**: Portfolio health — user inputs share quantities per watchlist stock; app calculates total invested value, sector concentration (%), AI analyses correlation clusters and writes an overall portfolio health score and outlook; holdings persist in SQLite
+- [ ] **AI-13**: AI-enriched push alerts — when a price alert fires, alertMonitor calls MiniMax to generate a one-sentence market context and includes it in the notification body; falls back to plain notification if AI unavailable
+
+| AI-11 | Phase 11 | Pending |
+| AI-12 | Phase 11 | Pending |
+| AI-13 | Phase 11 | Pending |
+
 **Coverage:**
-- v1 requirements: 43 total
-- Mapped to phases: 43
+- v1 requirements: 46 total
+- Mapped to phases: 46
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-18*
-*Last updated: 2026-03-18 after adding Phase 9 Price Alerts (ALRT-01..07)*
+*Last updated: 2026-03-23 after adding Phase 11 AI Intelligence Layer (AI-11..13)*

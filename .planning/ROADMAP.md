@@ -182,10 +182,27 @@ Plans:
 - [ ] 10-01-PLAN.md — SparklineChart SVG component, quoteStore tickHistory, StockCard sparkline + glow flash integration
 - [ ] 10-02-PLAN.md — SafeArea fixes, pull-to-refresh, tablet centering, empty state polish, neon visual accents
 
+### Phase 11: AI Intelligence Layer
+**Goal**: Three advanced AI features that normal stock apps cannot offer: (1) automatic candlestick pattern recognition with plain-Chinese explanations below the chart; (2) a portfolio health screen where users input their share quantities per stock and the AI delivers sector concentration, money-weighted correlation, and overall risk/outlook analysis; (3) AI-enriched push notifications that include a one-sentence AI market context when a price alert fires
+**Depends on**: Phase 9, Phase 10
+**Requirements**: AI-11, AI-12, AI-13
+**Success Criteria** (what must be TRUE):
+  1. On the stock detail chart page, an AI pattern card appears below the volume bars showing the detected candlestick pattern name (e.g. 吞噬、錘子、頭肩頂), a plain-Chinese explanation of what it means, and a bullish/neutral/bearish signal — updates when the user switches timeframes
+  2. A new Portfolio page (5th PagerView page) lets users enter the number of shares they hold for each watchlist stock; the AI analyses total invested value per stock, sector concentration (%), correlation clusters, and gives an overall portfolio health score with a written outlook
+  3. Holdings (share quantities) persist across app restarts via SQLite
+  4. When a price alert push notification fires, the notification body contains a brief AI-generated sentence providing market context for why the price moved (fetched at alert trigger time)
+  5. All three features degrade gracefully when no API key is set or the AI call fails — they show a clear prompt/error rather than crashing
+**Plans**: 3 plans
+
+Plans:
+- [ ] 11-01-PLAN.md — Chart pattern recognition: pattern detector service (pure TS, analyzes last N candles), minimaxApi pattern prompt, PatternCard component below volume bars, chartStore pattern cache
+- [ ] 11-02-PLAN.md — Portfolio health: SQLite holdings schema + migration, holdingsStore, PortfolioScreen UI (share input per stock, sector breakdown, AI health score card), 5th PagerView page
+- [ ] 11-03-PLAN.md — AI-enriched alerts: alertMonitor calls MiniMax at trigger time, notification body includes AI sentence, graceful fallback to plain notification on AI failure
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11
 
 Note: Phase 5 (Settings) depends only on Phase 1 and can be built in parallel with Phases 2-4 if desired. Phase 6 (AI) requires both Phase 4 and Phase 5 to be complete. Phase 9 (Price Alerts) requires both Phase 4 (chart detail page) and Phase 8 (background task infrastructure).
 
@@ -201,3 +218,4 @@ Note: Phase 5 (Settings) depends only on Phase 1 and can be built in parallel wi
 | 8. Daily Summary | 2/2 | Complete   | 2026-03-21 |
 | 9. Price Alerts | 2/2 | Complete   | 2026-03-22 |
 | 10. Polish | 2/2 | Complete    | 2026-03-21 |
+| 11. AI Intelligence Layer | 0/3 | Pending | |
