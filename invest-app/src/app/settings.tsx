@@ -1,58 +1,89 @@
 import { startActivityAsync, ActivityAction } from 'expo-intent-launcher';
-import { useRef, useState } from 'react';
-import { Animated, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useState } from 'react';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ApiKeyInput } from '../features/settings/components/ApiKeyInput';
 import { GlowPillSelector } from '../features/settings/components/GlowPillSelector';
 import { useSettingsStore } from '../features/settings/store/settingsStore';
+import { AI_PROVIDERS } from '../features/settings/constants/providers';
 
-function SavedToast({ opacityRef }: { opacityRef: Animated.Value }) {
+function DropdownSelect({
+  label,
+  value,
+  options,
+  onSelect,
+}: {
+  label: string;
+  value: string;
+  options: string[];
+  onSelect: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
   return (
-    <Animated.View
-      style={{ opacity: opacityRef, position: 'absolute', right: 0, top: 0 }}
-      pointerEvents="none"
-    >
-      <Text className="text-primary text-xs">Saved</Text>
-    </Animated.View>
+    <View className="mt-4">
+      <Text className="text-muted text-xs mb-1">{label}</Text>
+      <Pressable
+        onPress={() => setOpen(!open)}
+        style={{
+          backgroundColor: '#050508',
+          borderWidth: 1,
+          borderColor: open ? '#4D7CFF' : '#2a2a3a',
+          borderRadius: 8,
+          paddingHorizontal: 12,
+          paddingVertical: 10,
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
+        <Text style={{ color: '#e0e0e0', fontSize: 15 }}>{value}</Text>
+        <Text style={{ color: '#888', fontSize: 12 }}>{open ? '▲' : '▼'}</Text>
+      </Pressable>
+      {open && (
+        <View style={{ backgroundColor: '#0d0d14', borderWidth: 1, borderColor: '#2a2a3a', borderRadius: 8, marginTop: 4, overflow: 'hidden' }}>
+          {options.map(opt => (
+            <Pressable
+              key={opt}
+              onPress={() => { onSelect(opt); setOpen(false); }}
+              style={{
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+                backgroundColor: opt === value ? 'rgba(77,124,255,0.15)' : 'transparent',
+                borderBottomWidth: 1,
+                borderBottomColor: '#1a1a2a',
+              }}
+            >
+              <Text style={{ color: opt === value ? '#4D7CFF' : '#e0e0e0', fontSize: 15 }}>{opt}</Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+    </View>
   );
 }
 
 export default function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const providerName = useSettingsStore(s => s.providerName);
   const modelName = useSettingsStore(s => s.modelName);
-  const baseUrl = useSettingsStore(s => s.baseUrl);
   const glowLevel = useSettingsStore(s => s.glowLevel);
   const setModelName = useSettingsStore(s => s.setModelName);
-  const setBaseUrl = useSettingsStore(s => s.setBaseUrl);
+  const setProvider = useSettingsStore(s => s.setProvider);
   const setGlowLevel = useSettingsStore(s => s.setGlowLevel);
 
-  const [modelValue, setModelValue] = useState(modelName);
-  const [urlValue, setUrlValue] = useState(baseUrl);
-  const [modelFocused, setModelFocused] = useState(false);
-  const [urlFocused, setUrlFocused] = useState(false);
-  const modelToastOpacity = useRef(new Animated.Value(0)).current;
-  const urlToastOpacity = useRef(new Animated.Value(0)).current;
+  const currentProvider = AI_PROVIDERS.find(p => p.name === providerName) ?? AI_PROVIDERS[0];
 
-  function showToast(opacityRef: Animated.Value) {
-    Animated.sequence([
-      Animated.timing(opacityRef, { toValue: 1, duration: 150, useNativeDriver: true }),
-      Animated.delay(1000),
-      Animated.timing(opacityRef, { toValue: 0, duration: 350, useNativeDriver: true }),
-    ]).start();
+  function handleProviderSelect(name: string) {
+    const provider = AI_PROVIDERS.find(p => p.name === name);
+    if (provider) {
+      setProvider(name, provider.baseUrl, provider.models[0]);
+    }
   }
 
-  async function handleModelBlur() {
-    setModelFocused(false);
-    await setModelName(modelValue);
-    showToast(modelToastOpacity);
-  }
-
-  async function handleUrlBlur() {
-    setUrlFocused(false);
-    await setBaseUrl(urlValue);
-    showToast(urlToastOpacity);
+  function handleModelSelect(model: string) {
+    setModelName(model);
   }
 
   return (
@@ -75,38 +106,19 @@ export default function SettingsScreen() {
           <Text className="text-muted text-xs mb-1">API Key</Text>
           <ApiKeyInput />
 
-          <View className="mt-4" style={{ position: 'relative' }}>
-            <Text className="text-muted text-xs mb-1">AI Model</Text>
-            <SavedToast opacityRef={modelToastOpacity} />
-            <TextInput
-              className={`bg-bg border rounded-lg px-3 py-2 text-text text-base ${modelFocused ? 'border-primary' : 'border-border'}`}
-              value={modelValue}
-              onChangeText={setModelValue}
-              onFocus={() => setModelFocused(true)}
-              onBlur={handleModelBlur}
-              placeholder="MiniMax-M2.5"
-              placeholderTextColor="#666"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-          </View>
+          <DropdownSelect
+            label="AI Provider"
+            value={providerName}
+            options={AI_PROVIDERS.map(p => p.name)}
+            onSelect={handleProviderSelect}
+          />
 
-          <View className="mt-4" style={{ position: 'relative' }}>
-            <Text className="text-muted text-xs mb-1">Base URL</Text>
-            <SavedToast opacityRef={urlToastOpacity} />
-            <TextInput
-              className={`bg-bg border rounded-lg px-3 py-2 text-text text-base ${urlFocused ? 'border-primary' : 'border-border'}`}
-              value={urlValue}
-              onChangeText={setUrlValue}
-              onFocus={() => setUrlFocused(true)}
-              onBlur={handleUrlBlur}
-              placeholder="https://api.minimax.io/v1"
-              placeholderTextColor="#666"
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="url"
-            />
-          </View>
+          <DropdownSelect
+            label="AI Model"
+            value={modelName}
+            options={currentProvider.models}
+            onSelect={handleModelSelect}
+          />
         </View>
 
         {/* Display section */}
