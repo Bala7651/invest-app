@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { ScrollView, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSettingsStore } from '../../settings/store/settingsStore';
 import { useWatchlistStore } from '../../watchlist/store/watchlistStore';
 import { useQuoteStore } from '../../market/quoteStore';
@@ -12,6 +13,7 @@ interface AnalysisScreenProps {
 }
 
 export function AnalysisScreen({ isActive }: AnalysisScreenProps) {
+  const insets = useSafeAreaInsets();
   const apiKey = useSettingsStore(s => s.apiKey);
   const items = useWatchlistStore(s => s.items);
   const quotes = useQuoteStore(s => s.quotes);
@@ -55,7 +57,7 @@ export function AnalysisScreen({ isActive }: AnalysisScreenProps) {
   }
 
   return (
-    <View className="flex-1" style={{ paddingTop: 52, paddingBottom: 24 }}>
+    <View className="flex-1" style={{ paddingTop: insets.top + 14, paddingBottom: Math.max(insets.bottom, 8) + 18 }}>
       <ScrollView className="flex-1 px-4 pt-4" contentContainerStyle={{ paddingBottom: 16 }}>
         <Text className="text-primary text-2xl font-bold mb-4">AI 分析</Text>
 

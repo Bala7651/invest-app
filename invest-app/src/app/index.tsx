@@ -2,6 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import { Pressable, RefreshControl, Text, View, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ReorderableList, {
   ReorderableListReorderEvent,
   useReorderableDrag,
@@ -61,6 +62,7 @@ function SwipeableCard({ item }: { item: WatchlistItem }) {
 }
 
 function WatchlistPage() {
+  const insets = useSafeAreaInsets();
   const items = useWatchlistStore(s => s.items);
   const [searchVisible, setSearchVisible] = useState(false);
   const [alertsListVisible, setAlertsListVisible] = useState(false);
@@ -89,7 +91,7 @@ function WatchlistPage() {
   }
 
   const content = (
-    <View className="flex-1 bg-bg px-4" style={{ paddingTop: 52, paddingBottom: 24 }}>
+    <View className="flex-1 bg-bg px-4" style={{ paddingTop: insets.top + 14, paddingBottom: Math.max(insets.bottom, 8) + 18 }}>
       <View className="mb-4">
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center">
