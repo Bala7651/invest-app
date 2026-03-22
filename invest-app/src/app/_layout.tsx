@@ -4,7 +4,7 @@ import * as Notifications from 'expo-notifications';
 import { AndroidImportance } from 'expo-notifications';
 import { Stack } from 'expo-router';
 import { useEffect } from 'react';
-import { Platform, StatusBar, View, Text, AppState } from 'react-native';
+import { StatusBar, View, Text, AppState } from 'react-native';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator';
 import { db } from '../db/client';
@@ -103,19 +103,15 @@ export default function RootLayout() {
     );
   }
 
-  const statusBarHeight = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0;
-
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
-      <View style={{ flex: 1, backgroundColor: '#050508', paddingTop: statusBarHeight + 8, paddingBottom: 8 }}>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: '#050508' },
-          }}
-        />
-      </View>
+      <StatusBar translucent={false} backgroundColor="#050508" barStyle="light-content" />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: '#050508' },
+        }}
+      />
     </SafeAreaProvider>
   );
 }
