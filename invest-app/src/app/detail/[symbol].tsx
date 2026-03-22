@@ -22,7 +22,6 @@ export default function DetailScreen() {
   const { fetchCandles, getCandles, loading, errors } = useChartStore();
 
   const [timeframe, setTimeframe] = useState<Timeframe>('1D');
-  const [crosshairPrice, setCrosshairPrice] = useState<number | null>(null);
   const [alertModalVisible, setAlertModalVisible] = useState(false);
 
   const key = `${symbol}:${timeframe}`;
@@ -35,11 +34,9 @@ export default function DetailScreen() {
   }, [symbol, timeframe]);
 
   const displayPrice =
-    crosshairPrice !== null
-      ? crosshairPrice.toFixed(2)
-      : quote?.price != null
-        ? quote.price.toFixed(2)
-        : '—';
+    quote?.price != null
+      ? quote.price.toFixed(2)
+      : '—';
 
   const changeDisplay =
     quote?.price != null ? formatChange(quote.change, quote.changePct) : '—';
@@ -127,9 +124,6 @@ export default function DetailScreen() {
               <CandleChart
                 data={candles}
                 height={chartHeight}
-                onCandleChange={candle => {
-                  setCrosshairPrice(candle ? candle.close : null);
-                }}
               />
             </View>
             {/* Volume bars */}
