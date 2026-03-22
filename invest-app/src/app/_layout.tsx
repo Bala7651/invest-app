@@ -5,6 +5,7 @@ import { AndroidImportance } from 'expo-notifications';
 import { Stack } from 'expo-router';
 import { useEffect } from 'react';
 import { View, Text, AppState } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator';
 import { db } from '../db/client';
 import migrations from '../../drizzle/migrations';
@@ -94,11 +95,13 @@ export default function RootLayout() {
   }
 
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: '#050508' },
-      }}
-    />
+    <SafeAreaProvider>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: '#050508' },
+        }}
+      />
+    </SafeAreaProvider>
   );
 }

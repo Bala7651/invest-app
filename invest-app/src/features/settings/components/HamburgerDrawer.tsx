@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { createContext, useContext, useRef } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ReanimatedDrawerLayout, { DrawerLayoutMethods, DrawerType } from 'react-native-gesture-handler/ReanimatedDrawerLayout';
 
 interface DrawerContextValue {
@@ -20,6 +21,7 @@ interface HamburgerDrawerProps {
 
 function DrawerContent({ closeDrawer }: { closeDrawer: () => void }) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   function handleSettingsPress() {
     closeDrawer();
@@ -27,7 +29,7 @@ function DrawerContent({ closeDrawer }: { closeDrawer: () => void }) {
   }
 
   return (
-    <View style={{ flex: 1, paddingTop: 48, paddingHorizontal: 16 }} className="bg-surface">
+    <View style={{ flex: 1, paddingTop: insets.top + 8, paddingHorizontal: 16 }} className="bg-surface">
       <Pressable
         onPress={handleSettingsPress}
         className="py-4 border-b border-border"

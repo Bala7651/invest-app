@@ -1,6 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import { useState } from 'react';
 import { Modal, Pressable, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAlertStore } from '../store/alertStore';
 
 interface AlertModalProps {
@@ -12,6 +13,7 @@ interface AlertModalProps {
 }
 
 export function AlertModal({ visible, onClose, symbol, name, currentPrice }: AlertModalProps) {
+  const insets = useSafeAreaInsets();
   const getBySymbol = useAlertStore(s => s.getBySymbol);
   const upsertAlert = useAlertStore(s => s.upsertAlert);
   const existing = getBySymbol(symbol);
@@ -83,7 +85,7 @@ export function AlertModal({ visible, onClose, symbol, name, currentPrice }: Ale
         style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' }}
         onPress={onClose}
       >
-        <Pressable onPress={() => {}} style={{ backgroundColor: '#0d0d14', borderTopWidth: 1, borderTopColor: '#2a2a3a', borderRadius: 16, padding: 24 }}>
+        <Pressable onPress={() => {}} style={{ backgroundColor: '#0d0d14', borderTopWidth: 1, borderTopColor: '#2a2a3a', borderRadius: 16, padding: 24, paddingBottom: 24 + insets.bottom }}>
           <Text style={{ color: '#e0e0e0', fontSize: 18, fontWeight: 'bold', marginBottom: 20 }}>
             Price Alert — {symbol}
           </Text>

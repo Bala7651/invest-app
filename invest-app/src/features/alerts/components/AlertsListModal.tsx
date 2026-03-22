@@ -1,4 +1,5 @@
 import { Modal, Pressable, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { useAlertStore } from '../store/alertStore';
 import type { AlertRow } from '../services/alertService';
@@ -64,6 +65,7 @@ function AlertRow({ alert }: { alert: AlertRow }) {
 }
 
 export function AlertsListModal({ visible, onClose }: AlertsListModalProps) {
+  const insets = useSafeAreaInsets();
   const alerts = useAlertStore(s => s.alerts);
 
   const active = alerts.filter(
@@ -84,7 +86,7 @@ export function AlertsListModal({ visible, onClose }: AlertsListModalProps) {
         style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' }}
         onPress={onClose}
       >
-        <Pressable onPress={() => {}} style={{ backgroundColor: '#0d0d14', borderTopWidth: 1, borderTopColor: '#2a2a3a', borderRadius: 16, padding: 24, maxHeight: '80%' }}>
+        <Pressable onPress={() => {}} style={{ backgroundColor: '#0d0d14', borderTopWidth: 1, borderTopColor: '#2a2a3a', borderRadius: 16, padding: 24, paddingBottom: 24 + insets.bottom, maxHeight: '80%' }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <Text style={{ color: '#e0e0e0', fontSize: 18, fontWeight: 'bold' }}>Price Alerts</Text>
             <Pressable onPress={onClose}>

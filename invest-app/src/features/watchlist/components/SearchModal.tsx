@@ -7,6 +7,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useWatchlistStore } from '../store/watchlistStore';
 import { filterStocks, StockEntry } from '../utils/searchStocks';
 
@@ -16,6 +17,7 @@ interface SearchModalProps {
 }
 
 export function SearchModal({ visible, onClose }: SearchModalProps) {
+  const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<StockEntry[]>([]);
   const [addedSymbols, setAddedSymbols] = useState<Set<string>>(new Set());
@@ -64,7 +66,7 @@ export function SearchModal({ visible, onClose }: SearchModalProps) {
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
       <View className="flex-1 bg-bg">
-        <View className="flex-row items-center justify-between px-4 pt-14 pb-4 border-b border-border">
+        <View className="flex-row items-center justify-between px-4 pb-4 border-b border-border" style={{ paddingTop: insets.top + 8 }}>
           <Text className="text-text text-xl font-bold">Search Stocks</Text>
           <Pressable onPress={onClose}>
             <Text className="text-primary text-base">Close</Text>
@@ -95,6 +97,7 @@ export function SearchModal({ visible, onClose }: SearchModalProps) {
             keyExtractor={item => item.code}
             renderItem={renderItem}
             keyboardDismissMode="on-drag"
+            contentContainerStyle={{ paddingBottom: insets.bottom }}
           />
         )}
       </View>
