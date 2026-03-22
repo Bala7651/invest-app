@@ -1,7 +1,6 @@
 import { startActivityAsync, ActivityAction } from 'expo-intent-launcher';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ApiKeyInput } from '../features/settings/components/ApiKeyInput';
 import { GlowPillSelector } from '../features/settings/components/GlowPillSelector';
@@ -65,7 +64,6 @@ function DropdownSelect({
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const providerName = useSettingsStore(s => s.providerName);
   const modelName = useSettingsStore(s => s.modelName);
   const glowLevel = useSettingsStore(s => s.glowLevel);
@@ -91,7 +89,7 @@ export default function SettingsScreen() {
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView className="flex-1 bg-bg" contentContainerStyle={{ padding: 16, paddingTop: insets.top + 12, paddingBottom: insets.bottom + 12 }}>
+      <ScrollView className="flex-1 bg-bg" contentContainerStyle={{ padding: 16 }}>
         <View className="flex-row items-center mb-6">
           <Pressable onPress={() => router.back()} className="mr-4">
             <Text className="text-primary text-base">返回</Text>

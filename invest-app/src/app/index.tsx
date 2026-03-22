@@ -2,7 +2,6 @@ import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import { Pressable, RefreshControl, Text, View, useWindowDimensions } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ReorderableList, {
   ReorderableListReorderEvent,
   useReorderableDrag,
@@ -69,7 +68,6 @@ function WatchlistPage() {
   const [refreshEnabled, setRefreshEnabled] = useState(true);
   const alertCount = useAlertStore(s => s.activeCount());
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const isTablet = width >= 600;
 
@@ -91,7 +89,7 @@ function WatchlistPage() {
   }
 
   const content = (
-    <View className="flex-1 bg-bg px-4" style={{ paddingTop: insets.top + 12, paddingBottom: insets.bottom + 12 }}>
+    <View className="flex-1 bg-bg px-4">
       <View className="mb-4">
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center">

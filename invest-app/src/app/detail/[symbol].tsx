@@ -2,7 +2,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Pressable, Text, View, useWindowDimensions } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AlertModal } from '../../features/alerts/components/AlertModal';
 import { AlertStatusBar } from '../../features/alerts/components/AlertStatusBar';
 import { CandleChart } from '../../features/charts/components/CandleChart';
@@ -18,7 +17,6 @@ export default function DetailScreen() {
   const { symbol } = useLocalSearchParams<{ symbol: string }>();
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
 
   const quote = useQuoteStore(s => s.quotes[symbol]);
   const { fetchCandles, getCandles, loading, errors } = useChartStore();
@@ -58,7 +56,7 @@ export default function DetailScreen() {
   const volumeHeight = 80;
 
   return (
-    <View className="flex-1 bg-bg" style={{ paddingTop: insets.top + 12, paddingBottom: insets.bottom + 12 }}>
+    <View className="flex-1 bg-bg">
       {/* Bloomberg-style header */}
       <View className="flex-row items-center justify-between px-4 mb-4">
         <View className="flex-row items-center">

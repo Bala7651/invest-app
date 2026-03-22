@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSummaryStore } from '../store/summaryStore';
 import { useSettingsStore } from '../../settings/store/settingsStore';
 import { SummaryCard } from './SummaryCard';
@@ -10,7 +9,6 @@ interface SummaryScreenProps {
 }
 
 export function SummaryScreen({ isActive }: SummaryScreenProps) {
-  const insets = useSafeAreaInsets();
   const generating = useSummaryStore(s => s.generating);
   const progress = useSummaryStore(s => s.progress);
   const errors = useSummaryStore(s => s.errors);
@@ -38,7 +36,7 @@ export function SummaryScreen({ isActive }: SummaryScreenProps) {
   const errorCount = Object.values(errors).filter(e => e !== null).length;
 
   return (
-    <View className="flex-1 bg-bg px-4" style={{ paddingTop: insets.top + 12, paddingBottom: insets.bottom + 12 }}>
+    <View className="flex-1 bg-bg px-4">
       <View className="flex-row items-center justify-between mb-4">
         <Text className="text-text text-2xl font-bold">每日摘要</Text>
         <Pressable
