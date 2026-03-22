@@ -29,7 +29,7 @@ function DrawerContent({ closeDrawer }: { closeDrawer: () => void }) {
   }
 
   return (
-    <View style={{ flex: 1, paddingTop: insets.top + 8, paddingHorizontal: 16 }} className="bg-surface">
+    <View style={{ flex: 1, paddingTop: insets.top + 12, paddingHorizontal: 16 }} className="bg-surface">
       <Pressable
         onPress={handleSettingsPress}
         className="py-4 border-b border-border"

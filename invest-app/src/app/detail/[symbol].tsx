@@ -58,7 +58,7 @@ export default function DetailScreen() {
   const volumeHeight = 80;
 
   return (
-    <View className="flex-1 bg-bg" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
+    <View className="flex-1 bg-bg" style={{ paddingTop: insets.top + 12, paddingBottom: insets.bottom + 12 }}>
       {/* Bloomberg-style header */}
       <View className="flex-row items-center justify-between px-4 mb-4">
         <View className="flex-row items-center">

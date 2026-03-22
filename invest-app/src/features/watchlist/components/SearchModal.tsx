@@ -66,7 +66,7 @@ export function SearchModal({ visible, onClose }: SearchModalProps) {
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
       <View className="flex-1 bg-bg">
-        <View className="flex-row items-center justify-between px-4 pb-4 border-b border-border" style={{ paddingTop: insets.top + 8 }}>
+        <View className="flex-row items-center justify-between px-4 pb-4 border-b border-border" style={{ paddingTop: insets.top + 12 }}>
           <Text className="text-text text-xl font-bold">搜尋股票</Text>
           <Pressable onPress={onClose}>
             <Text className="text-primary text-base">關閉</Text>
