@@ -10,6 +10,11 @@
     "ios": {
       "icon": "./assets/expo.icon"
     },
+    "androidStatusBar": {
+      "translucent": true,
+      "barStyle": "light-content",
+      "backgroundColor": "#00000000"
+    },
     "android": {
       "package": "com.hopyky.invest",
       "adaptiveIcon": {

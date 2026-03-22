@@ -4,8 +4,8 @@ import * as Notifications from 'expo-notifications';
 import { AndroidImportance } from 'expo-notifications';
 import { Stack } from 'expo-router';
 import { useEffect } from 'react';
-import { View, Text, AppState } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { StatusBar, View, Text, AppState } from 'react-native';
+import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator';
 import { db } from '../db/client';
 import migrations from '../../drizzle/migrations';
@@ -82,20 +82,27 @@ export default function RootLayout() {
 
   if (error) {
     return (
-      <View className="flex-1 items-center justify-center bg-bg">
-        <Text className="text-stock-down text-base">
-          DB migration failed: {error.message}
-        </Text>
-      </View>
+      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+        <View className="flex-1 items-center justify-center bg-bg">
+          <Text className="text-stock-down text-base">
+            DB migration failed: {error.message}
+          </Text>
+        </View>
+      </SafeAreaProvider>
     );
   }
 
   if (!success) {
-    return <View className="flex-1 bg-bg" />;
+    return (
+      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+        <View className="flex-1 bg-bg" />
+      </SafeAreaProvider>
+    );
   }
 
   return (
-    <SafeAreaProvider>
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
       <Stack
         screenOptions={{
           headerShown: false,
