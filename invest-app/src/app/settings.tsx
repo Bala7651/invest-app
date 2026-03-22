@@ -89,7 +89,7 @@ export default function SettingsScreen() {
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView className="flex-1 bg-bg" contentContainerStyle={{ padding: 16 }}>
+      <ScrollView className="flex-1 bg-bg" contentContainerStyle={{ padding: 16, paddingTop: 16, paddingBottom: 16 }}>
         <View className="flex-row items-center mb-6">
           <Pressable onPress={() => router.back()} className="mr-4">
             <Text className="text-primary text-base">返回</Text>
