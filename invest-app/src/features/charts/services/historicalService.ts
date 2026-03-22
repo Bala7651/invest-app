@@ -172,13 +172,9 @@ export async function fetchCandles(symbol: string, timeframe: Timeframe): Promis
       points = [...prevPoints, ...points];
     }
 
-    const start = new Date(startDate);
-    points = points.filter(p => p.timestamp >= start.getTime());
-
     if (timeframe === '5D') {
       points = points.slice(-5);
     } else {
-      // 1D: show last 2 candles minimum so chart can render
       points = points.slice(-2);
     }
   }
