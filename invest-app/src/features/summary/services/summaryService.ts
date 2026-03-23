@@ -132,8 +132,16 @@ export async function fetchLatestQuoteForSummary(symbol: string): Promise<Summar
 
   const parseNum = (s: string) => parseFloat(s.replace(/,/g, ''));
 
-  const latest = rows[rows.length - 1];
-  const prev   = rows[rows.length - 2];
+  // Find the last two rows with a valid closing price.
+  // TWSE may include today's row with close="-" before data is finalized.
+  let latestIdx = rows.length - 1;
+  while (latestIdx >= 0 && isNaN(parseNum(rows[latestIdx][6]))) {
+    latestIdx--;
+  }
+  if (latestIdx < 1) return null;
+
+  const latest = rows[latestIdx];
+  const prev   = rows[latestIdx - 1];
 
   const close    = parseNum(latest[6]);
   const prevClose = parseNum(prev[6]);
