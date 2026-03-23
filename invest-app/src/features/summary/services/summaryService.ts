@@ -91,47 +91,98 @@ export async function fetchTWIX(): Promise<{ close: number; change: number; chan
 }
 
 // ---------------------------------------------------------------------------
-// Fresh quote from TWSE (used by summary so market-closed state still works)
+// Fresh quote + MA from TWSE STOCK_DAY (works outside market hours too)
 // ---------------------------------------------------------------------------
 
-export async function fetchLatestQuoteForSummary(symbol: string): Promise<SummaryQuoteData | null> {
-  const now = new Date();
-  const mm = String(now.getMonth() + 1).padStart(2, '0');
-  const url = `https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=${now.getFullYear()}${mm}01&stockNo=${symbol}`;
+function prevMonthYear(year: number, month: number): { year: number; month: number } {
+  return month === 1 ? { year: year - 1, month: 12 } : { year, month: month - 1 };
+}
+
+async function fetchStockDayRows(symbol: string, year: number, month: number): Promise<string[][]> {
+  const mm = String(month).padStart(2, '0');
+  const url = `https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=${year}${mm}01&stockNo=${symbol}`;
   try {
     const res = await fetch(url, {
       headers: { 'User-Agent': 'invest-app/1.0' },
       signal: timeoutSignal(6_000),
     });
-    if (!res.ok) return null;
+    if (!res.ok) return [];
     const data = await res.json();
-    if (!data.data || data.data.length < 2) return null;
-    const rows: string[][] = data.data;
-    const latest = rows[rows.length - 1];
-    const prev = rows[rows.length - 2];
-    const parseNum = (s: string) => parseFloat(s.replace(/,/g, ''));
-    const close = parseNum(latest[6]);
-    const prevClose = parseNum(prev[6]);
-    if (isNaN(close) || isNaN(prevClose)) return null;
-    const change = close - prevClose;
-    const changePct = prevClose !== 0 ? (change / prevClose) * 100 : 0;
-    const open = parseNum(latest[3]);
-    const high = parseNum(latest[4]);
-    const low = parseNum(latest[5]);
-    const volumeShares = parseNum(latest[1]);
-    return {
-      price: close,
-      open: isNaN(open) ? null : open,
-      high: isNaN(high) ? null : high,
-      low: isNaN(low) ? null : low,
-      volume: isNaN(volumeShares) ? null : Math.round(volumeShares / 1000),
-      change,
-      changePct,
-      prevClose,
-    };
+    return Array.isArray(data.data) ? data.data : [];
   } catch {
-    return null;
+    return [];
   }
+}
+
+export async function fetchLatestQuoteForSummary(symbol: string): Promise<SummaryQuoteData | null> {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+
+  let rows = await fetchStockDayRows(symbol, year, month);
+
+  // Month-boundary: if current month has fewer than 20 trading days, prepend previous month
+  if (rows.length < 20) {
+    const { year: py, month: pm } = prevMonthYear(year, month);
+    const prevRows = await fetchStockDayRows(symbol, py, pm);
+    rows = [...prevRows, ...rows];
+  }
+
+  if (rows.length < 2) return null;
+
+  const parseNum = (s: string) => parseFloat(s.replace(/,/g, ''));
+
+  const latest = rows[rows.length - 1];
+  const prev   = rows[rows.length - 2];
+
+  const close    = parseNum(latest[6]);
+  const prevClose = parseNum(prev[6]);
+  if (isNaN(close) || isNaN(prevClose)) return null;
+
+  const change    = close - prevClose;
+  const changePct = prevClose !== 0 ? (change / prevClose) * 100 : 0;
+  const open      = parseNum(latest[3]);
+  const high      = parseNum(latest[4]);
+  const low       = parseNum(latest[5]);
+  // STOCK_DAY volume is in shares; convert to 張 (1 張 = 1000 shares)
+  const volumeShares = parseNum(latest[1]);
+  const volumeLots   = isNaN(volumeShares) ? null : Math.round(volumeShares / 1000);
+
+  // MA5 / MA20 — use last 20 rows max
+  const win20   = rows.slice(-20);
+  const closes  = win20.map(r => parseNum(r[6])).filter(n => !isNaN(n));
+  // volumes also in shares here; defer /1000 until after averaging
+  const volsSh  = win20.map(r => parseNum(r[1])).filter(n => !isNaN(n));
+
+  const ma5 = closes.length >= 5
+    ? parseFloat((closes.slice(-5).reduce((a, b) => a + b, 0) / 5).toFixed(2))
+    : null;
+  const ma20 = closes.length >= 20
+    ? parseFloat((closes.reduce((a, b) => a + b, 0) / 20).toFixed(2))
+    : null;
+
+  // avgVolume20 in 張; volumeRatio = today 張 / avg 張  (same unit → ratio correct)
+  const avgVolume20 = volsSh.length >= 20
+    ? Math.round(volsSh.reduce((a, b) => a + b, 0) / 20 / 1000)
+    : null;
+  const volumeRatio = (avgVolume20 != null && avgVolume20 > 0 && volumeLots != null)
+    ? parseFloat((volumeLots / avgVolume20).toFixed(1))
+    : null;
+
+  return {
+    price: close,
+    open:  isNaN(open) ? null : open,
+    high:  isNaN(high) ? null : high,
+    low:   isNaN(low)  ? null : low,
+    volume: volumeLots,
+    change,
+    changePct,
+    prevClose,
+    ma5,
+    ma20,
+    avgVolume20,
+    volumeRatio,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -152,20 +203,31 @@ export interface SummaryQuoteData {
   change: number;
   changePct: number;
   prevClose: number;
+  ma5: number | null;
+  ma20: number | null;
+  avgVolume20: number | null;
+  volumeRatio: number | null;
 }
 
 export function buildSummaryPrompt(symbol: string, name: string, quote: SummaryQuoteData): string {
-  const ohlc = (quote.open != null && quote.high != null && quote.low != null)
-    ? `- 今日 K 棒：開 ${quote.open} ／高 ${quote.high} ／低 ${quote.low} ／收 ${quote.price ?? '無資料'} 元`
-    : `- 目前價格：${quote.price ?? '無資料'} 元`;
-  const vol = quote.volume != null ? `- 成交量：${quote.volume.toLocaleString()} 張` : '';
+  const lines: string[] = [];
+
+  if (quote.open != null && quote.high != null && quote.low != null) {
+    lines.push(`- 今日 K 棒：開 ${quote.open} ／高 ${quote.high} ／低 ${quote.low} ／收 ${quote.price ?? '無資料'} 元`);
+  } else {
+    lines.push(`- 目前價格：${quote.price ?? '無資料'} 元`);
+  }
+  lines.push(`- 漲跌：${quote.change >= 0 ? '+' : ''}${quote.change.toFixed(2)}（${quote.changePct.toFixed(2)}%）`);
+  lines.push(`- 昨收：${quote.prevClose} 元`);
+  if (quote.volume      != null) lines.push(`- 成交量：${quote.volume.toLocaleString()} 張`);
+  if (quote.ma5         != null) lines.push(`- 5日均價：${quote.ma5} 元`);
+  if (quote.ma20        != null) lines.push(`- 20日均價：${quote.ma20} 元`);
+  if (quote.avgVolume20 != null) lines.push(`- 20日均量：${quote.avgVolume20.toLocaleString()} 張`);
+  if (quote.volumeRatio != null) lines.push(`- 量比：${quote.volumeRatio}（今日量 / 20日均量）`);
 
   return `請為台灣股票 ${symbol}（${name}）生成今日簡短摘要。
 今日市場數據（以下為實際數據，請勿自行捏造任何未提供的數字）：
-${ohlc}
-- 漲跌：${quote.change >= 0 ? '+' : ''}${quote.change.toFixed(2)}（${quote.changePct.toFixed(2)}%）
-- 昨收：${quote.prevClose} 元
-${vol}
+${lines.join('\n')}
 請僅根據以上數據，用2-3句話說明今日價格走勢與短期觀察。禁止使用任何未提供的技術指標數值。`;
 }
 
