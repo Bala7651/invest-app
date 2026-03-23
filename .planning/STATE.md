@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: milestone
 status: completed
-stopped_at: "Completed 11-03-PLAN.md: AI-enriched push alerts"
-last_updated: "2026-03-23T00:04:46.345Z"
+stopped_at: "Completed 11-02-PLAN.md: Portfolio Health Screen"
+last_updated: "2026-03-23T00:04:56.106Z"
 last_activity: "2026-03-22 — Completed 10-01: SVG sparklines + Reanimated glow flash on watchlist cards, 241 tests pass"
 progress:
   total_phases: 11
@@ -151,6 +151,9 @@ Recent decisions affecting current work:
 - [Phase 11-03]: AbortController+setTimeout(5000) used in getAlertContext instead of AbortSignal.timeout() — Hermes JS engine compat
 - [Phase 11-03]: aiNotificationsEnabled defaults true via 'aiNotif !== false' pattern — null from SecureStore means enabled on first launch
 - [Phase 11-03]: AI notifications toggle renders on all platforms (not Android-only) — it is a preference, not a system-settings deep-link
+- [Phase 11-ai-intelligence-layer]: delete-then-insert upsert for holdings avoids unique constraint conflicts
+- [Phase 11-ai-intelligence-layer]: AbortController + setTimeout(30_000) for MiniMax fetch (Hermes compat, not AbortSignal.timeout)
+- [Phase 11-ai-intelligence-layer]: isLots lots/shares toggle is session-only useState — no persistence needed
 
 ### Pending Todos
 
@@ -167,6 +170,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-23T00:04:37.316Z
-Stopped at: Completed 11-03-PLAN.md: AI-enriched push alerts
+Last session: 2026-03-23T00:04:56.102Z
+Stopped at: Completed 11-02-PLAN.md: Portfolio Health Screen
 Resume file: None
