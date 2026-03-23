@@ -44,6 +44,16 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
           effectiveQuote = { ...quote, price: fresh.price, change: fresh.change, changePct: fresh.changePct, prevClose: fresh.prevClose };
         }
       }
+
+      // Still no price after fresh attempt — skip AI call to avoid non-JSON response
+      if (effectiveQuote.price == null) {
+        set(s => ({
+          loading: { ...s.loading, [symbol]: false },
+          errors: { ...s.errors, [symbol]: '等待行情資料，請稍後重試' },
+        }));
+        return;
+      }
+
       const result = await callMiniMax(symbol, effectiveQuote, credentials);
       set(s => ({
         cache: { ...s.cache, [symbol]: result },
