@@ -90,17 +90,13 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
 
     try {
       const result = await callPortfolioMiniMax(entries, { apiKey, modelName, baseUrl });
-      if (result) {
-        useHoldingsStore.getState().setLastAnalysis(result);
-        useHoldingsStore.getState().setChatHistory([
-          { role: 'user', content: buildDetailedAnalysisPrompt() },
-          { role: 'assistant', content: result.paragraph },
-        ]);
-      } else {
-        setAnalysisError('AI 分析失敗，請稍後重試');
-      }
-    } catch {
-      setAnalysisError('網路錯誤，請稍後重試');
+      useHoldingsStore.getState().setLastAnalysis(result);
+      useHoldingsStore.getState().setChatHistory([
+        { role: 'user', content: buildDetailedAnalysisPrompt() },
+        { role: 'assistant', content: result.paragraph },
+      ]);
+    } catch (e) {
+      setAnalysisError(String(e));
     } finally {
       setAnalysisLoading(false);
     }

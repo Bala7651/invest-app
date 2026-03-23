@@ -192,24 +192,25 @@ export async function callPortfolioMiniMax(
           { role: 'user', content: buildDetailedAnalysisPrompt() },
         ],
         temperature: 0.3,
-        max_tokens: 1600,
+        max_tokens: 900,
       }),
       signal: controller.signal,
     });
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      throw new Error(`HTTP ${res.status}: ${body.slice(0, 200)}`);
+    }
 
     const data = await res.json();
     let content: string = (data.choices?.[0]?.message?.content ?? '') as string;
     content = content.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
-    if (!content) return null;
+    if (!content) throw new Error('回應內容為空');
 
     const score = extractHealthScore(content);
     const paragraph = content.replace(/SCORE[：:]\s*\d{1,3}\s*\/\s*100[^\n]*/gi, '').trim();
 
     return { score, paragraph };
-  } catch {
-    return null;
   } finally {
     clearTimeout(timer);
   }
