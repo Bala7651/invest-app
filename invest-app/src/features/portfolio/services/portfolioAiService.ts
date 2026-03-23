@@ -57,64 +57,7 @@ function getIndustry(symbol: string): string {
   return INDUSTRY_MAP[symbol] ?? '未分類';
 }
 
-function buildSystemPromptWithData(entries: PortfolioEntry[]): string {
-  const active = entries.filter((e) => e.quantity > 0).slice(0, MAX_STOCKS);
-  const priced = active.filter((e) => e.currentPrice != null);
-  const totalValue = priced.reduce((sum, e) => sum + e.currentPrice! * e.quantity, 0);
-
-  const stockLines = active.map((e) => {
-    const industry = getIndustry(e.symbol);
-    if (e.currentPrice == null) {
-      return `- ${e.name}（${e.symbol}）｜產業：${industry}｜持股 ${e.quantity.toLocaleString()} 股｜現價 無資料`;
-    }
-    const mv = e.currentPrice * e.quantity;
-    const w = totalValue > 0 ? ((mv / totalValue) * 100).toFixed(1) : '0.0';
-    return `- ${e.name}（${e.symbol}）｜產業：${industry}｜持股 ${e.quantity.toLocaleString()} 股｜現價 ${e.currentPrice} 元｜市值 ${Math.round(mv).toLocaleString()} 元｜佔比 ${w}%`;
-  });
-
-  const industryMap: Record<string, number> = {};
-  for (const e of priced) {
-    const ind = getIndustry(e.symbol);
-    industryMap[ind] = (industryMap[ind] ?? 0) + e.currentPrice! * e.quantity;
-  }
-  const industryLines = Object.entries(industryMap)
-    .sort((a, b) => b[1] - a[1])
-    .map(([ind, mv]) => `- ${ind}：${totalValue > 0 ? ((mv / totalValue) * 100).toFixed(1) : '0.0'}%`);
-
-  const sortedByMv = [...priced].sort(
-    (a, b) => b.currentPrice! * b.quantity - a.currentPrice! * a.quantity,
-  );
-  const maxStock = sortedByMv[0];
-  const maxStockW =
-    maxStock && totalValue > 0
-      ? ((maxStock.currentPrice! * maxStock.quantity / totalValue) * 100).toFixed(1)
-      : '—';
-
-  const sortedInd = Object.entries(industryMap).sort((a, b) => b[1] - a[1]);
-  const maxInd = sortedInd[0];
-  const maxIndW =
-    maxInd && totalValue > 0 ? ((maxInd[1] / totalValue) * 100).toFixed(1) : '—';
-
-  const top3Mv = sortedByMv
-    .slice(0, 3)
-    .reduce((sum, e) => sum + e.currentPrice! * e.quantity, 0);
-  const top3W = totalValue > 0 ? ((top3Mv / totalValue) * 100).toFixed(1) : '—';
-
-  return `你是一位資深台灣股市投資組合顧問，隸屬聲譽卓著的金融機構，專為高淨值客戶提供深度投資分析與長期理財規劃。你的專長涵蓋個股基本面評估、產業輪動週期判斷、風險情境模擬，以及持股策略建議。
-
-【客戶的投資組合資料】
-總市值：${Math.round(totalValue).toLocaleString()} 元
-持股明細：
-${stockLines.length > 0 ? stockLines.join('\n') : '- 無持股資料'}
-
-產業分布：
-${industryLines.length > 0 ? industryLines.join('\n') : '- 無可計算資料'}
-
-關鍵指標：
-- 最大單一持股佔比：${maxStockW}%${maxStock ? `（${maxStock.name}）` : ''}
-- 最大單一產業佔比：${maxIndW}%${maxInd ? `（${maxInd[0]}）` : ''}
-- 前三大持股合計佔比：${top3W}%
-- 持股檔數：${active.length}
+const PORTFOLIO_SYSTEM_PROMPT = `你是一位資深台灣股市投資組合顧問，隸屬聲譽卓著的金融機構，專為高淨值客戶提供深度投資分析與長期理財規劃。你的專長涵蓋個股基本面評估、產業輪動週期判斷、風險情境模擬，以及持股策略建議。
 
 【回覆模式】
 你有兩種回覆模式，根據用戶的訊息自動切換：
@@ -147,20 +90,72 @@ ${industryLines.length > 0 ? industryLines.join('\n') : '- 無可計算資料'}
 - 對話問答模式中，先直接回答結論，再給理由，不繞圈子。
 
 【重要限制】
-- 你不具備即時行情查詢能力，所有數據以上方提供的為準。
+- 你不具備即時行情查詢能力，所有數據以用戶提供的為準。
 - 產業輪動觀點基於訓練資料中的歷史規律與公開資訊，非即時市場數據，必要時提醒客戶核實最新狀況。
 - 禁止給出具體買入價格或目標價。
 - 你的分析是參考建議，非投資指令。
-- 佔比與市值數字直接引用上方提供的計算結果，不自行重新計算。`;
+- 佔比與市值數字直接引用用戶提供的計算結果，不自行重新計算。`;
+
+// Build the data-rich user message (data + request in one message)
+export function buildDetailedAnalysisPrompt(entries: PortfolioEntry[]): string {
+  const active = entries.filter((e) => e.quantity > 0).slice(0, MAX_STOCKS);
+  const priced = active.filter((e) => e.currentPrice != null);
+  const totalValue = priced.reduce((sum, e) => sum + e.currentPrice! * e.quantity, 0);
+
+  const stockLines = active.map((e) => {
+    const industry = getIndustry(e.symbol);
+    if (e.currentPrice == null) {
+      return `- ${e.name}（${e.symbol}）｜產業：${industry}｜持股 ${e.quantity.toLocaleString()} 股｜現價 無資料`;
+    }
+    const mv = e.currentPrice * e.quantity;
+    const w = totalValue > 0 ? ((mv / totalValue) * 100).toFixed(1) : '0.0';
+    return `- ${e.name}（${e.symbol}）｜產業：${industry}｜持股 ${e.quantity.toLocaleString()} 股｜現價 ${e.currentPrice} 元｜市值 ${Math.round(mv).toLocaleString()} 元｜佔比 ${w}%`;
+  });
+
+  const industryMap: Record<string, number> = {};
+  for (const e of priced) {
+    const ind = getIndustry(e.symbol);
+    industryMap[ind] = (industryMap[ind] ?? 0) + e.currentPrice! * e.quantity;
+  }
+  const industryLines = Object.entries(industryMap)
+    .sort((a, b) => b[1] - a[1])
+    .map(([ind, mv]) => `- ${ind}：${totalValue > 0 ? ((mv / totalValue) * 100).toFixed(1) : '0.0'}%`);
+
+  const sortedByMv = [...priced].sort(
+    (a, b) => b.currentPrice! * b.quantity - a.currentPrice! * a.quantity,
+  );
+  const maxStock = sortedByMv[0];
+  const maxStockW =
+    maxStock && totalValue > 0
+      ? ((maxStock.currentPrice! * maxStock.quantity / totalValue) * 100).toFixed(1)
+      : '—';
+  const maxInd = Object.entries(industryMap).sort((a, b) => b[1] - a[1])[0];
+  const maxIndW = maxInd && totalValue > 0 ? ((maxInd[1] / totalValue) * 100).toFixed(1) : '—';
+  const top3W =
+    totalValue > 0
+      ? ((sortedByMv.slice(0, 3).reduce((s, e) => s + e.currentPrice! * e.quantity, 0) / totalValue) * 100).toFixed(1)
+      : '—';
+
+  return `【客戶的投資組合資料】
+總市值：${Math.round(totalValue).toLocaleString()} 元
+持股明細：
+${stockLines.length > 0 ? stockLines.join('\n') : '- 無持股資料'}
+
+產業分布：
+${industryLines.length > 0 ? industryLines.join('\n') : '- 無可計算資料'}
+
+關鍵指標：
+- 最大單一持股佔比：${maxStockW}%${maxStock ? `（${maxStock.name}）` : ''}
+- 最大單一產業佔比：${maxIndW}%${maxInd ? `（${maxInd[0]}）` : ''}
+- 前三大持股合計佔比：${top3W}%
+- 持股檔數：${active.length}
+
+請為我的台灣股票投資組合提供完整的深度分析報告，包含持股全景、產業輪動觀點、風險情境模擬與行動建議。`;
 }
 
-export function buildDetailedAnalysisPrompt(): string {
-  return `請為我的台灣股票投資組合提供完整的深度分析報告，包含持股全景、產業輪動觀點、風險情境模擬與行動建議。`;
-}
-
-// Alias kept for test compatibility — tests check that data appears in the returned string
+// Alias kept for test compatibility
 export function buildPortfolioPrompt(entries: PortfolioEntry[]): string {
-  return buildSystemPromptWithData(entries);
+  return buildDetailedAnalysisPrompt(entries);
 }
 
 export function extractHealthScore(response: string): number {
@@ -176,7 +171,7 @@ export async function callPortfolioMiniMax(
   const url = `${credentials.baseUrl.replace(/\/$/, '')}/chat/completions`;
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 30_000);
+  const timer = setTimeout(() => controller.abort(), 60_000);
 
   try {
     const res = await fetch(url, {
@@ -188,8 +183,8 @@ export async function callPortfolioMiniMax(
       body: JSON.stringify({
         model: credentials.modelName,
         messages: [
-          { role: 'system', content: buildSystemPromptWithData(entries) },
-          { role: 'user', content: buildDetailedAnalysisPrompt() },
+          { role: 'system', content: PORTFOLIO_SYSTEM_PROMPT },
+          { role: 'user', content: buildDetailedAnalysisPrompt(entries) },
         ],
         temperature: 0.3,
         max_tokens: 900,
@@ -217,7 +212,6 @@ export async function callPortfolioMiniMax(
 }
 
 export async function callPortfolioFollowUp(
-  entries: PortfolioEntry[],
   chatHistory: ChatMessage[],
   question: string,
   credentials: Credentials,
@@ -225,7 +219,7 @@ export async function callPortfolioFollowUp(
   const url = `${credentials.baseUrl.replace(/\/$/, '')}/chat/completions`;
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 20_000);
+  const timer = setTimeout(() => controller.abort(), 30_000);
 
   try {
     const res = await fetch(url, {
@@ -237,7 +231,7 @@ export async function callPortfolioFollowUp(
       body: JSON.stringify({
         model: credentials.modelName,
         messages: [
-          { role: 'system', content: buildSystemPromptWithData(entries) },
+          { role: 'system', content: PORTFOLIO_SYSTEM_PROMPT },
           ...chatHistory,
           { role: 'user', content: question },
         ],

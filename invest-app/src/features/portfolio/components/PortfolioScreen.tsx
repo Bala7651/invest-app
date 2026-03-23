@@ -92,7 +92,7 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
       const result = await callPortfolioMiniMax(entries, { apiKey, modelName, baseUrl });
       useHoldingsStore.getState().setLastAnalysis(result);
       useHoldingsStore.getState().setChatHistory([
-        { role: 'user', content: buildDetailedAnalysisPrompt() },
+        { role: 'user', content: buildDetailedAnalysisPrompt(entries) },
         { role: 'assistant', content: result.paragraph },
       ]);
     } catch (e) {
@@ -108,20 +108,8 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
     setFollowUpText('');
     setFollowUpLoading(true);
 
-    const currentEntries = items.map((item) => {
-      const q = quotes[item.symbol];
-      const holding = holdings[item.symbol];
-      return {
-        symbol: item.symbol,
-        name: item.name,
-        quantity: holding?.quantity ?? 0,
-        currentPrice: q?.price ?? null,
-      };
-    });
-
     try {
       const response = await callPortfolioFollowUp(
-        currentEntries,
         useHoldingsStore.getState().chatHistory,
         question,
         { apiKey, modelName, baseUrl },

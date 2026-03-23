@@ -117,19 +117,19 @@ describe('callPortfolioMiniMax', () => {
     expect(result!.paragraph).toContain('投資組合');
   });
 
-  it('returns null on HTTP error', async () => {
-    (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: false, status: 500 });
+  it('throws on HTTP error', async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      text: async () => 'Internal Server Error',
+    });
 
-    const result = await callPortfolioMiniMax([makeEntry()], credentials);
-
-    expect(result).toBeNull();
+    await expect(callPortfolioMiniMax([makeEntry()], credentials)).rejects.toThrow('HTTP 500');
   });
 
-  it('returns null on network error', async () => {
+  it('throws on network error', async () => {
     (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network failed'));
 
-    const result = await callPortfolioMiniMax([makeEntry()], credentials);
-
-    expect(result).toBeNull();
+    await expect(callPortfolioMiniMax([makeEntry()], credentials)).rejects.toThrow('Network failed');
   });
 });
