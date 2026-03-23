@@ -189,10 +189,27 @@ export async function fetchLatestQuoteForSummary(symbol: string): Promise<Summar
 // AI summary call
 // ---------------------------------------------------------------------------
 
-const SUMMARY_SYSTEM_PROMPT = `You are a Taiwan stock market analyst providing brief daily summaries.
-ALWAYS respond in Traditional Chinese (繁體中文).
-ALWAYS respond with only a plain text paragraph. No JSON, no markdown, no headers.
-Keep the summary to 2-3 sentences: mention today's price action, one key technical signal, and short-term outlook.`;
+const SUMMARY_SYSTEM_PROMPT = `你是一位專業的台灣股市分析師，負責撰寫每日精簡的盤勢與個股摘要。
+
+【格式規則】
+1. 全程使用繁體中文。
+2. 純文字段落，禁止 JSON、Markdown、標題或任何特殊排版。
+3. 以 4-6 句話完成摘要，每句話簡短有力，不超過 30 字。
+4. 句與句之間自然銜接，形成一個連貫段落。
+
+【內容架構】
+第一句：今日收盤結果，漲跌方向與幅度。
+第二句：盤中走勢特徵，根據開盤與高低點判斷（開高走低、低檔反彈、區間震盪等）。
+第三句：量能觀察，根據量比判斷今日交易活躍度（放量突破、縮量整理、量能持平等）。
+第四句：技術面位置，根據現價與均線的相對關係描述多空格局（站上/跌破均線、均線糾結等）。如未提供均線數據則跳過此句。
+第五至六句：短期展望與需關注的支撐壓力或事件。
+
+【溝通風格】
+- 語氣沉穩專業，像資深分析師在晨會上做簡報。
+- 客觀中立，禁止「強勢噴出」「崩跌」「慘綠」「噴發」等聳動用語。
+- 禁止使用「強烈建議買進/賣出」等指令性語句。
+- 只評論用戶提供的數據，絕對不捏造任何未提供的數字或指標。
+- 引用數字時直接使用，不要加「根據數據顯示」之類的前綴。`;
 
 export interface SummaryQuoteData {
   price: number | null;
@@ -211,33 +228,30 @@ export interface SummaryQuoteData {
 
 export function buildSummaryPrompt(symbol: string, name: string, quote: SummaryQuoteData): string {
   const lines: string[] = [];
-
-  if (quote.open != null && quote.high != null && quote.low != null) {
-    lines.push(`- 今日 K 棒：開 ${quote.open} ／高 ${quote.high} ／低 ${quote.low} ／收 ${quote.price ?? '無資料'} 元`);
-  } else {
-    lines.push(`- 目前價格：${quote.price ?? '無資料'} 元`);
-  }
-  lines.push(`- 漲跌：${quote.change >= 0 ? '+' : ''}${quote.change.toFixed(2)}（${quote.changePct.toFixed(2)}%）`);
+  lines.push(`- 收盤價：${quote.price ?? '無資料'} 元`);
+  lines.push(`- 漲跌：${quote.change >= 0 ? '+' : ''}${quote.change.toFixed(2)} 元（${quote.changePct.toFixed(2)}%）`);
   lines.push(`- 昨收：${quote.prevClose} 元`);
+  if (quote.open != null) lines.push(`- 開盤：${quote.open} 元`);
+  if (quote.high != null) lines.push(`- 最高：${quote.high} 元`);
+  if (quote.low  != null) lines.push(`- 最低：${quote.low} 元`);
   if (quote.volume      != null) lines.push(`- 成交量：${quote.volume.toLocaleString()} 張`);
+  if (quote.volumeRatio != null) lines.push(`- 量比：${quote.volumeRatio}（今日量÷20日均量）`);
   if (quote.ma5         != null) lines.push(`- 5日均價：${quote.ma5} 元`);
   if (quote.ma20        != null) lines.push(`- 20日均價：${quote.ma20} 元`);
-  if (quote.avgVolume20 != null) lines.push(`- 20日均量：${quote.avgVolume20.toLocaleString()} 張`);
-  if (quote.volumeRatio != null) lines.push(`- 量比：${quote.volumeRatio}（今日量 / 20日均量）`);
 
-  return `請為台灣股票 ${symbol}（${name}）生成今日簡短摘要。
-今日市場數據（以下為實際數據，請勿自行捏造任何未提供的數字）：
+  return `請為 ${name}（${symbol}）生成今日摘要。
+今日數據（以下為實際數據，請據實引用，勿自行編造）：
 ${lines.join('\n')}
-請僅根據以上數據，用2-3句話說明今日價格走勢與短期觀察。禁止使用任何未提供的技術指標數值。`;
+請用 4-6 句簡短的話描述今日股價走勢、量價關係、技術面位置與短期展望。`;
 }
 
 export function buildIndexSummaryPrompt(indexData: { close: number; change: number; changePct: number }): string {
   const sign = indexData.change >= 0 ? '+' : '';
-  return `請為台灣加權指數（大盤）生成今日簡短摘要。
-最新指數資料：
-- 指數：${indexData.close.toFixed(2)} 點
+  return `請為台灣加權指數（大盤）生成今日摘要。
+今日數據（以下為實際數據，請據實引用，勿自行編造）：
+- 收盤指數：${indexData.close.toFixed(2)} 點
 - 漲跌：${sign}${indexData.change.toFixed(2)} 點（${sign}${indexData.changePct.toFixed(2)}%）
-請用2-3句話說明今日大盤表現、關鍵走勢及短期展望。`;
+請用 4-6 句簡短的話描述今日表現、量能狀況、技術面位置與短期展望。`;
 }
 
 export async function callSummaryMiniMax(
@@ -264,7 +278,7 @@ export async function callSummaryMiniMax(
           { role: 'user', content: userPrompt },
         ],
         temperature: 0.3,
-        max_tokens: 300,
+        max_tokens: 200,
       }),
       signal: controller.signal,
     });
