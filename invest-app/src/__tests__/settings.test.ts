@@ -53,3 +53,42 @@ describe('ALRT-03: Battery Optimization setting', () => {
     expect(source).toContain('IGNORE_BATTERY_OPTIMIZATION_SETTINGS');
   });
 });
+
+describe('AI Notifications toggle', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('setAiNotificationsEnabled(false) calls setItemAsync with key ai_notifications_enabled and value false', async () => {
+    const { setItemAsync } = require('expo-secure-store');
+    const { useSettingsStore } = require('../features/settings/store/settingsStore');
+    await useSettingsStore.getState().setAiNotificationsEnabled(false);
+    expect(setItemAsync).toHaveBeenCalledWith('ai_notifications_enabled', 'false');
+  });
+
+  it('setAiNotificationsEnabled(true) calls setItemAsync with key ai_notifications_enabled and value true', async () => {
+    const { setItemAsync } = require('expo-secure-store');
+    const { useSettingsStore } = require('../features/settings/store/settingsStore');
+    await useSettingsStore.getState().setAiNotificationsEnabled(true);
+    expect(setItemAsync).toHaveBeenCalledWith('ai_notifications_enabled', 'true');
+  });
+
+  it('loadFromSecureStore sets aiNotificationsEnabled=false when stored value is false', async () => {
+    const { getItemAsync } = require('expo-secure-store');
+    getItemAsync.mockImplementation((key: string) => {
+      if (key === 'ai_notifications_enabled') return Promise.resolve('false');
+      return Promise.resolve(null);
+    });
+    const { useSettingsStore } = require('../features/settings/store/settingsStore');
+    await useSettingsStore.getState().loadFromSecureStore();
+    expect(useSettingsStore.getState().aiNotificationsEnabled).toBe(false);
+  });
+
+  it('loadFromSecureStore sets aiNotificationsEnabled=true when stored value is null (default)', async () => {
+    const { getItemAsync } = require('expo-secure-store');
+    getItemAsync.mockResolvedValue(null);
+    const { useSettingsStore } = require('../features/settings/store/settingsStore');
+    await useSettingsStore.getState().loadFromSecureStore();
+    expect(useSettingsStore.getState().aiNotificationsEnabled).toBe(true);
+  });
+});

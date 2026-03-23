@@ -12,17 +12,26 @@ jest.mock('expo-notifications', () => ({
   },
 }));
 
+jest.mock('../features/settings/store/settingsStore', () => ({
+  useSettingsStore: { getState: jest.fn() },
+}));
+
 import * as alertService from '../features/alerts/services/alertService';
 import * as Notifications from 'expo-notifications';
+import { useSettingsStore } from '../features/settings/store/settingsStore';
 
 const mockGetAll = alertService.getAll as jest.MockedFunction<typeof alertService.getAll>;
 const mockMarkTriggered = alertService.markTriggered as jest.MockedFunction<typeof alertService.markTriggered>;
 const mockSchedule = Notifications.scheduleNotificationAsync as jest.MockedFunction<typeof Notifications.scheduleNotificationAsync>;
+const mockGetState = (useSettingsStore as any).getState as jest.MockedFunction<() => any>;
 
 beforeEach(() => {
   jest.clearAllMocks();
   mockMarkTriggered.mockResolvedValue(undefined);
   mockSchedule.mockResolvedValue('notification-id' as any);
+  // Default: AI disabled (empty apiKey) so existing tests behave as before
+  mockGetState.mockReturnValue({ aiNotificationsEnabled: false, apiKey: '', modelName: 'MiniMax-M2.5', baseUrl: 'https://api.minimax.io/v1' });
+  global.fetch = jest.fn();
 });
 
 describe('checkAlerts', () => {
@@ -188,5 +197,143 @@ describe('checkAlerts', () => {
     await checkAlerts({ '2330': { symbol: '2330', name: '台積電', price: 970 } });
 
     expect(mockSchedule).not.toHaveBeenCalled();
+  });
+
+  describe('AI-enriched notifications', () => {
+    it('when aiNotificationsEnabled=true and apiKey set and fetch resolves, body includes AI sentence', async () => {
+      mockGetState.mockReturnValue({
+        aiNotificationsEnabled: true,
+        apiKey: 'test-key',
+        modelName: 'MiniMax-M2.5',
+        baseUrl: 'https://api.minimax.io/v1',
+      });
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [{ message: { content: '市場情緒謹慎，成交量放大。' } }],
+        }),
+      });
+
+      mockGetAll.mockResolvedValue([
+        {
+          id: 1, symbol: '2330', name: '台積電',
+          upper_price: 980, lower_price: null,
+          upper_status: 'active', lower_status: 'active',
+        },
+      ]);
+
+      await checkAlerts({ '2330': { symbol: '2330', name: '台積電', price: 985 } });
+
+      expect(mockSchedule).toHaveBeenCalledTimes(1);
+      const call = mockSchedule.mock.calls[0][0];
+      expect(call.content.body).toContain('| 市場情緒謹慎，成交量放大。');
+    });
+
+    it('body format is "{name} crossed {direction} {price} - current: {current} | {AI_SENTENCE}"', async () => {
+      mockGetState.mockReturnValue({
+        aiNotificationsEnabled: true,
+        apiKey: 'test-key',
+        modelName: 'MiniMax-M2.5',
+        baseUrl: 'https://api.minimax.io/v1',
+      });
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [{ message: { content: 'AI說明文字。' } }],
+        }),
+      });
+
+      mockGetAll.mockResolvedValue([
+        {
+          id: 1, symbol: '2330', name: '台積電',
+          upper_price: 980, lower_price: null,
+          upper_status: 'active', lower_status: 'active',
+        },
+      ]);
+
+      await checkAlerts({ '2330': { symbol: '2330', name: '台積電', price: 985 } });
+
+      const call = mockSchedule.mock.calls[0][0];
+      expect(call.content.body).toBe('台積電 crossed above 980 - current: 985.00 | AI說明文字。');
+    });
+
+    it('when AI fetch times out, plain notification fires anyway', async () => {
+      mockGetState.mockReturnValue({
+        aiNotificationsEnabled: true,
+        apiKey: 'test-key',
+        modelName: 'MiniMax-M2.5',
+        baseUrl: 'https://api.minimax.io/v1',
+      });
+      // fetch never resolves — simulate timeout scenario
+      // The actual timeout handling returns null, so notification fires with plain body
+      (global.fetch as jest.Mock).mockImplementation(() => new Promise(() => {}));
+
+      mockGetAll.mockResolvedValue([
+        {
+          id: 1, symbol: '2330', name: '台積電',
+          upper_price: 980, lower_price: null,
+          upper_status: 'active', lower_status: 'active',
+        },
+      ]);
+
+      // Use jest fake timers to fast-forward the 5s timeout
+      jest.useFakeTimers();
+      const promise = checkAlerts({ '2330': { symbol: '2330', name: '台積電', price: 985 } });
+      jest.advanceTimersByTime(6000);
+      await promise;
+      jest.useRealTimers();
+
+      expect(mockSchedule).toHaveBeenCalledTimes(1);
+      const call = mockSchedule.mock.calls[0][0];
+      expect(call.content.body).not.toContain('|');
+    });
+
+    it('when aiNotificationsEnabled=false, fetch is never called, plain notification fires', async () => {
+      mockGetState.mockReturnValue({
+        aiNotificationsEnabled: false,
+        apiKey: 'test-key',
+        modelName: 'MiniMax-M2.5',
+        baseUrl: 'https://api.minimax.io/v1',
+      });
+
+      mockGetAll.mockResolvedValue([
+        {
+          id: 1, symbol: '2330', name: '台積電',
+          upper_price: 980, lower_price: null,
+          upper_status: 'active', lower_status: 'active',
+        },
+      ]);
+
+      await checkAlerts({ '2330': { symbol: '2330', name: '台積電', price: 985 } });
+
+      expect(global.fetch).not.toHaveBeenCalled();
+      expect(mockSchedule).toHaveBeenCalledTimes(1);
+      const call = mockSchedule.mock.calls[0][0];
+      expect(call.content.body).not.toContain('|');
+    });
+
+    it('when apiKey is empty string, fetch is never called, plain notification fires', async () => {
+      mockGetState.mockReturnValue({
+        aiNotificationsEnabled: true,
+        apiKey: '',
+        modelName: 'MiniMax-M2.5',
+        baseUrl: 'https://api.minimax.io/v1',
+      });
+
+      mockGetAll.mockResolvedValue([
+        {
+          id: 1, symbol: '2330', name: '台積電',
+          upper_price: 980, lower_price: null,
+          upper_status: 'active', lower_status: 'active',
+        },
+      ]);
+
+      await checkAlerts({ '2330': { symbol: '2330', name: '台積電', price: 985 } });
+
+      expect(global.fetch).not.toHaveBeenCalled();
+      expect(mockSchedule).toHaveBeenCalledTimes(1);
+      const call = mockSchedule.mock.calls[0][0];
+      expect(call.content.body).not.toContain('|');
+    });
   });
 });
