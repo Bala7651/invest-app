@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: milestone
 status: completed
-stopped_at: Phase 11 context gathered
-last_updated: "2026-03-22T19:20:55.615Z"
+stopped_at: "Completed 11-01: Candlestick pattern detection (8 patterns, PatternCard, detail screen wiring)"
+last_updated: "2026-03-23T00:03:55.056Z"
 last_activity: "2026-03-22 — Completed 10-01: SVG sparklines + Reanimated glow flash on watchlist cards, 241 tests pass"
 progress:
   total_phases: 11
   completed_phases: 8
-  total_plans: 22
-  completed_plans: 20
+  total_plans: 25
+  completed_plans: 21
   percent: 98
 ---
 
@@ -69,6 +69,7 @@ Progress: [██████████] 98%
 | Phase 09-price-alerts P02 | 10 | 2 tasks | 11 files |
 | Phase 10-polish P01 | 5 | 2 tasks | 7 files |
 | Phase 10-polish P02 | 12 | 2 tasks | 7 files |
+| Phase 11-ai-intelligence-layer P01 | 15 | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -142,6 +143,9 @@ Recent decisions affecting current work:
 - [Phase 10-polish]: forceRefresh merges into existing quotes and appends to tickHistory to avoid losing polling data
 - [Phase 10-polish]: Tablet centering uses conditional wrapper View with maxWidth:540 alignSelf:center when width>=600
 - [Phase 10-polish]: RefreshControl disabled during drag via onDragStart/onDragEnd to prevent gesture conflict with ReorderableList
+- [Phase 11-ai-intelligence-layer]: Hammer/shooting-star require prior trend check (bearish/bullish); inverted hammer does not — different reversal context
+- [Phase 11-ai-intelligence-layer]: Morning/evening star near-doji uses 30% of c1 body threshold (not strict 5% range doji) for realistic 3-candle matching
+- [Phase 11-ai-intelligence-layer]: PatternCard gets candles from parent hook props; does not call useChartStore internally — avoids double subscription
 
 ### Pending Todos
 
@@ -158,6 +162,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T19:20:55.611Z
-Stopped at: Phase 11 context gathered
-Resume file: .planning/phases/11-ai-intelligence-layer/11-CONTEXT.md
+Last session: 2026-03-23T00:03:55.052Z
+Stopped at: Completed 11-01: Candlestick pattern detection (8 patterns, PatternCard, detail screen wiring)
+Resume file: None
