@@ -213,8 +213,11 @@ describe('quoteStore forceRefresh', () => {
     const quotes = useQuoteStore.getState().quotes;
     expect(quotes['2330']).toBeDefined();
     expect(quotes['2330'].price).toBe(1000);
-    // 2317 has null price — skipped to preserve any cached price
-    expect(quotes['2317']).toBeUndefined();
+    // 2317 has null price — cold start so prevClose (200) used as fallback
+    expect(quotes['2317']).toBeDefined();
+    expect(quotes['2317'].price).toBe(200);
+    expect(quotes['2317'].change).toBe(0);
+    expect(quotes['2317'].changePct).toBe(0);
     expect(mockGetQuotes).toHaveBeenCalledWith(SYMBOLS);
   });
 

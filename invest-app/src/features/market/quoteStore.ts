@@ -125,7 +125,22 @@ export const useQuoteStore = create<QuoteState>((set, get) => ({
       const quotesUpdate: Record<string, Quote> = {};
       const tickHistory = { ...get().tickHistory };
       for (const q of raw) {
-        if (q.price === null) continue; // keep last known price when market is closed
+        if (q.price === null) {
+          if (!get().quotes[q.symbol]) {
+            // Cold start with no cached price — show prevClose so card isn't blank
+            quotesUpdate[q.symbol] = {
+              symbol: q.symbol,
+              name: q.name,
+              price: q.prevClose,
+              prevClose: q.prevClose,
+              change: 0,
+              changePct: 0,
+              fetchedAt,
+            };
+          }
+          // else: cached price exists — keep it, don't overwrite with null
+          continue;
+        }
         const change = q.price - q.prevClose;
         const changePct = (change / q.prevClose) * 100;
         quotesUpdate[q.symbol] = {
