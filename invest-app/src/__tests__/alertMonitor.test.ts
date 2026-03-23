@@ -257,16 +257,17 @@ describe('checkAlerts', () => {
       expect(call.content.body).toBe('台積電 crossed above 980 - current: 985.00 | AI說明文字。');
     });
 
-    it('when AI fetch times out, plain notification fires anyway', async () => {
+    it('when AI fetch times out (AbortError), plain notification fires anyway', async () => {
       mockGetState.mockReturnValue({
         aiNotificationsEnabled: true,
         apiKey: 'test-key',
         modelName: 'MiniMax-M2.5',
         baseUrl: 'https://api.minimax.io/v1',
       });
-      // fetch never resolves — simulate timeout scenario
-      // The actual timeout handling returns null, so notification fires with plain body
-      (global.fetch as jest.Mock).mockImplementation(() => new Promise(() => {}));
+      // Simulate abort (timeout) by rejecting with AbortError
+      (global.fetch as jest.Mock).mockRejectedValue(
+        Object.assign(new Error('The operation was aborted'), { name: 'AbortError' })
+      );
 
       mockGetAll.mockResolvedValue([
         {
@@ -276,12 +277,7 @@ describe('checkAlerts', () => {
         },
       ]);
 
-      // Use jest fake timers to fast-forward the 5s timeout
-      jest.useFakeTimers();
-      const promise = checkAlerts({ '2330': { symbol: '2330', name: '台積電', price: 985 } });
-      jest.advanceTimersByTime(6000);
-      await promise;
-      jest.useRealTimers();
+      await checkAlerts({ '2330': { symbol: '2330', name: '台積電', price: 985 } });
 
       expect(mockSchedule).toHaveBeenCalledTimes(1);
       const call = mockSchedule.mock.calls[0][0];
