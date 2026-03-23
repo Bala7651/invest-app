@@ -1,12 +1,13 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Pressable, Text, View, useWindowDimensions } from 'react-native';
+import { Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { OHLCVPoint } from '../../features/charts/types';
 import { AlertModal } from '../../features/alerts/components/AlertModal';
 import { AlertStatusBar } from '../../features/alerts/components/AlertStatusBar';
 import { CandleChart } from '../../features/charts/components/CandleChart';
 import { ChartSkeleton } from '../../features/charts/components/ChartSkeleton';
+import { PatternCard } from '../../features/charts/components/PatternCard';
 import { TimeframeSelector } from '../../features/charts/components/TimeframeSelector';
 import { VolumeBar } from '../../features/charts/components/VolumeBar';
 import { useChartStore } from '../../features/charts/store/chartStore';
@@ -203,17 +204,25 @@ export default function DetailScreen() {
           <ChartSkeleton height={chartHeight + volumeHeight + 16} />
         )}
 
-        {/* Timeframe selector */}
-        <View style={{ marginTop: 8 }}>
-          <TimeframeSelector
-            active={timeframe}
-            onSelect={setTimeframe}
-            loading={isLoading}
-          />
-        </View>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Pattern card — shown below volume bars when a pattern is detected */}
+          <PatternCard candles={candles} />
 
-        {/* Alert status bar */}
-        <AlertStatusBar symbol={symbol} onPress={() => setAlertModalVisible(true)} />
+          {/* Timeframe selector */}
+          <View style={{ marginTop: 8 }}>
+            <TimeframeSelector
+              active={timeframe}
+              onSelect={setTimeframe}
+              loading={isLoading}
+            />
+          </View>
+
+          {/* Alert status bar */}
+          <AlertStatusBar symbol={symbol} onPress={() => setAlertModalVisible(true)} />
+        </ScrollView>
       </View>
     </View>
   );
