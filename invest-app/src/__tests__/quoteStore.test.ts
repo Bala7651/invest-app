@@ -213,7 +213,8 @@ describe('quoteStore forceRefresh', () => {
     const quotes = useQuoteStore.getState().quotes;
     expect(quotes['2330']).toBeDefined();
     expect(quotes['2330'].price).toBe(1000);
-    expect(quotes['2317']).toBeDefined();
+    // 2317 has null price — skipped to preserve any cached price
+    expect(quotes['2317']).toBeUndefined();
     expect(mockGetQuotes).toHaveBeenCalledWith(SYMBOLS);
   });
 

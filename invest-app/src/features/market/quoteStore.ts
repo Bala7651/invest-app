@@ -122,12 +122,13 @@ export const useQuoteStore = create<QuoteState>((set, get) => ({
     try {
       const raw = await getQuotes(symbols);
       const fetchedAt = Date.now();
-      const quotes: Record<string, Quote> = {};
+      const quotesUpdate: Record<string, Quote> = {};
       const tickHistory = { ...get().tickHistory };
       for (const q of raw) {
-        const change = q.price !== null ? q.price - q.prevClose : 0;
-        const changePct = q.price !== null ? (change / q.prevClose) * 100 : 0;
-        quotes[q.symbol] = {
+        if (q.price === null) continue; // keep last known price when market is closed
+        const change = q.price - q.prevClose;
+        const changePct = (change / q.prevClose) * 100;
+        quotesUpdate[q.symbol] = {
           symbol: q.symbol,
           name: q.name,
           price: q.price,
@@ -136,11 +137,9 @@ export const useQuoteStore = create<QuoteState>((set, get) => ({
           changePct,
           fetchedAt,
         };
-        if (q.price !== null) {
-          tickHistory[q.symbol] = [...(tickHistory[q.symbol] ?? []), q.price];
-        }
+        tickHistory[q.symbol] = [...(tickHistory[q.symbol] ?? []), q.price];
       }
-      set({ quotes: { ...get().quotes, ...quotes }, tickHistory });
+      set({ quotes: { ...get().quotes, ...quotesUpdate }, tickHistory });
     } catch (e) {
       set({ lastError: String(e) });
     }
