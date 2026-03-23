@@ -13,6 +13,7 @@ import { AlertsListModal } from '../features/alerts/components/AlertsListModal';
 import { useAlertStore } from '../features/alerts/store/alertStore';
 import { AnalysisScreen } from '../features/analysis/components/AnalysisScreen';
 import { SummaryScreen } from '../features/summary/components/SummaryScreen';
+import { PortfolioScreen } from '../features/portfolio/components/PortfolioScreen';
 import { MarketStatusBar } from '../features/market/MarketStatusBar';
 import { useQuoteStore } from '../features/market/quoteStore';
 import { EmptyWatchlist } from '../features/watchlist/components/EmptyWatchlist';
@@ -202,6 +203,9 @@ export default function HomeScreen() {
       </View>
       <View key="3" style={{ flex: 1 }}>
         <SummaryScreen isActive={activePage === 3} />
+      </View>
+      <View key="4" style={{ flex: 1 }}>
+        <PortfolioScreen isActive={activePage === 4} />
       </View>
     </PagerView>
   );
