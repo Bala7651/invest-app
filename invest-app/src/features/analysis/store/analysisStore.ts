@@ -36,16 +36,28 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
     }));
 
     try {
-      // If price is unavailable (market closed / not yet fetched), get fresh TWSE data
-      let effectiveQuote = quote;
-      if (quote.price == null || quote.price === 0) {
-        const fresh = await fetchLatestQuoteForSummary(symbol);
-        if (fresh) {
-          effectiveQuote = { ...quote, price: fresh.price, change: fresh.change, changePct: fresh.changePct, prevClose: fresh.prevClose };
-        }
+      // Always try STOCK_DAY first — gives full OHLCV + MA5/MA20/volumeRatio
+      const fresh = await fetchLatestQuoteForSummary(symbol);
+      let effectiveQuote: QuoteData;
+      if (fresh) {
+        effectiveQuote = {
+          name: quote.name,
+          price: fresh.price,
+          change: fresh.change,
+          changePct: fresh.changePct,
+          prevClose: fresh.prevClose,
+          volume: fresh.volume,
+          open: fresh.open,
+          high: fresh.high,
+          low: fresh.low,
+          volumeRatio: fresh.volumeRatio,
+          ma5: fresh.ma5,
+          ma20: fresh.ma20,
+        };
+      } else {
+        effectiveQuote = quote;
       }
 
-      // Still no price after fresh attempt — skip AI call to avoid non-JSON response
       if (effectiveQuote.price == null) {
         set(s => ({
           loading: { ...s.loading, [symbol]: false },

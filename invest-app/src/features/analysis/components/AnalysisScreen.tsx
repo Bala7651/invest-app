@@ -37,7 +37,10 @@ export function AnalysisScreen({ isActive }: AnalysisScreenProps) {
               change: q.change,
               changePct: q.changePct,
               prevClose: q.prevClose,
-              volume: 0,
+              volume: q.volume,
+              open: q.open,
+              high: q.high,
+              low: q.low,
             }
           : {
               name: item.name,
@@ -87,7 +90,10 @@ export function AnalysisScreen({ isActive }: AnalysisScreenProps) {
                         change: q.change,
                         changePct: q.changePct,
                         prevClose: q.prevClose,
-                        volume: 0,
+                        volume: q.volume,
+                        open: q.open,
+                        high: q.high,
+                        low: q.low,
                       }
                     : {
                         name: item.name,

@@ -11,14 +11,13 @@ const mockQuote = {
 };
 
 const mockResult: AnalysisResult = {
-  sentimentScore: 72,
-  sentimentLabel: 'Bullish',
-  sentimentSummary: 'Market sentiment is positive.',
-  technicalSummary: 'Stock shows strong momentum.',
-  recommendation: 'Buy',
-  recommendationReasoning: 'Fundamentals are solid.',
-  riskScore: 35,
-  riskExplanation: 'Moderate risk due to market volatility.',
+  technicalScore: 72,
+  technicalSummary: '今日形成長紅K棒，收盤價站上MA5，量能溫和配合，多方動能漸增。',
+  trendPosition: '多方主導',
+  volumeSignal: '溫和放量',
+  riskLevel: '中等風險',
+  riskExplanation: '振幅約2%，屬正常波動，均線偏離幅度不大。',
+  outlook: '短期支撐在MA5附近，若量能持續則有機會測試前高。',
   overallScore: 70,
 };
 
@@ -56,7 +55,7 @@ describe('buildPrompt', () => {
   it('handles null price gracefully', () => {
     const quoteWithNullPrice = { ...mockQuote, price: null };
     const prompt = buildPrompt('2330', quoteWithNullPrice);
-    expect(prompt).toContain('unavailable');
+    expect(prompt).toContain('無資料');
   });
 });
 
@@ -64,9 +63,9 @@ describe('parseAnalysisResponse', () => {
   it('extracts JSON from markdown code block', () => {
     const content = `\`\`\`json\n${JSON.stringify(mockResult)}\n\`\`\``;
     const result = parseAnalysisResponse(content);
-    expect(result.sentimentScore).toBe(72);
-    expect(result.sentimentLabel).toBe('Bullish');
-    expect(result.recommendation).toBe('Buy');
+    expect(result.technicalScore).toBe(72);
+    expect(result.trendPosition).toBe('多方主導');
+    expect(result.overallScore).toBe(70);
   });
 
   it('extracts JSON from code block without language tag', () => {
@@ -78,7 +77,7 @@ describe('parseAnalysisResponse', () => {
   it('extracts bare JSON object without code block', () => {
     const content = JSON.stringify(mockResult);
     const result = parseAnalysisResponse(content);
-    expect(result.riskScore).toBe(35);
+    expect(result.technicalScore).toBe(72);
   });
 
   it('throws Error with "No JSON found" when content has no JSON', () => {
@@ -86,7 +85,7 @@ describe('parseAnalysisResponse', () => {
   });
 
   it('throws on malformed JSON inside code block', () => {
-    const content = '```json\n{ "sentimentScore": 72, "broken": \n```';
+    const content = '```json\n{ "technicalScore": 72, "broken": \n```';
     expect(() => parseAnalysisResponse(content)).toThrow();
   });
 });
@@ -152,7 +151,7 @@ describe('callMiniMax', () => {
     expect(options.headers['Authorization']).toBe('Bearer test-api-key');
   });
 
-  it('sends correct body with model, messages, temperature, max_tokens, Chinese prompt', async () => {
+  it('sends correct body with model, messages, temperature, max_tokens', async () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
@@ -165,7 +164,7 @@ describe('callMiniMax', () => {
     const [, options] = (global.fetch as jest.Mock).mock.calls[0];
     const body = JSON.parse(options.body);
     expect(body.model).toBe('MiniMax-M2.5');
-    expect(body.temperature).toBe(0.3);
+    expect(body.temperature).toBe(0.2);
     expect(body.max_tokens).toBe(600);
     expect(body.messages).toHaveLength(2);
     expect(body.messages[0].role).toBe('system');
@@ -181,7 +180,7 @@ describe('callMiniMax', () => {
     });
 
     const result = await callMiniMax('2330', mockQuote, credentials);
-    expect(result.recommendation).toBe('Buy');
+    expect(result.trendPosition).toBe('多方主導');
   });
 
   it('throws on non-ok HTTP response with status code in message', async () => {

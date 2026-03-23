@@ -34,16 +34,17 @@ function scoreColor(score: number): string {
   return '#FF1744';
 }
 
-function riskColor(score: number): string {
-  if (score >= 65) return '#FF1744';
-  if (score >= 40) return '#FFB300';
-  return '#00E676';
+function trendColor(pos: string): string {
+  if (pos === '多方主導') return '#00E676';
+  if (pos === '偏多整理') return '#69F0AE';
+  if (pos === '偏空整理') return '#FF6D00';
+  return '#FF1744'; // 空方主導
 }
 
-function badgeColor(rec: string): string {
-  if (rec === 'Buy' || rec === '買入') return '#00E676';
-  if (rec === 'Hold' || rec === '持有') return '#FFB300';
-  return '#FF1744';
+function riskLevelColor(level: string): string {
+  if (level === '低風險') return '#00E676';
+  if (level === '中等風險') return '#FFB300';
+  return '#FF1744'; // 高風險
 }
 
 export function AnalysisCard({ symbol, name, quote, result, loading, error, onRetry }: AnalysisCardProps) {
@@ -90,10 +91,10 @@ export function AnalysisCard({ symbol, name, quote, result, loading, error, onRe
               {result.overallScore}/100
             </Text>
             <View
-              style={{ backgroundColor: badgeColor(result.recommendation), borderRadius: 12, paddingHorizontal: 10, paddingVertical: 2 }}
+              style={{ backgroundColor: trendColor(result.trendPosition), borderRadius: 12, paddingHorizontal: 10, paddingVertical: 2 }}
             >
               <Text style={{ color: '#000', fontWeight: '700', fontSize: 12 }}>
-                {result.recommendation}
+                {result.trendPosition}
               </Text>
             </View>
           </View>
@@ -117,31 +118,35 @@ export function AnalysisCard({ symbol, name, quote, result, loading, error, onRe
       {result && !loading && !error && (
         <Animated.View style={expandStyle}>
           <View className="border-t border-border mt-3 pt-3">
-            <Text className="text-primary font-semibold mb-1">市場情緒</Text>
-            <Text style={{ color: scoreColor(result.sentimentScore) }} className="text-sm font-semibold">
-              {result.sentimentScore}/100 — {result.sentimentLabel}
-            </Text>
-            <Text className="text-muted text-sm mt-1">{result.sentimentSummary}</Text>
-          </View>
-
-          <View className="border-t border-border mt-3 pt-3">
             <Text className="text-primary font-semibold mb-1">技術分析</Text>
-            <Text className="text-muted text-sm">{result.technicalSummary}</Text>
+            <Text style={{ color: scoreColor(result.technicalScore) }} className="text-sm font-semibold">
+              {result.technicalScore}/100
+            </Text>
+            <Text className="text-muted text-sm mt-1">{result.technicalSummary}</Text>
           </View>
 
           <View className="border-t border-border mt-3 pt-3">
-            <Text className="text-primary font-semibold mb-1">投資建議</Text>
-            <Text style={{ color: badgeColor(result.recommendation) }} className="text-sm font-semibold">
-              {result.recommendation}
-            </Text>
-            <Text className="text-muted text-sm mt-1">{result.recommendationReasoning}</Text>
+            <Text className="text-primary font-semibold mb-1">趨勢與量能</Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
+              <View style={{ backgroundColor: trendColor(result.trendPosition), borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 }}>
+                <Text style={{ color: '#000', fontSize: 12, fontWeight: '600' }}>{result.trendPosition}</Text>
+              </View>
+              <View style={{ backgroundColor: '#1E2A4A', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 }}>
+                <Text style={{ color: '#4D7CFF', fontSize: 12, fontWeight: '600' }}>{result.volumeSignal}</Text>
+              </View>
+            </View>
+          </View>
+
+          <View className="border-t border-border mt-3 pt-3">
+            <Text className="text-primary font-semibold mb-1">短期展望</Text>
+            <Text className="text-muted text-sm">{result.outlook}</Text>
           </View>
 
           <View className="border-t border-border mt-3 pt-3">
             <Text className="text-primary font-semibold mb-1">風險評估</Text>
-            <Text style={{ color: riskColor(result.riskScore) }} className="text-sm font-semibold">
-              {result.riskScore}/100
-            </Text>
+            <View style={{ backgroundColor: riskLevelColor(result.riskLevel), borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, alignSelf: 'flex-start' }}>
+              <Text style={{ color: '#000', fontSize: 12, fontWeight: '600' }}>{result.riskLevel}</Text>
+            </View>
             <Text className="text-muted text-sm mt-1">{result.riskExplanation}</Text>
           </View>
         </Animated.View>

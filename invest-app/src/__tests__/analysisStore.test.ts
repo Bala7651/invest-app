@@ -3,6 +3,9 @@ import { callMiniMax } from '../features/analysis/services/minimaxApi';
 import { AnalysisResult } from '../features/analysis/types';
 
 jest.mock('../features/analysis/services/minimaxApi');
+jest.mock('../features/summary/services/summaryService', () => ({
+  fetchLatestQuoteForSummary: jest.fn().mockResolvedValue(null),
+}));
 
 const mockCallMiniMax = callMiniMax as jest.MockedFunction<typeof callMiniMax>;
 
@@ -22,14 +25,13 @@ const mockCredentials = {
 };
 
 const mockResult: AnalysisResult = {
-  sentimentScore: 72,
-  sentimentLabel: 'Bullish',
-  sentimentSummary: 'Market sentiment is positive.',
-  technicalSummary: 'Stock shows strong momentum.',
-  recommendation: 'Buy',
-  recommendationReasoning: 'Fundamentals are solid.',
-  riskScore: 35,
-  riskExplanation: 'Moderate risk due to market volatility.',
+  technicalScore: 72,
+  technicalSummary: '今日形成長紅K棒，收盤價站上MA5，量能溫和配合。',
+  trendPosition: '多方主導',
+  volumeSignal: '溫和放量',
+  riskLevel: '中等風險',
+  riskExplanation: '振幅約2%，屬正常波動。',
+  outlook: '短期支撐在MA5附近，若量能持續則有機會測試前高。',
   overallScore: 70,
 };
 
