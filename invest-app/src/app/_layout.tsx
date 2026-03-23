@@ -70,8 +70,11 @@ export default function RootLayout() {
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
       const syms = useWatchlistStore.getState().items.map(i => i.symbol);
-      if (state === 'active' && syms.length > 0 && isMarketOpen()) {
-        useQuoteStore.getState().startPolling(syms);
+      if (state === 'active' && syms.length > 0) {
+        useQuoteStore.getState().forceRefresh(syms);
+        if (isMarketOpen()) {
+          useQuoteStore.getState().startPolling(syms);
+        }
       } else if (state === 'background') {
         useQuoteStore.getState().stopPolling();
       }
