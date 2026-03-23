@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import { Pressable, RefreshControl, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import ReorderableList, {
   ReorderableListReorderEvent,
   useReorderableDrag,
@@ -172,10 +173,13 @@ function WatchlistPage() {
   return content;
 }
 
+const PAGE_LABELS = ['自選', 'AI分析', '摘要', '組合'];
+
 export default function HomeScreen() {
   const router = useRouter();
   const pagerRef = useRef<PagerView>(null);
   const [activePage, setActivePage] = useState(1);
+  const { bottom } = useSafeAreaInsets();
 
   function handlePageSelected(e: { nativeEvent: { position: number } }) {
     const page = e.nativeEvent.position;
@@ -188,25 +192,60 @@ export default function HomeScreen() {
   }
 
   return (
-    <PagerView
-      ref={pagerRef}
-      style={{ flex: 1 }}
-      initialPage={1}
-      onPageSelected={handlePageSelected}
-    >
-      <View key="0" style={{ flex: 1 }} />
-      <View key="1" style={{ flex: 1 }}>
-        <WatchlistPage />
+    <View style={{ flex: 1 }}>
+      <PagerView
+        ref={pagerRef}
+        style={{ flex: 1 }}
+        initialPage={1}
+        onPageSelected={handlePageSelected}
+      >
+        <View key="0" style={{ flex: 1 }} />
+        <View key="1" style={{ flex: 1 }}>
+          <WatchlistPage />
+        </View>
+        <View key="2" style={{ flex: 1 }}>
+          <AnalysisScreen isActive={activePage === 2} />
+        </View>
+        <View key="3" style={{ flex: 1 }}>
+          <SummaryScreen isActive={activePage === 3} />
+        </View>
+        <View key="4" style={{ flex: 1 }}>
+          <PortfolioScreen isActive={activePage === 4} />
+        </View>
+      </PagerView>
+
+      {/* Page indicator dots — pages 1-4 (visible pages only) */}
+      <View
+        style={{
+          position: 'absolute',
+          bottom: Math.max(bottom, 8) + 58,
+          left: 0,
+          right: 0,
+          flexDirection: 'row',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: 8,
+          pointerEvents: 'none',
+        }}
+      >
+        {[1, 2, 3, 4].map((page, i) => (
+          <View key={page} style={{ alignItems: 'center', gap: 3 }}>
+            <View
+              style={{
+                width: activePage === page ? 18 : 6,
+                height: 6,
+                borderRadius: 3,
+                backgroundColor: activePage === page ? '#4D7CFF' : '#2A2A4A',
+              }}
+            />
+            {activePage === page ? (
+              <Text style={{ color: '#4D7CFF', fontSize: 9, fontWeight: '600' }}>
+                {PAGE_LABELS[i]}
+              </Text>
+            ) : null}
+          </View>
+        ))}
       </View>
-      <View key="2" style={{ flex: 1 }}>
-        <AnalysisScreen isActive={activePage === 2} />
-      </View>
-      <View key="3" style={{ flex: 1 }}>
-        <SummaryScreen isActive={activePage === 3} />
-      </View>
-      <View key="4" style={{ flex: 1 }}>
-        <PortfolioScreen isActive={activePage === 4} />
-      </View>
-    </PagerView>
+    </View>
   );
 }
