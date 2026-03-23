@@ -40,3 +40,20 @@ export const daily_summaries = sqliteTable('daily_summaries', {
     () => new Date()
   ),
 });
+
+export const holdings = sqliteTable(
+  'holdings',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    symbol: text('symbol').notNull(),
+    name: text('name').notNull(),
+    quantity: real('quantity').notNull().default(0),
+    created_at: integer('created_at', { mode: 'timestamp' }).$defaultFn(
+      () => new Date()
+    ),
+    updated_at: integer('updated_at', { mode: 'timestamp' }).$defaultFn(
+      () => new Date()
+    ),
+  },
+  (t) => [uniqueIndex('holdings_symbol_unique').on(t.symbol)]
+);
