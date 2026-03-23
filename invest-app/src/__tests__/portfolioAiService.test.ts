@@ -62,14 +62,24 @@ describe('extractHealthScore', () => {
     expect(result).toBe(72);
   });
 
-  it('returns null for malformed response (no SCORE tag)', () => {
+  it('returns 50 for malformed response (no SCORE tag)', () => {
     const result = extractHealthScore('這是一段沒有評分的回應文字');
-    expect(result).toBeNull();
+    expect(result).toBe(50);
   });
 
-  it('returns null for empty string', () => {
+  it('returns 50 for empty string', () => {
     const result = extractHealthScore('');
-    expect(result).toBeNull();
+    expect(result).toBe(50);
+  });
+
+  it('handles SCORE with space after colon', () => {
+    const result = extractHealthScore('分析完成。SCORE: 68/100');
+    expect(result).toBe(68);
+  });
+
+  it('handles full-width colon SCORE：72/100', () => {
+    const result = extractHealthScore('SCORE：72/100');
+    expect(result).toBe(72);
   });
 
   it('handles SCORE:100/100 edge case', () => {

@@ -46,10 +46,10 @@ ${stockLines}
 最後以「SCORE:XX/100 其中XX為0到100的整數」結尾，XX為整體投資組合健康分數。`;
 }
 
-export function extractHealthScore(response: string): number | null {
-  const match = response.match(/SCORE:(\d{1,3})\/100/);
-  if (!match) return null;
-  return parseInt(match[1], 10);
+export function extractHealthScore(response: string): number {
+  const match = response.match(/SCORE[：:]\s*(\d{1,3})\s*\/\s*100/i);
+  if (!match) return 50; // fallback if AI omits or reformats the tag
+  return Math.min(100, Math.max(0, parseInt(match[1], 10)));
 }
 
 export async function callPortfolioMiniMax(
@@ -89,11 +89,10 @@ export async function callPortfolioMiniMax(
     // Strip <think>...</think> reasoning tags if present (some models include them)
     content = content.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
 
-    const score = extractHealthScore(content);
-    if (score === null) return null;
+    if (!content) return null;
 
-    // Remove the SCORE:XX/100 line from the paragraph
-    const paragraph = content.replace(/SCORE:\d{1,3}\/100[^\n]*/g, '').trim();
+    const score = extractHealthScore(content);
+    const paragraph = content.replace(/SCORE[：:]\s*\d{1,3}\s*\/\s*100[^\n]*/gi, '').trim();
 
     return { score, paragraph };
   } catch {

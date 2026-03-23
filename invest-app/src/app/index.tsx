@@ -218,7 +218,7 @@ export default function HomeScreen() {
       <View
         style={{
           position: 'absolute',
-          bottom: Math.max(bottom, 8) + 58,
+          bottom: Math.max(bottom, 8) + 20,
           left: 0,
           right: 0,
           flexDirection: 'row',
