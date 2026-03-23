@@ -35,9 +35,23 @@ Provide your analysis as a JSON object.`;
 export function parseAnalysisResponse(content: string): AnalysisResult {
   // MiniMax reasoning models wrap thinking in <think>...</think> — strip it first
   const cleaned = content.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
-  const match = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/) ?? cleaned.match(/(\{[\s\S]*\})/);
-  if (!match) throw new Error('No JSON found in response');
-  return JSON.parse(match[1]) as AnalysisResult;
+
+  // Strategy 1: markdown code block (```json ... ``` or ``` ... ```)
+  const codeBlock = cleaned.match(/```[\w]*\s*([\s\S]*?)```/);
+  if (codeBlock) {
+    try { return JSON.parse(codeBlock[1].trim()) as AnalysisResult; } catch {}
+  }
+
+  // Strategy 2: raw JSON object — find outermost { ... }
+  const rawJson = cleaned.match(/(\{[\s\S]*\})/);
+  if (rawJson) {
+    try { return JSON.parse(rawJson[1]) as AnalysisResult; } catch {}
+  }
+
+  // Strategy 3: the entire cleaned string is JSON
+  try { return JSON.parse(cleaned) as AnalysisResult; } catch {}
+
+  throw new Error('No JSON found in response');
 }
 
 export async function callMiniMax(

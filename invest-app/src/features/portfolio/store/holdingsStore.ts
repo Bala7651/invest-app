@@ -5,20 +5,29 @@ import {
   deleteHolding,
   HoldingRow,
 } from '../services/holdingsService';
+import { PortfolioAnalysis, ChatMessage } from '../services/portfolioAiService';
 
 interface HoldingsState {
   holdings: Record<string, HoldingRow>;
   loading: boolean;
   error: string | null;
+  lastAnalysis: PortfolioAnalysis | null;
+  chatHistory: ChatMessage[];
   loadHoldings: () => Promise<void>;
   setQuantity: (symbol: string, name: string, quantity: number) => Promise<void>;
   clearHoldings: () => void;
+  setLastAnalysis: (result: PortfolioAnalysis | null) => void;
+  setChatHistory: (history: ChatMessage[]) => void;
+  appendChatMessage: (msg: ChatMessage) => void;
+  clearChatHistory: () => void;
 }
 
 export const useHoldingsStore = create<HoldingsState>((set) => ({
   holdings: {},
   loading: false,
   error: null,
+  lastAnalysis: null,
+  chatHistory: [],
 
   loadHoldings: async () => {
     set({ loading: true, error: null });
@@ -62,4 +71,9 @@ export const useHoldingsStore = create<HoldingsState>((set) => ({
   },
 
   clearHoldings: () => set({ holdings: {} }),
+
+  setLastAnalysis: (result) => set({ lastAnalysis: result }),
+  setChatHistory: (history) => set({ chatHistory: history }),
+  appendChatMessage: (msg) => set((s) => ({ chatHistory: [...s.chatHistory, msg] })),
+  clearChatHistory: () => set({ chatHistory: [] }),
 }));

@@ -14,7 +14,8 @@ import { useSettingsStore } from '../../settings/store/settingsStore';
 import { useHoldingsStore } from '../store/holdingsStore';
 import {
   callPortfolioMiniMax,
-  PortfolioAnalysis,
+  callPortfolioFollowUp,
+  buildDetailedAnalysisPrompt,
 } from '../services/portfolioAiService';
 import { NoApiKeyPrompt } from '../../analysis/components/NoApiKeyPrompt';
 
@@ -22,11 +23,6 @@ interface PortfolioScreenProps {
   isActive: boolean;
 }
 
-function scoreColor(score: number): string {
-  if (score >= 65) return '#00E676';
-  if (score >= 40) return '#FFB300';
-  return '#FF1744';
-}
 
 export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
   const insets = useSafeAreaInsets();
@@ -38,9 +34,12 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
   const baseUrl = useSettingsStore((s) => s.baseUrl);
 
   const [isLots, setIsLots] = useState(true);
-  const [analysisResult, setAnalysisResult] = useState<PortfolioAnalysis | null>(null);
+  const analysisResult = useHoldingsStore((s) => s.lastAnalysis);
+  const chatHistory = useHoldingsStore((s) => s.chatHistory);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [followUpText, setFollowUpText] = useState('');
+  const [followUpLoading, setFollowUpLoading] = useState(false);
 
   const hasLoaded = useRef(false);
 
@@ -75,7 +74,8 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
 
     setAnalysisLoading(true);
     setAnalysisError(null);
-    setAnalysisResult(null);
+    useHoldingsStore.getState().setLastAnalysis(null);
+    useHoldingsStore.getState().clearChatHistory();
 
     const entries = items.map((item) => {
       const q = quotes[item.symbol];
@@ -91,7 +91,11 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
     try {
       const result = await callPortfolioMiniMax(entries, { apiKey, modelName, baseUrl });
       if (result) {
-        setAnalysisResult(result);
+        useHoldingsStore.getState().setLastAnalysis(result);
+        useHoldingsStore.getState().setChatHistory([
+          { role: 'user', content: buildDetailedAnalysisPrompt() },
+          { role: 'assistant', content: result.paragraph },
+        ]);
       } else {
         setAnalysisError('AI 分析失敗，請稍後重試');
       }
@@ -99,6 +103,41 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
       setAnalysisError('網路錯誤，請稍後重試');
     } finally {
       setAnalysisLoading(false);
+    }
+  }
+
+  async function handleFollowUp() {
+    const question = followUpText.trim();
+    if (!question || followUpLoading) return;
+    setFollowUpText('');
+    setFollowUpLoading(true);
+
+    const currentEntries = items.map((item) => {
+      const q = quotes[item.symbol];
+      const holding = holdings[item.symbol];
+      return {
+        symbol: item.symbol,
+        name: item.name,
+        quantity: holding?.quantity ?? 0,
+        currentPrice: q?.price ?? null,
+      };
+    });
+
+    try {
+      const response = await callPortfolioFollowUp(
+        currentEntries,
+        useHoldingsStore.getState().chatHistory,
+        question,
+        { apiKey, modelName, baseUrl },
+      );
+      if (response) {
+        useHoldingsStore.getState().appendChatMessage({ role: 'user', content: question });
+        useHoldingsStore.getState().appendChatMessage({ role: 'assistant', content: response });
+      }
+    } catch {
+      // silently ignore follow-up errors
+    } finally {
+      setFollowUpLoading(false);
     }
   }
 
@@ -176,8 +215,9 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
       <ScrollView
         className="flex-1 px-4"
         contentContainerStyle={{ paddingBottom: 16 }}
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={true}
         keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled={true}
       >
         {/* Stock rows */}
         {items.length === 0 ? (
@@ -276,41 +316,91 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
           </View>
         ) : null}
 
-        {/* Health score card */}
+        {/* Analysis result card */}
         {analysisResult ? (
-          <View className="bg-surface border border-border rounded-lg px-4 py-4 mb-4">
-            {/* Score number */}
-            <View style={{ alignItems: 'center', marginBottom: 12 }}>
-              <Text
-                style={{
-                  fontSize: 56,
-                  fontWeight: '900',
-                  color: scoreColor(analysisResult.score),
-                  lineHeight: 64,
-                }}
-              >
-                {analysisResult.score}
-              </Text>
-              <Text
-                style={{
-                  color: scoreColor(analysisResult.score),
-                  fontSize: 13,
-                  fontWeight: '600',
-                }}
-              >
-                投資組合健康分數 / 100
-              </Text>
+          <>
+            <View className="bg-surface border border-border rounded-lg px-4 py-4 mb-4">
+              {analysisResult.paragraph ? (
+                <Text className="text-text text-sm" style={{ lineHeight: 22 }}>
+                  {analysisResult.paragraph}
+                </Text>
+              ) : null}
             </View>
-            {/* AI paragraph */}
-            {analysisResult.paragraph ? (
-              <Text
-                className="text-text text-sm"
-                style={{ lineHeight: 20 }}
+
+            {/* Follow-up chat exchanges (skip first 2 = initial Q&A) */}
+            {chatHistory.slice(2).map((msg, i) => (
+              <View
+                key={i}
+                className="rounded-lg px-4 py-3 mb-2"
+                style={{
+                  backgroundColor: msg.role === 'user' ? '#0D0D14' : '#111827',
+                  borderWidth: 1,
+                  borderColor: msg.role === 'user' ? '#4D7CFF' : '#1E2A4A',
+                }}
               >
-                {analysisResult.paragraph}
-              </Text>
-            ) : null}
-          </View>
+                <Text
+                  style={{
+                    color: msg.role === 'user' ? '#4D7CFF' : '#E0E0E0',
+                    fontSize: 13,
+                    lineHeight: 20,
+                  }}
+                >
+                  {msg.content}
+                </Text>
+              </View>
+            ))}
+
+            {/* Follow-up input */}
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+                marginBottom: 16,
+                marginTop: 4,
+              }}
+            >
+              <TextInput
+                value={followUpText}
+                onChangeText={setFollowUpText}
+                onSubmitEditing={handleFollowUp}
+                placeholder="繼續追問..."
+                placeholderTextColor="#616161"
+                returnKeyType="send"
+                style={{
+                  flex: 1,
+                  color: '#E0E0E0',
+                  backgroundColor: '#0D0D14',
+                  borderColor: '#1E2A4A',
+                  borderWidth: 1,
+                  borderRadius: 8,
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                  fontSize: 14,
+                }}
+              />
+              <Pressable
+                onPress={handleFollowUp}
+                disabled={followUpLoading || !followUpText.trim()}
+                style={[
+                  {
+                    borderWidth: 1,
+                    borderColor: '#4D7CFF',
+                    borderRadius: 8,
+                    paddingHorizontal: 14,
+                    paddingVertical: 8,
+                  },
+                  (followUpLoading || !followUpText.trim()) ? { opacity: 0.4 } : undefined,
+                ]}
+              >
+                {followUpLoading ? (
+                  <ActivityIndicator size="small" color="#4D7CFF" />
+                ) : (
+                  <Text style={{ color: '#4D7CFF', fontSize: 14, fontWeight: '600' }}>送出</Text>
+                )}
+              </Pressable>
+            </View>
+          </>
         ) : null}
       </ScrollView>
     </View>
