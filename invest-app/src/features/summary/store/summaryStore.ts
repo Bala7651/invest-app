@@ -77,8 +77,17 @@ export const useSummaryStore = create<SummaryState>((set, get) => ({
         const q = quotes[item.symbol];
         const freshQuote = await fetchLatestQuoteForSummary(item.symbol);
         const quoteData = freshQuote
-          ?? (q ? { price: q.price, change: q.change, changePct: q.changePct, prevClose: q.prevClose }
-               : { price: null, change: 0, changePct: 0, prevClose: 0 });
+          ?? (q ? {
+               price: q.price,
+               open: q.open,
+               high: q.high,
+               low: q.low,
+               volume: q.volume,
+               change: q.change,
+               changePct: q.changePct,
+               prevClose: q.prevClose,
+             }
+             : { price: null, open: null, high: null, low: null, volume: null, change: 0, changePct: 0, prevClose: 0 });
         const userPrompt = buildSummaryPrompt(item.symbol, item.name, quoteData);
         const raw = await callSummaryMiniMax(item.symbol, userPrompt, credentials);
         // Strip <think> reasoning blocks from MiniMax reasoning models

@@ -8,6 +8,10 @@ interface Quote {
   name: string;
   price: number | null;
   prevClose: number;
+  open: number | null;
+  high: number | null;
+  low: number | null;
+  volume: number;
   change: number;
   changePct: number;
   fetchedAt: number;
@@ -53,6 +57,10 @@ export const useQuoteStore = create<QuoteState>((set, get) => ({
               name: q.name,
               price: q.price,
               prevClose: q.prevClose,
+              open: q.open,
+              high: q.high,
+              low: q.low,
+              volume: q.volume,
               change,
               changePct,
               fetchedAt,
@@ -85,6 +93,10 @@ export const useQuoteStore = create<QuoteState>((set, get) => ({
             name: q.name,
             price: q.price,
             prevClose: q.prevClose,
+            open: q.open,
+            high: q.high,
+            low: q.low,
+            volume: q.volume,
             change,
             changePct,
             fetchedAt,
@@ -133,6 +145,10 @@ export const useQuoteStore = create<QuoteState>((set, get) => ({
               name: q.name,
               price: q.prevClose,
               prevClose: q.prevClose,
+              open: null,
+              high: null,
+              low: null,
+              volume: q.volume,
               change: 0,
               changePct: 0,
               fetchedAt,
@@ -148,6 +164,10 @@ export const useQuoteStore = create<QuoteState>((set, get) => ({
           name: q.name,
           price: q.price,
           prevClose: q.prevClose,
+          open: q.open,
+          high: q.high,
+          low: q.low,
+          volume: q.volume,
           change,
           changePct,
           fetchedAt,

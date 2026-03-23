@@ -115,7 +115,20 @@ export async function fetchLatestQuoteForSummary(symbol: string): Promise<Summar
     if (isNaN(close) || isNaN(prevClose)) return null;
     const change = close - prevClose;
     const changePct = prevClose !== 0 ? (change / prevClose) * 100 : 0;
-    return { price: close, change, changePct, prevClose };
+    const open = parseNum(latest[3]);
+    const high = parseNum(latest[4]);
+    const low = parseNum(latest[5]);
+    const volumeShares = parseNum(latest[1]);
+    return {
+      price: close,
+      open: isNaN(open) ? null : open,
+      high: isNaN(high) ? null : high,
+      low: isNaN(low) ? null : low,
+      volume: isNaN(volumeShares) ? null : Math.round(volumeShares / 1000),
+      change,
+      changePct,
+      prevClose,
+    };
   } catch {
     return null;
   }
@@ -130,20 +143,30 @@ ALWAYS respond in Traditional Chinese (繁體中文).
 ALWAYS respond with only a plain text paragraph. No JSON, no markdown, no headers.
 Keep the summary to 2-3 sentences: mention today's price action, one key technical signal, and short-term outlook.`;
 
-interface SummaryQuoteData {
+export interface SummaryQuoteData {
   price: number | null;
+  open: number | null;
+  high: number | null;
+  low: number | null;
+  volume: number | null;
   change: number;
   changePct: number;
   prevClose: number;
 }
 
 export function buildSummaryPrompt(symbol: string, name: string, quote: SummaryQuoteData): string {
+  const ohlc = (quote.open != null && quote.high != null && quote.low != null)
+    ? `- 今日 K 棒：開 ${quote.open} ／高 ${quote.high} ／低 ${quote.low} ／收 ${quote.price ?? '無資料'} 元`
+    : `- 目前價格：${quote.price ?? '無資料'} 元`;
+  const vol = quote.volume != null ? `- 成交量：${quote.volume.toLocaleString()} 張` : '';
+
   return `請為台灣股票 ${symbol}（${name}）生成今日簡短摘要。
-今日市場數據（請使用以下實際數據，勿自行編造）：
-- 目前價格：${quote.price ?? '無資料'} 元
+今日市場數據（以下為實際數據，請勿自行捏造任何未提供的數字）：
+${ohlc}
 - 漲跌：${quote.change >= 0 ? '+' : ''}${quote.change.toFixed(2)}（${quote.changePct.toFixed(2)}%）
 - 昨收：${quote.prevClose} 元
-請用2-3句話說明今日價格走勢、關鍵技術訊號及短期展望。`;
+${vol}
+請僅根據以上數據，用2-3句話說明今日價格走勢與短期觀察。禁止使用任何未提供的技術指標數值。`;
 }
 
 export function buildIndexSummaryPrompt(indexData: { close: number; change: number; changePct: number }): string {

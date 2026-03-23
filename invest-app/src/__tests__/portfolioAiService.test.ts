@@ -32,7 +32,7 @@ describe('buildPortfolioPrompt', () => {
     const prompt = buildPortfolioPrompt(entries);
 
     expect(prompt).toContain('台積電');
-    expect(prompt).toContain('5000');
+    expect(prompt).toContain('5,000');
   });
 
   it('caps at 15 stocks when given 16+ entries', () => {
