@@ -33,11 +33,9 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
   const items = useWatchlistStore((s) => s.items);
   const quotes = useQuoteStore((s) => s.quotes);
   const holdings = useHoldingsStore((s) => s.holdings);
-  const { apiKey, modelName, baseUrl } = useSettingsStore((s) => ({
-    apiKey: s.apiKey,
-    modelName: s.modelName,
-    baseUrl: s.baseUrl,
-  }));
+  const apiKey = useSettingsStore((s) => s.apiKey);
+  const modelName = useSettingsStore((s) => s.modelName);
+  const baseUrl = useSettingsStore((s) => s.baseUrl);
 
   const [isLots, setIsLots] = useState(true);
   const [analysisResult, setAnalysisResult] = useState<PortfolioAnalysis | null>(null);
