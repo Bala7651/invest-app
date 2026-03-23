@@ -275,7 +275,7 @@ export async function callSummaryMiniMax(
           { role: 'user', content: userPrompt },
         ],
         temperature: 0.3,
-        max_tokens: 200,
+        max_tokens: 500,
       }),
       signal: controller.signal,
     });

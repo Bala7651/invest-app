@@ -58,6 +58,7 @@ export const useSummaryStore = create<SummaryState>((set, get) => ({
         const userPrompt = buildIndexSummaryPrompt(indexData);
         const raw = await callSummaryMiniMax('TWSE', userPrompt, credentials);
         const content = raw.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+        if (!content) throw new Error('AI 回應為空');
         await upsertSummary('TWSE', date, content);
       } else {
         await upsertSummary('TWSE', date, `${ERROR_PREFIX}無法取得大盤資料`);
@@ -97,8 +98,8 @@ export const useSummaryStore = create<SummaryState>((set, get) => ({
         } else {
           const userPrompt = buildSummaryPrompt(item.symbol, item.name, quoteData);
           const raw = await callSummaryMiniMax(item.symbol, userPrompt, credentials);
-          // Strip <think> reasoning blocks from MiniMax reasoning models
           const content = raw.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+          if (!content) throw new Error('AI 回應為空');
           await upsertSummary(item.symbol, date, content);
         }
       } catch (e) {

@@ -165,7 +165,7 @@ describe('callMiniMax', () => {
     const body = JSON.parse(options.body);
     expect(body.model).toBe('MiniMax-M2.5');
     expect(body.temperature).toBe(0.2);
-    expect(body.max_tokens).toBe(600);
+    expect(body.max_tokens).toBe(900);
     expect(body.messages).toHaveLength(2);
     expect(body.messages[0].role).toBe('system');
     expect(body.messages[1].role).toBe('user');

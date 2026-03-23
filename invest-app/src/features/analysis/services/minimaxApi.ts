@@ -132,7 +132,7 @@ export async function callMiniMax(
           { role: 'user', content: prompt },
         ],
         temperature: 0.2,
-        max_tokens: 600,
+        max_tokens: 900,
       }),
       signal: controller.signal,
     });
