@@ -1,6 +1,6 @@
 import { startActivityAsync, ActivityAction } from 'expo-intent-launcher';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ApiKeyInput } from '../features/settings/components/ApiKeyInput';
 import { GlowPillSelector } from '../features/settings/components/GlowPillSelector';
@@ -70,6 +70,8 @@ export default function SettingsScreen() {
   const setModelName = useSettingsStore(s => s.setModelName);
   const setProvider = useSettingsStore(s => s.setProvider);
   const setGlowLevel = useSettingsStore(s => s.setGlowLevel);
+  const aiNotificationsEnabled = useSettingsStore(s => s.aiNotificationsEnabled);
+  const setAiNotificationsEnabled = useSettingsStore(s => s.setAiNotificationsEnabled);
 
   const currentProvider = AI_PROVIDERS.find(p => p.name === providerName) ?? AI_PROVIDERS[0];
 
@@ -129,11 +131,27 @@ export default function SettingsScreen() {
           />
         </View>
 
-        {/* Alerts section — Android only */}
-        {Platform.OS === 'android' ? (
-          <>
-            <Text className="text-muted text-xs uppercase tracking-widest mb-3">提醒</Text>
-            <View className="bg-surface border border-border rounded-lg mb-4">
+        {/* Alerts section */}
+        <Text className="text-muted text-xs uppercase tracking-widest mb-3">提醒</Text>
+        <View className="bg-surface border border-border rounded-lg mb-4">
+          {/* AI notifications toggle — renders on all platforms */}
+          <View testID="ai-notifications-toggle" className="p-4 flex-row items-center justify-between">
+            <View style={{ flex: 1 }}>
+              <Text className="text-text text-base">AI 通知內容</Text>
+              <Text className="text-muted text-xs mt-1">價格提醒觸發時附加 AI 市場背景說明</Text>
+            </View>
+            <Switch
+              value={aiNotificationsEnabled}
+              onValueChange={(v) => setAiNotificationsEnabled(v)}
+              trackColor={{ false: '#2a2a3a', true: '#4D7CFF' }}
+              thumbColor={aiNotificationsEnabled ? '#fff' : '#888'}
+            />
+          </View>
+
+          {/* Battery optimization row — Android only */}
+          {Platform.OS === 'android' ? (
+            <>
+              <View style={{ height: 1, backgroundColor: '#2a2a3a' }} />
               <Pressable
                 testID="battery-optimization-row"
                 onPress={() => startActivityAsync(ActivityAction.IGNORE_BATTERY_OPTIMIZATION_SETTINGS)}
@@ -147,9 +165,9 @@ export default function SettingsScreen() {
                   <Text className="text-primary text-sm">開啟設定</Text>
                 </View>
               </Pressable>
-            </View>
-          </>
-        ) : null}
+            </>
+          ) : null}
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
