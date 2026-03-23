@@ -154,11 +154,11 @@
 
 - [x] **AI-11**: Chart pattern recognition — detect candlestick patterns (e.g. 吞噬、錘子、頭肩頂、雙底) from OHLCV data and display pattern name, plain-Chinese explanation, and bullish/neutral/bearish signal below the chart; updates per timeframe
 - [ ] **AI-12**: Portfolio health — user inputs share quantities per watchlist stock; app calculates total invested value, sector concentration (%), AI analyses correlation clusters and writes an overall portfolio health score and outlook; holdings persist in SQLite
-- [ ] **AI-13**: AI-enriched push alerts — when a price alert fires, alertMonitor calls MiniMax to generate a one-sentence market context and includes it in the notification body; falls back to plain notification if AI unavailable
+- [x] **AI-13**: AI-enriched push alerts — when a price alert fires, alertMonitor calls MiniMax to generate a one-sentence market context and includes it in the notification body; falls back to plain notification if AI unavailable
 
 | AI-11 | Phase 11 | Complete |
 | AI-12 | Phase 11 | Pending |
-| AI-13 | Phase 11 | Pending |
+| AI-13 | Phase 11 | Complete |
 
 **Coverage:**
 - v1 requirements: 46 total

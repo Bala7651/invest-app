@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: milestone
 status: completed
-stopped_at: "Completed 11-01: Candlestick pattern detection (8 patterns, PatternCard, detail screen wiring)"
-last_updated: "2026-03-23T00:03:55.056Z"
+stopped_at: "Completed 11-03-PLAN.md: AI-enriched push alerts"
+last_updated: "2026-03-23T00:04:46.345Z"
 last_activity: "2026-03-22 — Completed 10-01: SVG sparklines + Reanimated glow flash on watchlist cards, 241 tests pass"
 progress:
   total_phases: 11
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 25
-  completed_plans: 21
+  completed_plans: 23
   percent: 98
 ---
 
@@ -70,6 +70,8 @@ Progress: [██████████] 98%
 | Phase 10-polish P01 | 5 | 2 tasks | 7 files |
 | Phase 10-polish P02 | 12 | 2 tasks | 7 files |
 | Phase 11-ai-intelligence-layer P01 | 15 | 3 tasks | 4 files |
+| Phase 11-ai-intelligence-layer P03 | 5 | 3 tasks | 5 files |
+| Phase 11-ai-intelligence-layer P02 | 4 | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -146,6 +148,9 @@ Recent decisions affecting current work:
 - [Phase 11-ai-intelligence-layer]: Hammer/shooting-star require prior trend check (bearish/bullish); inverted hammer does not — different reversal context
 - [Phase 11-ai-intelligence-layer]: Morning/evening star near-doji uses 30% of c1 body threshold (not strict 5% range doji) for realistic 3-candle matching
 - [Phase 11-ai-intelligence-layer]: PatternCard gets candles from parent hook props; does not call useChartStore internally — avoids double subscription
+- [Phase 11-03]: AbortController+setTimeout(5000) used in getAlertContext instead of AbortSignal.timeout() — Hermes JS engine compat
+- [Phase 11-03]: aiNotificationsEnabled defaults true via 'aiNotif !== false' pattern — null from SecureStore means enabled on first launch
+- [Phase 11-03]: AI notifications toggle renders on all platforms (not Android-only) — it is a preference, not a system-settings deep-link
 
 ### Pending Todos
 
@@ -162,6 +167,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-23T00:03:55.052Z
-Stopped at: Completed 11-01: Candlestick pattern detection (8 patterns, PatternCard, detail screen wiring)
+Last session: 2026-03-23T00:04:37.316Z
+Stopped at: Completed 11-03-PLAN.md: AI-enriched push alerts
 Resume file: None
