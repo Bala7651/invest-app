@@ -1,7 +1,7 @@
 {
   "name": "invest-app",
   "main": "expo-router/entry",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
@@ -58,6 +58,8 @@
     "@types/react": "~19.2.2",
     "babel-plugin-inline-import": "^3.0.0",
     "drizzle-kit": "^0.31.10",
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "~55.0.0",
     "tailwindcss": "^3.4.19",
     "typescript": "~5.9.2"
   },

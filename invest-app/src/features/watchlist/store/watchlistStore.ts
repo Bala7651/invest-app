@@ -29,9 +29,11 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
     const item = await watchlistService.insertItem(symbol, name);
     set(state => ({ items: [...state.items, item] }));
     const symbols = get().items.map(i => i.symbol);
-    useQuoteStore.getState().stopPolling();
+    const quoteStore = useQuoteStore.getState();
+    await quoteStore.forceRefresh([symbol]);
+    quoteStore.stopPolling();
     if (symbols.length > 0 && isMarketOpen()) {
-      useQuoteStore.getState().startPolling(symbols);
+      quoteStore.startPolling(symbols);
     }
   },
 

@@ -235,7 +235,20 @@ describe('fetchTWIX', () => {
 // ---------------------------------------------------------------------------
 
 describe('buildSummaryPrompt', () => {
-  const quote = { price: 850.5, change: 12.5, changePct: 1.49, prevClose: 838.0 };
+  const quote = {
+    price: 850.5,
+    open: 845.0,
+    high: 852.0,
+    low: 842.0,
+    volume: 12345,
+    change: 12.5,
+    changePct: 1.49,
+    prevClose: 838.0,
+    ma5: 840.2,
+    ma20: 832.6,
+    avgVolume20: 11000,
+    volumeRatio: 1.1,
+  };
 
   it('contains the symbol', () => {
     expect(buildSummaryPrompt('2330', '台積電', quote)).toContain('2330');

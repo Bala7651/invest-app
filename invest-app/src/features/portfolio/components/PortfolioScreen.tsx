@@ -77,19 +77,27 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
     useHoldingsStore.getState().setLastAnalysis(null);
     useHoldingsStore.getState().clearChatHistory();
 
-    const entries = items.map((item) => {
-      const q = quotes[item.symbol];
-      const holding = holdings[item.symbol];
-      return {
-        symbol: item.symbol,
-        name: item.name,
-        quantity: holding?.quantity ?? 0,
-        currentPrice: q?.price ?? null,
-      };
-    });
-
     try {
+      const symbols = items.map(item => item.symbol);
+      await useQuoteStore.getState().forceRefresh(symbols);
+      const latestQuotes = useQuoteStore.getState().quotes;
+
+      const entries = items.map((item) => {
+        const q = latestQuotes[item.symbol] ?? quotes[item.symbol];
+        const holding = holdings[item.symbol];
+        return {
+          symbol: item.symbol,
+          name: item.name,
+          quantity: holding?.quantity ?? 0,
+          currentPrice: q?.price ?? null,
+        };
+      });
+
       const result = await callPortfolioMiniMax(entries, { apiKey, modelName, baseUrl });
+      if (!result) {
+        setAnalysisError('AI 回應為空');
+        return;
+      }
       useHoldingsStore.getState().setLastAnalysis(result);
       useHoldingsStore.getState().setChatHistory([
         { role: 'user', content: buildDetailedAnalysisPrompt(entries) },

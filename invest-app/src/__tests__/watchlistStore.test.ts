@@ -12,6 +12,7 @@ jest.mock('../features/market/quoteStore', () => ({
     getState: jest.fn(() => ({
       startPolling: jest.fn(),
       stopPolling: jest.fn(),
+      forceRefresh: jest.fn(),
     })),
   },
 }));
@@ -21,17 +22,28 @@ jest.mock('../features/market/marketHours', () => ({
 }));
 
 import * as watchlistService from '../services/watchlistService';
+import { useQuoteStore } from '../features/market/quoteStore';
 
 const mockGetAll = watchlistService.getAll as jest.MockedFunction<typeof watchlistService.getAll>;
 const mockInsertItem = watchlistService.insertItem as jest.MockedFunction<typeof watchlistService.insertItem>;
 const mockDeleteItem = watchlistService.deleteItem as jest.MockedFunction<typeof watchlistService.deleteItem>;
 const mockUpdateSortOrders = watchlistService.updateSortOrders as jest.MockedFunction<typeof watchlistService.updateSortOrders>;
+const mockQuoteStore = {
+  startPolling: jest.fn(),
+  stopPolling: jest.fn(),
+  forceRefresh: jest.fn(),
+};
 
 beforeEach(() => {
   useWatchlistStore.setState({ items: [] });
   jest.clearAllMocks();
   mockUpdateSortOrders.mockResolvedValue(undefined);
   mockDeleteItem.mockResolvedValue(undefined);
+  mockQuoteStore.startPolling.mockReset();
+  mockQuoteStore.stopPolling.mockReset();
+  mockQuoteStore.forceRefresh.mockReset();
+  mockQuoteStore.forceRefresh.mockResolvedValue(undefined);
+  (useQuoteStore.getState as jest.Mock).mockReturnValue(mockQuoteStore);
 });
 
 describe('watchlistStore', () => {
@@ -72,6 +84,16 @@ describe('watchlistStore', () => {
       expect(items).toHaveLength(1);
       expect(items[0].symbol).toBe('2330');
       expect(items[0].id).toBe(1);
+    });
+
+    test('hydrates a quote immediately after add even when market is closed', async () => {
+      const returned = { id: 1, symbol: '2330', name: '台灣積體電路製造', sort_order: 0 };
+      mockInsertItem.mockResolvedValue(returned);
+
+      await useWatchlistStore.getState().addItem('2330', '台灣積體電路製造');
+
+      expect(mockQuoteStore.forceRefresh).toHaveBeenCalledWith(['2330']);
+      expect(mockQuoteStore.startPolling).not.toHaveBeenCalled();
     });
 
     test('rejects duplicate symbol (check before insert)', async () => {
