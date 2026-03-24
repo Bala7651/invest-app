@@ -10,6 +10,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useWatchlistStore } from '../../watchlist/store/watchlistStore';
 import { useQuoteStore } from '../../market/quoteStore';
+import { buildQuoteSnapshot } from '../../market/quotePresentation';
 import { useSettingsStore } from '../../settings/store/settingsStore';
 import { useHoldingsStore } from '../store/holdingsStore';
 import {
@@ -84,12 +85,13 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
 
       const entries = items.map((item) => {
         const q = latestQuotes[item.symbol] ?? quotes[item.symbol];
+        const snapshot = buildQuoteSnapshot(item.name, q);
         const holding = holdings[item.symbol];
         return {
           symbol: item.symbol,
           name: item.name,
           quantity: holding?.quantity ?? 0,
-          currentPrice: q?.price ?? null,
+          currentPrice: snapshot.price,
         };
       });
 
@@ -238,9 +240,9 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
           </View>
         ) : (
           items.map((item) => {
-            const q = quotes[item.symbol];
+            const snapshot = buildQuoteSnapshot(item.name, quotes[item.symbol]);
             const holding = holdings[item.symbol];
-            const price = q?.price ?? null;
+            const price = snapshot.price;
             const sharesHeld = holding?.quantity ?? 0;
             const value =
               price !== null && sharesHeld > 0
@@ -258,6 +260,14 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
                     {item.name}
                   </Text>
                   <Text className="text-muted text-xs">{item.symbol}</Text>
+                  <Text className="text-text text-xs" style={{ marginTop: 2 }}>
+                    {price != null ? `${price.toFixed(2)} 元` : '—'}
+                  </Text>
+                  {snapshot.sourceMeta ? (
+                    <Text className="text-muted text-xs" style={{ marginTop: 2 }}>
+                      {snapshot.sourceMeta}
+                    </Text>
+                  ) : null}
                   {value ? (
                     <Text className="text-primary text-xs" style={{ marginTop: 2 }}>
                       {value}

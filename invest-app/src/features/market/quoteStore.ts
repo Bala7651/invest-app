@@ -4,8 +4,9 @@ import { getQuotes, QuoteFetchOptions } from '../../services/stockService';
 import { isMarketOpen } from './marketHours';
 import { fetchLatestQuoteForSummary, SummaryQuoteData } from '../summary/services/summaryService';
 import { useSettingsStore } from '../settings/store/settingsStore';
+import { QuoteSource } from './quotePresentation';
 
-interface Quote {
+export interface Quote {
   symbol: string;
   name: string;
   price: number | null;
@@ -19,7 +20,7 @@ interface Quote {
   fetchedAt: number;
   bid: number | null;
   ask: number | null;
-  source: 'twse_live' | 'alpha_vantage' | 'yahoo_delayed' | 'twse_close' | 'prev_close';
+  source: QuoteSource;
 }
 
 interface QuoteState {

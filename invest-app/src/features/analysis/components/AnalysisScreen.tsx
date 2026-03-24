@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSettingsStore } from '../../settings/store/settingsStore';
 import { useWatchlistStore } from '../../watchlist/store/watchlistStore';
 import { useQuoteStore } from '../../market/quoteStore';
+import { buildQuoteSnapshot } from '../../market/quotePresentation';
 import { useAnalysisStore } from '../store/analysisStore';
 import { AnalysisCard } from './AnalysisCard';
 import { NoApiKeyPrompt } from './NoApiKeyPrompt';
@@ -18,6 +19,21 @@ export function AnalysisScreen({ isActive }: AnalysisScreenProps) {
   const items = useWatchlistStore(s => s.items);
   const quotes = useQuoteStore(s => s.quotes);
   const { cache, loading, errors, fetchAnalysis, loadPersistedAnalysis } = useAnalysisStore();
+
+  function buildAnalysisQuoteData(fallbackName: string, quote?: typeof quotes[string]) {
+    const snapshot = buildQuoteSnapshot(fallbackName, quote);
+    return {
+      name: snapshot.name,
+      price: snapshot.price,
+      change: snapshot.change,
+      changePct: snapshot.changePct,
+      prevClose: snapshot.prevClose,
+      volume: snapshot.volume ?? 0,
+      open: snapshot.open,
+      high: snapshot.high,
+      low: snapshot.low,
+    };
+  }
 
   useEffect(() => {
     if (!isActive || !apiKey) return;
@@ -36,25 +52,13 @@ export function AnalysisScreen({ isActive }: AnalysisScreenProps) {
       for (const item of currentItems) {
         if (cancelled) return;
         const q = currentQuotes[item.symbol];
-        const quoteData = q
-          ? {
-              name: q.name,
-              price: q.price,
-              change: q.change,
-              changePct: q.changePct,
-              prevClose: q.prevClose,
-              volume: q.volume,
-              open: q.open,
-              high: q.high,
-              low: q.low,
-            }
-          : {
-              name: item.name,
-              price: null,
-              change: 0,
-              changePct: 0,
-              prevClose: 0,
-              volume: 0,
+        const quoteData = q ? buildAnalysisQuoteData(item.name, q) : {
+          name: item.name,
+          price: null,
+          change: 0,
+          changePct: 0,
+          prevClose: 0,
+          volume: 0,
         };
         await fetchAnalysis(item.symbol, quoteData, credentials);
       }
@@ -94,17 +98,7 @@ export function AnalysisScreen({ isActive }: AnalysisScreenProps) {
                   const { apiKey: key, modelName, baseUrl } = useSettingsStore.getState();
                   const q = useQuoteStore.getState().quotes[item.symbol];
                   const quoteData = q
-                    ? {
-                        name: q.name,
-                        price: q.price,
-                        change: q.change,
-                        changePct: q.changePct,
-                        prevClose: q.prevClose,
-                        volume: q.volume,
-                        open: q.open,
-                        high: q.high,
-                        low: q.low,
-                      }
+                    ? buildAnalysisQuoteData(item.name, q)
                     : {
                         name: item.name,
                         price: null,

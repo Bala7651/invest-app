@@ -10,19 +10,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { WatchlistItem } from '../store/watchlistStore';
 import { SparklineChart } from './SparklineChart';
-
-interface Quote {
-  symbol: string;
-  name: string;
-  price: number | null;
-  prevClose: number;
-  change: number;
-  changePct: number;
-  fetchedAt: number;
-  bid: number | null;
-  ask: number | null;
-  source: 'twse_live' | 'alpha_vantage' | 'yahoo_delayed' | 'twse_close' | 'prev_close';
-}
+import { Quote } from '../../market/quoteStore';
+import { buildQuoteSnapshot } from '../../market/quotePresentation';
 
 interface StockCardProps {
   item: WatchlistItem;
@@ -38,33 +27,19 @@ export function formatChange(change: number, changePct: number): string {
 }
 
 export function StockCard({ item, quote, tickHistory, onPress, onLongPress }: StockCardProps) {
-  const priceDisplay = quote?.price != null ? quote.price.toFixed(2) : '—';
+  const snapshot = buildQuoteSnapshot(item.name, quote);
+  const priceDisplay = snapshot.price != null ? snapshot.price.toFixed(2) : '—';
   const changeDisplay =
-    quote?.price != null
-      ? formatChange(quote.change, quote.changePct)
+    snapshot.price != null
+      ? formatChange(snapshot.change, snapshot.changePct)
       : '等待開盤';
   const changeColorClass =
-    quote?.price != null
-      ? quote.change >= 0
+    snapshot.price != null
+      ? snapshot.change >= 0
         ? 'text-stock-up'
         : 'text-stock-down'
       : 'text-muted';
-  const sourceMeta =
-    quote?.source === 'alpha_vantage'
-      ? 'Alpha'
-      : quote?.source === 'yahoo_delayed'
-      ? '延遲'
-      : quote?.source === 'twse_close' || quote?.source === 'prev_close'
-        ? '昨收'
-        : null;
-  const bookMeta =
-    quote?.bid != null && quote?.ask != null
-      ? `買 ${quote.bid.toFixed(2)} / 賣 ${quote.ask.toFixed(2)}`
-      : null;
-  const detailMeta =
-    sourceMeta && bookMeta
-      ? `${sourceMeta} · ${bookMeta}`
-      : sourceMeta ?? bookMeta;
+  const detailMeta = snapshot.sourceMeta;
 
   const flashColor = quote != null && quote.change >= 0 ? '#00E676' : '#FF1744';
   const glowProgress = useSharedValue(0);

@@ -7,16 +7,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { AnalysisResult } from '../types';
 import { AnalysisSkeleton } from './AnalysisSkeleton';
-
-interface Quote {
-  symbol: string;
-  name: string;
-  price: number | null;
-  prevClose: number;
-  change: number;
-  changePct: number;
-  fetchedAt: number;
-}
+import { Quote } from '../../market/quoteStore';
+import { buildQuoteSnapshot } from '../../market/quotePresentation';
 
 interface AnalysisCardProps {
   symbol: string;
@@ -50,6 +42,7 @@ function riskLevelColor(level: string): string {
 export function AnalysisCard({ symbol, name, quote, result, loading, error, onRetry }: AnalysisCardProps) {
   const [expanded, setExpanded] = useState(false);
   const maxHeight = useSharedValue(0);
+  const snapshot = buildQuoteSnapshot(name, quote);
 
   const expandStyle = useAnimatedStyle(() => ({
     maxHeight: maxHeight.value,
@@ -62,13 +55,13 @@ export function AnalysisCard({ symbol, name, quote, result, loading, error, onRe
     maxHeight.value = withTiming(next ? 2000 : 0, { duration: 250 });
   }
 
-  const priceDisplay = quote?.price != null ? quote.price.toFixed(2) : '—';
+  const priceDisplay = snapshot.price != null ? snapshot.price.toFixed(2) : '—';
   const changeDisplay =
-    quote?.price != null
-      ? `${quote.change >= 0 ? '+' : ''}${quote.change.toFixed(2)} (${quote.changePct.toFixed(2)}%)`
+    snapshot.price != null
+      ? `${snapshot.change >= 0 ? '+' : ''}${snapshot.change.toFixed(2)} (${snapshot.changePct.toFixed(2)}%)`
       : '—';
-  const changeColorStyle = quote?.price != null
-    ? { color: quote.change >= 0 ? '#00E676' : '#FF1744' }
+  const changeColorStyle = snapshot.price != null
+    ? { color: snapshot.change >= 0 ? '#00E676' : '#FF1744' }
     : {};
 
   return (
@@ -82,6 +75,9 @@ export function AnalysisCard({ symbol, name, quote, result, loading, error, onRe
           <View className="items-end">
             <Text className="text-text font-semibold">{priceDisplay}</Text>
             <Text style={changeColorStyle} className="text-sm mt-0.5">{changeDisplay}</Text>
+            {snapshot.sourceMeta ? (
+              <Text className="text-muted text-xs mt-0.5">{snapshot.sourceMeta}</Text>
+            ) : null}
           </View>
         </View>
 
