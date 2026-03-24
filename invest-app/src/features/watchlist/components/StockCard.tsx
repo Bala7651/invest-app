@@ -19,6 +19,9 @@ interface Quote {
   change: number;
   changePct: number;
   fetchedAt: number;
+  bid: number | null;
+  ask: number | null;
+  source: 'twse_live' | 'yahoo_delayed' | 'twse_close' | 'prev_close';
 }
 
 interface StockCardProps {
@@ -46,6 +49,20 @@ export function StockCard({ item, quote, tickHistory, onPress, onLongPress }: St
         ? 'text-stock-up'
         : 'text-stock-down'
       : 'text-muted';
+  const sourceMeta =
+    quote?.source === 'yahoo_delayed'
+      ? '延遲'
+      : quote?.source === 'twse_close' || quote?.source === 'prev_close'
+        ? '昨收'
+        : null;
+  const bookMeta =
+    quote?.bid != null && quote?.ask != null
+      ? `買 ${quote.bid.toFixed(2)} / 賣 ${quote.ask.toFixed(2)}`
+      : null;
+  const detailMeta =
+    sourceMeta && bookMeta
+      ? `${sourceMeta} · ${bookMeta}`
+      : sourceMeta ?? bookMeta;
 
   const flashColor = quote != null && quote.change >= 0 ? '#00E676' : '#FF1744';
   const glowProgress = useSharedValue(0);
@@ -84,6 +101,9 @@ export function StockCard({ item, quote, tickHistory, onPress, onLongPress }: St
       <View className="items-end">
         <Animated.Text style={[{ fontWeight: '600', fontSize: 16 }, priceStyle]}>{priceDisplay}</Animated.Text>
         <Text className={`${changeColorClass} text-sm mt-0.5`}>{changeDisplay}</Text>
+        {detailMeta ? (
+          <Text className="text-muted text-xs mt-0.5">{detailMeta}</Text>
+        ) : null}
       </View>
     </Pressable>
   );

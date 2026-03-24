@@ -268,6 +268,9 @@ describe('quoteStore forceRefresh', () => {
           change: 0,
           changePct: 0,
           fetchedAt: 1,
+          bid: null,
+          ask: null,
+          source: 'prev_close',
         },
       },
     });

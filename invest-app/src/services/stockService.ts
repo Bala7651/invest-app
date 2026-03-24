@@ -8,6 +8,9 @@ export interface TWSEQuote {
   low: number | null;
   volume: number;
   updatedAt: number;
+  bid?: number | null;
+  ask?: number | null;
+  source?: 'twse_live' | 'twse_unpriced' | 'yahoo_delayed';
 }
 
 export interface QuoteFetchOptions {
@@ -75,6 +78,12 @@ function lastNumber(values: Array<number | null> | undefined): number | null {
   return null;
 }
 
+function firstNumberFromBook(levels: string | undefined): number | null {
+  if (!levels) return null;
+  const [first] = levels.split('_');
+  return parseSentinel(first ?? '');
+}
+
 function getCachedYahooQuote(symbol: string, now = Date.now()): TWSEQuote | null {
   const cached = yahooFallbackCache.get(symbol);
   if (!cached) return null;
@@ -120,6 +129,9 @@ async function fetchYahooQuote(symbol: string, options: QuoteFetchOptions = {}):
         low: parseNumber(meta?.regularMarketDayLow) ?? lastNumber(quote?.low),
         volume: parseNumber(meta?.regularMarketVolume) ?? 0,
         updatedAt: (parseNumber(meta?.regularMarketTime) ?? Math.floor(Date.now() / 1000)) * 1000,
+        bid: null,
+        ask: null,
+        source: 'yahoo_delayed',
       };
 
       yahooFallbackCache.set(symbol, { quote: yahooQuote, fetchedAt: Date.now() });
@@ -163,6 +175,9 @@ async function applyYahooFallbacks(
       low: yahooQuote.low ?? existing.low,
       volume: yahooQuote.volume || existing.volume,
       updatedAt: yahooQuote.updatedAt || existing.updatedAt,
+      bid: existing.bid ?? yahooQuote.bid ?? null,
+      ask: existing.ask ?? yahooQuote.ask ?? null,
+      source: 'yahoo_delayed',
     });
   }
 
@@ -228,17 +243,23 @@ async function _fetchQuotes(symbols: string[], options: QuoteFetchOptions = {}):
       });
       if (!res.ok) throw new Error(`TWSE HTTP ${res.status}`);
       const data = await res.json();
-      return (data.msgArray ?? []).map((item: any): TWSEQuote => ({
-        symbol: item.c,
-        name: item.n,
-        price: parseSentinel(item.z),
-        prevClose: parseFloat(item.y),
-        open: parseSentinel(item.o),
-        high: parseSentinel(item.h),
-        low: parseSentinel(item.l),
-        volume: parseFloat(item.v) || 0,
-        updatedAt: parseInt(item.tlong, 10),
-      }));
+      return (data.msgArray ?? []).map((item: any): TWSEQuote => {
+        const price = parseSentinel(item.z);
+        return {
+          symbol: item.c,
+          name: item.n,
+          price,
+          prevClose: parseFloat(item.y),
+          open: parseSentinel(item.o),
+          high: parseSentinel(item.h),
+          low: parseSentinel(item.l),
+          volume: parseFloat(item.v) || 0,
+          updatedAt: parseInt(item.tlong, 10),
+          bid: firstNumberFromBook(item.b),
+          ask: firstNumberFromBook(item.a),
+          source: price != null ? 'twse_live' : 'twse_unpriced',
+        };
+      });
     } finally {
       cleanup();
     }

@@ -16,6 +16,9 @@ interface Quote {
   change: number;
   changePct: number;
   fetchedAt: number;
+  bid: number | null;
+  ask: number | null;
+  source: 'twse_live' | 'yahoo_delayed' | 'twse_close' | 'prev_close';
 }
 
 interface QuoteState {
@@ -29,7 +32,7 @@ interface QuoteState {
   forceRefresh: (symbols: string[], options?: QuoteFetchOptions) => Promise<void>;
 }
 
-function buildLiveQuote(q: {
+function buildResolvedQuote(q: {
   symbol: string;
   name: string;
   price: number;
@@ -38,6 +41,9 @@ function buildLiveQuote(q: {
   high: number | null;
   low: number | null;
   volume: number;
+  bid?: number | null;
+  ask?: number | null;
+  source?: 'twse_live' | 'yahoo_delayed' | 'twse_unpriced';
 }, fetchedAt: number): Quote {
   const change = q.price - q.prevClose;
   const changePct = (change / q.prevClose) * 100;
@@ -53,6 +59,9 @@ function buildLiveQuote(q: {
     change,
     changePct,
     fetchedAt,
+    bid: q.bid ?? null,
+    ask: q.ask ?? null,
+    source: q.source === 'yahoo_delayed' ? 'yahoo_delayed' : 'twse_live',
   };
 }
 
@@ -60,7 +69,9 @@ function buildQuoteFromDaily(
   symbol: string,
   name: string,
   summary: SummaryQuoteData,
-  fetchedAt: number
+  fetchedAt: number,
+  bid: number | null = null,
+  ask: number | null = null
 ): Quote {
   return {
     symbol,
@@ -74,6 +85,9 @@ function buildQuoteFromDaily(
     change: summary.change,
     changePct: summary.changePct,
     fetchedAt,
+    bid,
+    ask,
+    source: 'twse_close',
   };
 }
 
@@ -82,6 +96,8 @@ function buildPrevCloseFallback(q: {
   name: string;
   prevClose: number;
   volume: number;
+  bid?: number | null;
+  ask?: number | null;
 }, fetchedAt: number): Quote {
   return {
     symbol: q.symbol,
@@ -95,6 +111,9 @@ function buildPrevCloseFallback(q: {
     change: 0,
     changePct: 0,
     fetchedAt,
+    bid: q.bid ?? null,
+    ask: q.ask ?? null,
+    source: 'prev_close',
   };
 }
 
@@ -136,15 +155,23 @@ export const useQuoteStore = create<QuoteState>((set, get) => ({
           for (const q of raw) {
             const previous = get().quotes[q.symbol];
             if (q.price !== null) {
-              quotes[q.symbol] = buildLiveQuote(q as typeof q & { price: number }, fetchedAt);
+              quotes[q.symbol] = buildResolvedQuote(q as typeof q & { price: number }, fetchedAt);
               continue;
             }
 
             const daily = dailyFallbacks[q.symbol];
             if (daily?.price != null) {
-              quotes[q.symbol] = buildQuoteFromDaily(q.symbol, q.name, daily, fetchedAt);
+              quotes[q.symbol] = buildQuoteFromDaily(q.symbol, q.name, daily, fetchedAt, q.bid ?? null, q.ask ?? null);
             } else if (previous?.price != null) {
-              quotes[q.symbol] = { ...previous, symbol: q.symbol, name: q.name, prevClose: q.prevClose, fetchedAt };
+              quotes[q.symbol] = {
+                ...previous,
+                symbol: q.symbol,
+                name: q.name,
+                prevClose: q.prevClose,
+                bid: q.bid ?? previous.bid,
+                ask: q.ask ?? previous.ask,
+                fetchedAt,
+              };
             } else {
               quotes[q.symbol] = buildPrevCloseFallback(q, fetchedAt);
             }
@@ -173,20 +200,28 @@ export const useQuoteStore = create<QuoteState>((set, get) => ({
         for (const q of raw) {
           const previous = get().quotes[q.symbol];
           if (q.price !== null) {
-            const liveQuote = buildLiveQuote(q as typeof q & { price: number }, fetchedAt);
+            const liveQuote = buildResolvedQuote(q as typeof q & { price: number }, fetchedAt);
             quotes[q.symbol] = liveQuote;
             alertQuotes[q.symbol] = liveQuote;
             continue;
           }
 
           if (previous?.price != null) {
-            quotes[q.symbol] = { ...previous, symbol: q.symbol, name: q.name, prevClose: q.prevClose, fetchedAt };
+            quotes[q.symbol] = {
+              ...previous,
+              symbol: q.symbol,
+              name: q.name,
+              prevClose: q.prevClose,
+              bid: q.bid ?? previous.bid,
+              ask: q.ask ?? previous.ask,
+              fetchedAt,
+            };
             continue;
           }
 
           const daily = dailyFallbacks[q.symbol];
           if (daily?.price != null) {
-            quotes[q.symbol] = buildQuoteFromDaily(q.symbol, q.name, daily, fetchedAt);
+            quotes[q.symbol] = buildQuoteFromDaily(q.symbol, q.name, daily, fetchedAt, q.bid ?? null, q.ask ?? null);
           } else {
             quotes[q.symbol] = buildPrevCloseFallback(q, fetchedAt);
           }
@@ -233,21 +268,37 @@ export const useQuoteStore = create<QuoteState>((set, get) => ({
       for (const q of raw) {
         const previous = get().quotes[q.symbol];
         if (q.price !== null) {
-          quotesUpdate[q.symbol] = buildLiveQuote(q as typeof q & { price: number }, fetchedAt);
+          quotesUpdate[q.symbol] = buildResolvedQuote(q as typeof q & { price: number }, fetchedAt);
           tickHistory[q.symbol] = [...(tickHistory[q.symbol] ?? []), q.price];
           continue;
         }
 
         if (marketOpen && previous?.price != null) {
-          quotesUpdate[q.symbol] = { ...previous, symbol: q.symbol, name: q.name, prevClose: q.prevClose, fetchedAt };
+          quotesUpdate[q.symbol] = {
+            ...previous,
+            symbol: q.symbol,
+            name: q.name,
+            prevClose: q.prevClose,
+            bid: q.bid ?? previous.bid,
+            ask: q.ask ?? previous.ask,
+            fetchedAt,
+          };
           continue;
         }
 
         const daily = dailyFallbacks[q.symbol];
         if (daily?.price != null) {
-          quotesUpdate[q.symbol] = buildQuoteFromDaily(q.symbol, q.name, daily, fetchedAt);
+          quotesUpdate[q.symbol] = buildQuoteFromDaily(q.symbol, q.name, daily, fetchedAt, q.bid ?? null, q.ask ?? null);
         } else if (previous?.price != null) {
-          quotesUpdate[q.symbol] = { ...previous, symbol: q.symbol, name: q.name, prevClose: q.prevClose, fetchedAt };
+          quotesUpdate[q.symbol] = {
+            ...previous,
+            symbol: q.symbol,
+            name: q.name,
+            prevClose: q.prevClose,
+            bid: q.bid ?? previous.bid,
+            ask: q.ask ?? previous.ask,
+            fetchedAt,
+          };
         } else {
           quotesUpdate[q.symbol] = buildPrevCloseFallback(q, fetchedAt);
         }
