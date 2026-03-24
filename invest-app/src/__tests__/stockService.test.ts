@@ -1,5 +1,33 @@
 import * as StockService from '../services/stockService';
 
+const MOCK_YAHOO_CHART_RESPONSE = {
+  chart: {
+    result: [
+      {
+        meta: {
+          symbol: '2330.TW',
+          shortName: '台積電',
+          regularMarketPrice: 1820,
+          previousClose: 1810,
+          regularMarketDayHigh: 1850,
+          regularMarketDayLow: 1800,
+          regularMarketVolume: 14571374,
+          regularMarketTime: 1774319075,
+        },
+        indicators: {
+          quote: [
+            {
+              open: [1850],
+              high: [1850],
+              low: [1800],
+            },
+          ],
+        },
+      },
+    ],
+  },
+};
+
 // --- Export bypass tests ---
 
 it('does not export _fetchQuotes (bypass impossible)', () => {
@@ -76,10 +104,59 @@ it('TWSEQuote interface has required fields via mock fetch response', async () =
   expect(q).toHaveProperty('updatedAt', 1742299200000);
 });
 
+it('getQuotes falls back to Yahoo when TWSE returns a null live price', async () => {
+  const twseResponse = {
+    msgArray: [
+      {
+        c: '2330',
+        n: '台積電',
+        z: '-',
+        y: '1810.00',
+        o: '1850.00',
+        h: '1850.00',
+        l: '1820.00',
+        v: '12345',
+        tlong: '1742299200000',
+      },
+    ],
+  };
+
+  global.fetch = jest
+    .fn()
+    .mockResolvedValueOnce({
+      ok: true,
+      json: async () => twseResponse,
+    } as any)
+    .mockResolvedValueOnce({
+      ok: true,
+      json: async () => MOCK_YAHOO_CHART_RESPONSE,
+    } as any);
+
+  const quotes = await StockService.getQuotes(['2330']);
+  expect(quotes).toHaveLength(1);
+  expect(quotes[0]).toMatchObject({
+    symbol: '2330',
+    name: '台積電',
+    price: 1820,
+    prevClose: 1810,
+    open: 1850,
+    high: 1850,
+    low: 1800,
+  });
+  expect(quotes[0].volume).toBe(14571374);
+  expect(global.fetch).toHaveBeenCalledTimes(2);
+  expect((global.fetch as jest.Mock).mock.calls[1][0]).toContain('2330.TW');
+});
+
 // --- URL format test ---
 
 it('getQuotes formats symbols as pipe-delimited tse_XXXX.tw string in URL', async () => {
-  const mockResponse = { msgArray: [] };
+  const mockResponse = {
+    msgArray: [
+      { c: '2330', n: '台積電', z: '900', y: '895', o: '897', h: '902', l: '896', v: '12345', tlong: '1742299200000' },
+      { c: '2317', n: '鴻海', z: '200', y: '198', o: '199', h: '201', l: '197', v: '67890', tlong: '1742299200000' },
+    ],
+  };
 
   global.fetch = jest.fn().mockResolvedValueOnce({
     ok: true,
@@ -99,14 +176,27 @@ it('getQuotes formats symbols as pipe-delimited tse_XXXX.tw string in URL', asyn
 
 it('two sequential getQuotes calls are spaced at least 2000ms apart', async () => {
   const timestamps: number[] = [];
-  let callCount = 0;
-  const mockResponse = { msgArray: [] };
 
-  global.fetch = jest.fn().mockImplementation(async () => {
+  global.fetch = jest.fn().mockImplementation(async (url: string) => {
     timestamps.push(Date.now());
+    const symbol = url.includes('2317') ? '2317' : '2330';
     return {
       ok: true,
-      json: async () => mockResponse,
+      json: async () => ({
+        msgArray: [
+          {
+            c: symbol,
+            n: symbol === '2330' ? '台積電' : '鴻海',
+            z: symbol === '2330' ? '900' : '200',
+            y: symbol === '2330' ? '895' : '198',
+            o: symbol === '2330' ? '897' : '199',
+            h: symbol === '2330' ? '902' : '201',
+            l: symbol === '2330' ? '896' : '197',
+            v: symbol === '2330' ? '12345' : '67890',
+            tlong: '1742299200000',
+          },
+        ],
+      }),
     };
   });
 
