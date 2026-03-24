@@ -183,6 +183,70 @@ describe('callMiniMax', () => {
     expect(result.trendPosition).toBe('多方主導');
   });
 
+  it('repairs a non-JSON first response with a second formatting call', async () => {
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          choices: [{ message: { content: '台積電今日收紅，量能溫和放大，短線偏多。' } }],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          choices: [{ message: { content: JSON.stringify(mockResult) } }],
+        }),
+      });
+
+    const result = await callMiniMax('2330', mockQuote, credentials);
+
+    expect(result.overallScore).toBe(70);
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('falls back to a local structured analysis when the model never returns JSON', async () => {
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          choices: [{ message: { content: '今天股價偏強，但模型沒有照要求輸出。' } }],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          choices: [{ message: { content: '還是沒有 JSON' } }],
+        }),
+      });
+
+    const result = await callMiniMax('2330', mockQuote, credentials);
+
+    expect(typeof result.technicalSummary).toBe('string');
+    expect(result.technicalSummary.length).toBeGreaterThan(0);
+    expect(result.volumeSignal).toBe('無資料');
+    expect(result.overallScore).toBeGreaterThanOrEqual(0);
+    expect(result.overallScore).toBeLessThanOrEqual(100);
+  });
+
+  it('adds json_object response_format for OpenAI-compatible structured output providers', async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        choices: [{ message: { content: JSON.stringify(mockResult) } }],
+      }),
+    });
+
+    await callMiniMax('2330', mockQuote, {
+      apiKey: 'test-api-key',
+      modelName: 'gpt-4.1-mini',
+      baseUrl: 'https://api.openai.com/v1',
+    });
+
+    const [, options] = (global.fetch as jest.Mock).mock.calls[0];
+    const body = JSON.parse(options.body);
+    expect(body.response_format).toEqual({ type: 'json_object' });
+  });
+
   it('throws on non-ok HTTP response with status code in message', async () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: false,
