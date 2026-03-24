@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { checkAlerts } from '../alerts/services/alertMonitor';
-import { getQuotes } from '../../services/stockService';
+import { getQuotes, QuoteFetchOptions } from '../../services/stockService';
 import { isMarketOpen } from './marketHours';
 import { fetchLatestQuoteForSummary, SummaryQuoteData } from '../summary/services/summaryService';
 
@@ -26,7 +26,7 @@ interface QuoteState {
   _intervalId: ReturnType<typeof setInterval> | null;
   startPolling: (symbols: string[]) => void;
   stopPolling: () => void;
-  forceRefresh: (symbols: string[]) => Promise<void>;
+  forceRefresh: (symbols: string[], options?: QuoteFetchOptions) => Promise<void>;
 }
 
 function buildLiveQuote(q: {
@@ -156,7 +156,7 @@ export const useQuoteStore = create<QuoteState>((set, get) => ({
               tickHistory[q.symbol] = [...prev, q.price];
             }
           }
-          set({ quotes: { ...get().quotes, ...quotes }, tickHistory });
+          set({ quotes: { ...get().quotes, ...quotes }, tickHistory, lastError: null });
         } catch (e) {
           set({ lastError: String(e) });
         }
@@ -198,7 +198,7 @@ export const useQuoteStore = create<QuoteState>((set, get) => ({
             tickHistory[q.symbol] = [...prev, q.price];
           }
         }
-        set({ quotes: { ...get().quotes, ...quotes }, tickHistory });
+        set({ quotes: { ...get().quotes, ...quotes }, tickHistory, lastError: null });
         checkAlerts(alertQuotes).catch(() => {});
       } catch (e) {
         set({ lastError: String(e) });
@@ -219,9 +219,12 @@ export const useQuoteStore = create<QuoteState>((set, get) => ({
     set({ polling: false, _intervalId: null, tickHistory: {} });
   },
 
-  async forceRefresh(symbols: string[]) {
+  async forceRefresh(symbols: string[], options: QuoteFetchOptions = {}) {
     try {
-      const raw = await getQuotes(symbols);
+      const raw = await getQuotes(symbols, options);
+      if (symbols.length > 0 && raw.length === 0) {
+        throw new Error('TWSE 與 Yahoo 都沒有返回任何報價資料');
+      }
       const fetchedAt = Date.now();
       const marketOpen = isMarketOpen();
       const dailyFallbacks = await loadDailyFallbacks(raw);
@@ -249,7 +252,7 @@ export const useQuoteStore = create<QuoteState>((set, get) => ({
           quotesUpdate[q.symbol] = buildPrevCloseFallback(q, fetchedAt);
         }
       }
-      set({ quotes: { ...get().quotes, ...quotesUpdate }, tickHistory });
+      set({ quotes: { ...get().quotes, ...quotesUpdate }, tickHistory, lastError: null });
     } catch (e) {
       set({ lastError: String(e) });
     }

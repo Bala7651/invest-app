@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Pressable, RefreshControl, Text, View, useWindowDimensions } from 'react-native';
+import { Alert, Pressable, RefreshControl, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import ReorderableList, {
@@ -82,10 +82,30 @@ function WatchlistPage() {
   async function handleRefresh() {
     setRefreshing(true);
     const symbols = items.map(i => i.symbol);
-    if (symbols.length > 0) {
-      await useQuoteStore.getState().forceRefresh(symbols);
+    try {
+      if (symbols.length > 0) {
+        await useQuoteStore.getState().forceRefresh(symbols, { forceNetwork: true });
+
+        const { quotes, lastError } = useQuoteStore.getState();
+        if (lastError) {
+          Alert.alert('重新整理失敗', lastError);
+          return;
+        }
+
+        const missing = items
+          .filter(item => quotes[item.symbol]?.price == null)
+          .map(item => `${item.symbol} ${item.name}`);
+
+        if (missing.length > 0) {
+          Alert.alert(
+            '價格仍未取得',
+            `以下股票重新整理後仍沒有價格：\n${missing.join('\n')}\n\n可能原因：TWSE 沒有回傳成交價，而且 Yahoo 補價也沒有成功。`
+          );
+        }
+      }
+    } finally {
+      setRefreshing(false);
     }
-    setRefreshing(false);
   }
 
   function renderItem({ item }: { item: WatchlistItem }) {

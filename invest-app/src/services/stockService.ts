@@ -10,6 +10,10 @@ export interface TWSEQuote {
   updatedAt: number;
 }
 
+export interface QuoteFetchOptions {
+  forceNetwork?: boolean;
+}
+
 interface YahooChartMeta {
   symbol?: string;
   shortName?: string;
@@ -72,8 +76,8 @@ function getCachedYahooQuote(symbol: string, now = Date.now()): TWSEQuote | null
   return cached.quote;
 }
 
-async function fetchYahooQuote(symbol: string): Promise<TWSEQuote | null> {
-  const cached = getCachedYahooQuote(symbol);
+async function fetchYahooQuote(symbol: string, options: QuoteFetchOptions = {}): Promise<TWSEQuote | null> {
+  const cached = options.forceNetwork ? null : getCachedYahooQuote(symbol);
   if (cached) return cached;
 
   const yahooSymbol = `${symbol}.TW`;
@@ -114,7 +118,11 @@ async function fetchYahooQuote(symbol: string): Promise<TWSEQuote | null> {
   }
 }
 
-async function applyYahooFallbacks(symbols: string[], quotes: TWSEQuote[]): Promise<TWSEQuote[]> {
+async function applyYahooFallbacks(
+  symbols: string[],
+  quotes: TWSEQuote[],
+  options: QuoteFetchOptions = {}
+): Promise<TWSEQuote[]> {
   const bySymbol = new Map(quotes.map(q => [q.symbol, q] as const));
   const missingSymbols = symbols.filter(symbol => {
     const q = bySymbol.get(symbol);
@@ -122,7 +130,7 @@ async function applyYahooFallbacks(symbols: string[], quotes: TWSEQuote[]): Prom
   });
 
   for (const symbol of missingSymbols) {
-    const yahooQuote = await fetchYahooQuote(symbol);
+    const yahooQuote = await fetchYahooQuote(symbol, options);
     if (!yahooQuote) continue;
 
     const existing = bySymbol.get(symbol);
@@ -194,7 +202,7 @@ async function withRetry<T>(fn: () => Promise<T>): Promise<T | null> {
   }
 }
 
-async function _fetchQuotes(symbols: string[]): Promise<TWSEQuote[]> {
+async function _fetchQuotes(symbols: string[], options: QuoteFetchOptions = {}): Promise<TWSEQuote[]> {
   const exCh = symbols.map(s => `tse_${s}.tw`).join('|');
   const url = `https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=${encodeURIComponent(exCh)}&json=1&delay=0`;
   const result = await withRetry(async () => {
@@ -216,9 +224,9 @@ async function _fetchQuotes(symbols: string[]): Promise<TWSEQuote[]> {
       updatedAt: parseInt(item.tlong, 10),
     }));
   });
-  return applyYahooFallbacks(symbols, result ?? []);
+  return applyYahooFallbacks(symbols, result ?? [], options);
 }
 
-export async function getQuotes(symbols: string[]): Promise<TWSEQuote[]> {
-  return _queue.enqueue(() => _fetchQuotes(symbols));
+export async function getQuotes(symbols: string[], options: QuoteFetchOptions = {}): Promise<TWSEQuote[]> {
+  return _queue.enqueue(() => _fetchQuotes(symbols, options));
 }

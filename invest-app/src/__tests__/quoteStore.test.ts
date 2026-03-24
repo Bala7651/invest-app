@@ -250,7 +250,7 @@ describe('quoteStore forceRefresh', () => {
     expect(quotes['2317'].price).toBe(200);
     expect(quotes['2317'].change).toBe(5);
     expect(quotes['2317'].changePct).toBeCloseTo(2.56, 5);
-    expect(mockGetQuotes).toHaveBeenCalledWith(SYMBOLS);
+    expect(mockGetQuotes).toHaveBeenCalledWith(SYMBOLS, {});
   });
 
   test('forceRefresh heals an existing null quote using fallback data', async () => {
