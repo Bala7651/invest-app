@@ -17,6 +17,8 @@ export interface TWSEQuote {
 
 export interface QuoteFetchOptions {
   forceNetwork?: boolean;
+  forceAlphaVantageLookup?: boolean;
+  forceAlphaVantageNetwork?: boolean;
 }
 
 interface YahooChartMeta {
@@ -82,6 +84,12 @@ const alphaVantageCache = new Map<
     reason: 'success' | 'unsupported' | 'rate_limit' | 'error';
   }
 >();
+
+function isAlphaVantageRateLimitMessage(value: unknown): boolean {
+  if (typeof value !== 'string') return false;
+  const normalized = value.toLowerCase();
+  return normalized.includes('alpha vantage') && normalized.includes('limit');
+}
 
 function createTimeoutSignal(ms: number): { signal: AbortSignal; cleanup: () => void } {
   const controller = new AbortController();
@@ -309,19 +317,41 @@ async function fetchAlphaVantageJson<T>(url: string): Promise<T> {
     if (!res.ok) {
       throw new Error(`Alpha Vantage HTTP ${res.status}`);
     }
-    return await res.json();
+    const data = await res.json();
+    await useSettingsStore.getState().recordAlphaVantageRequest();
+    if (
+      isAlphaVantageRateLimitMessage((data as AlphaVantageGlobalQuoteResponse | undefined)?.Information) ||
+      isAlphaVantageRateLimitMessage((data as AlphaVantageGlobalQuoteResponse | undefined)?.Note)
+    ) {
+      await useSettingsStore.getState().markAlphaVantageLimitReached();
+    }
+    return data;
   } finally {
     cleanup();
   }
 }
 
-async function fetchAlphaVantageQuote(symbol: string): Promise<TWSEQuote | null> {
-  const { marketDataProvider, alphaVantageApiKey } = useSettingsStore.getState();
-  if (marketDataProvider !== 'alpha_vantage' || !alphaVantageApiKey) {
+async function fetchAlphaVantageQuote(
+  symbol: string,
+  options: QuoteFetchOptions = {},
+): Promise<TWSEQuote | null> {
+  await useSettingsStore.getState().ensureAlphaVantageQuotaCurrent();
+  const {
+    marketDataProvider,
+    alphaVantageApiKey,
+    alphaVantageEnabled,
+    alphaVantageDailyRemaining,
+  } = useSettingsStore.getState();
+  if (
+    marketDataProvider !== 'alpha_vantage' ||
+    !alphaVantageApiKey ||
+    !alphaVantageEnabled ||
+    alphaVantageDailyRemaining <= 0
+  ) {
     return null;
   }
 
-  const cached = getCachedAlphaVantageQuote(symbol);
+  const cached = options.forceAlphaVantageNetwork ? undefined : getCachedAlphaVantageQuote(symbol);
   if (cached !== undefined) {
     return cached;
   }
@@ -551,7 +581,7 @@ async function _fetchQuotes(symbols: string[], options: QuoteFetchOptions = {}):
       cleanup();
     }
   });
-  const alphaAugmented = await applyAlphaVantageFallbacks(symbols, result ?? []);
+  const alphaAugmented = await applyAlphaVantageFallbacks(symbols, result ?? [], options);
   return applyYahooFallbacks(symbols, alphaAugmented, options);
 }
 
@@ -562,25 +592,43 @@ export async function getQuotes(symbols: string[], options: QuoteFetchOptions = 
 async function applyAlphaVantageFallbacks(
   symbols: string[],
   quotes: TWSEQuote[],
+  options: QuoteFetchOptions = {},
 ): Promise<TWSEQuote[]> {
-  const { marketDataProvider, alphaVantageApiKey } = useSettingsStore.getState();
-  if (marketDataProvider !== 'alpha_vantage' || !alphaVantageApiKey) {
+  await useSettingsStore.getState().ensureAlphaVantageQuotaCurrent();
+  const {
+    marketDataProvider,
+    alphaVantageApiKey,
+    alphaVantageEnabled,
+    alphaVantageDailyRemaining,
+  } = useSettingsStore.getState();
+  if (
+    marketDataProvider !== 'alpha_vantage' ||
+    !alphaVantageApiKey ||
+    !alphaVantageEnabled ||
+    alphaVantageDailyRemaining <= 0
+  ) {
     return quotes;
   }
 
   const bySymbol = new Map(quotes.map(q => [q.symbol, q] as const));
-  const missingSymbols = symbols.filter(symbol => {
-    const q = bySymbol.get(symbol);
-    return !q || q.price === null;
-  });
+  const candidateSymbols = options.forceAlphaVantageLookup
+    ? symbols
+    : symbols.filter(symbol => {
+        const q = bySymbol.get(symbol);
+        return !q || q.price === null;
+      });
 
-  for (const symbol of missingSymbols) {
-    const alphaQuote = await fetchAlphaVantageQuote(symbol);
+  for (const symbol of candidateSymbols) {
+    const alphaQuote = await fetchAlphaVantageQuote(symbol, options);
     if (!alphaQuote) continue;
 
     const existing = bySymbol.get(symbol);
     if (!existing) {
       bySymbol.set(symbol, alphaQuote);
+      continue;
+    }
+
+    if (existing.price != null) {
       continue;
     }
 
@@ -599,4 +647,8 @@ async function applyAlphaVantageFallbacks(
   }
 
   return symbols.map(symbol => bySymbol.get(symbol)).filter((quote): quote is TWSEQuote => Boolean(quote));
+}
+
+export function resetAlphaVantageCache() {
+  alphaVantageCache.clear();
 }

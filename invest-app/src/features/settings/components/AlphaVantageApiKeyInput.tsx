@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { Alert, Animated, Pressable, Text, TextInput, View } from 'react-native';
 import { useSettingsStore } from '../store/settingsStore';
+import { resetAlphaVantageCache } from '../../../services/stockService';
 
 function maskKey(key: string): string {
   if (!key) return '';
@@ -8,10 +9,19 @@ function maskKey(key: string): string {
   return '........' + key.slice(-4);
 }
 
+function isAlphaVantageRateLimitMessage(value: unknown): boolean {
+  if (typeof value !== 'string') return false;
+  const normalized = value.toLowerCase();
+  return normalized.includes('alpha vantage') && normalized.includes('limit');
+}
+
 export function AlphaVantageApiKeyInput() {
   const apiKey = useSettingsStore(s => s.alphaVantageApiKey);
   const saveApiKey = useSettingsStore(s => s.saveAlphaVantageApiKey);
   const deleteApiKey = useSettingsStore(s => s.deleteAlphaVantageApiKey);
+  const recordAlphaVantageRequest = useSettingsStore(s => s.recordAlphaVantageRequest);
+  const markAlphaVantageLimitReached = useSettingsStore(s => s.markAlphaVantageLimitReached);
+  const ensureAlphaVantageQuotaCurrent = useSettingsStore(s => s.ensureAlphaVantageQuotaCurrent);
 
   const [isRevealed, setIsRevealed] = useState(false);
   const [inputValue, setInputValue] = useState(apiKey);
@@ -31,11 +41,13 @@ export function AlphaVantageApiKeyInput() {
   async function handleBlur() {
     setIsFocused(false);
     await saveApiKey(inputValue);
+    resetAlphaVantageCache();
     showSavedToast();
   }
 
   async function handleTest() {
     if (!inputValue) return;
+    await ensureAlphaVantageQuotaCurrent();
     setIsTesting(true);
     setTestResult(null);
     try {
@@ -43,6 +55,10 @@ export function AlphaVantageApiKeyInput() {
         `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=TSM&apikey=${encodeURIComponent(inputValue)}`
       );
       const data = await res.json();
+      await recordAlphaVantageRequest();
+      if (isAlphaVantageRateLimitMessage(data?.Information) || isAlphaVantageRateLimitMessage(data?.Note)) {
+        await markAlphaVantageLimitReached();
+      }
       const quote = data['Global Quote'];
       setTestResult(quote && Object.keys(quote).length > 0 ? 'success' : 'error');
     } catch {
@@ -63,6 +79,7 @@ export function AlphaVantageApiKeyInput() {
           style: 'destructive',
           onPress: async () => {
             await deleteApiKey();
+            resetAlphaVantageCache();
             setInputValue('');
             setTestResult(null);
           },

@@ -264,8 +264,8 @@ export const useQuoteStore = create<QuoteState>((set, get) => ({
     try {
       const raw = await getQuotes(symbols, options);
       if (symbols.length > 0 && raw.length === 0) {
-        const { marketDataProvider, alphaVantageApiKey } = useSettingsStore.getState();
-        if (marketDataProvider === 'alpha_vantage' && alphaVantageApiKey) {
+        const { marketDataProvider, alphaVantageApiKey, alphaVantageEnabled } = useSettingsStore.getState();
+        if (marketDataProvider === 'alpha_vantage' && alphaVantageApiKey && alphaVantageEnabled) {
           throw new Error('Alpha Vantage、TWSE 與 Yahoo 都沒有返回任何報價資料');
         }
         throw new Error('TWSE 與 Yahoo 都沒有返回任何報價資料');

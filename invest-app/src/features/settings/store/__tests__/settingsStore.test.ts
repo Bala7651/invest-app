@@ -11,6 +11,13 @@ const mockSetItemAsync = SecureStore.setItemAsync as jest.Mock;
 const mockGetItemAsync = SecureStore.getItemAsync as jest.Mock;
 const mockDeleteItemAsync = SecureStore.deleteItemAsync as jest.Mock;
 
+function getLocalDateKey(now = new Date()): string {
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockGetItemAsync.mockResolvedValue(null);
@@ -23,6 +30,9 @@ beforeEach(() => {
     providerName: 'MiniMax',
     marketDataProvider: 'twse_yahoo',
     alphaVantageApiKey: '',
+    alphaVantageEnabled: false,
+    alphaVantageDailyRemaining: 25,
+    alphaVantageLastResetDate: getLocalDateKey(),
     aiNotificationsEnabled: true,
   });
 });
@@ -100,11 +110,16 @@ describe('loadFromSecureStore', () => {
     mockGetItemAsync.mockImplementation((key: string) => {
       if (key === 'market_data_provider') return Promise.resolve('alpha_vantage');
       if (key === 'alpha_vantage_api_key') return Promise.resolve('alpha-key');
+      if (key === 'alpha_vantage_enabled') return Promise.resolve('true');
+      if (key === 'alpha_vantage_daily_remaining') return Promise.resolve('17');
+      if (key === 'alpha_vantage_last_reset') return Promise.resolve(getLocalDateKey());
       return Promise.resolve(null);
     });
     await useSettingsStore.getState().loadFromSecureStore();
     expect(useSettingsStore.getState().marketDataProvider).toBe('alpha_vantage');
     expect(useSettingsStore.getState().alphaVantageApiKey).toBe('alpha-key');
+    expect(useSettingsStore.getState().alphaVantageEnabled).toBe(true);
+    expect(useSettingsStore.getState().alphaVantageDailyRemaining).toBe(17);
   });
 });
 
@@ -155,6 +170,12 @@ describe('saveAlphaVantageApiKey', () => {
     await useSettingsStore.getState().saveAlphaVantageApiKey('alpha-key');
     expect(useSettingsStore.getState().alphaVantageApiKey).toBe('alpha-key');
   });
+
+  it('resets daily remaining back to 25 when the key is changed', async () => {
+    useSettingsStore.setState({ alphaVantageDailyRemaining: 3 });
+    await useSettingsStore.getState().saveAlphaVantageApiKey('alpha-key');
+    expect(useSettingsStore.getState().alphaVantageDailyRemaining).toBe(25);
+  });
 });
 
 describe('setMarketDataProvider', () => {
@@ -166,5 +187,36 @@ describe('setMarketDataProvider', () => {
   it('updates state.marketDataProvider', async () => {
     await useSettingsStore.getState().setMarketDataProvider('alpha_vantage');
     expect(useSettingsStore.getState().marketDataProvider).toBe('alpha_vantage');
+  });
+});
+
+describe('Alpha Vantage quota helpers', () => {
+  it('setAlphaVantageEnabled persists and updates state', async () => {
+    await useSettingsStore.getState().setAlphaVantageEnabled(true);
+    expect(mockSetItemAsync).toHaveBeenCalledWith('alpha_vantage_enabled', 'true');
+    expect(useSettingsStore.getState().alphaVantageEnabled).toBe(true);
+  });
+
+  it('recordAlphaVantageRequest decreases daily remaining by 1', async () => {
+    useSettingsStore.setState({ alphaVantageDailyRemaining: 25 });
+    const remaining = await useSettingsStore.getState().recordAlphaVantageRequest();
+    expect(remaining).toBe(24);
+    expect(useSettingsStore.getState().alphaVantageDailyRemaining).toBe(24);
+  });
+
+  it('markAlphaVantageLimitReached forces remaining down to 0', async () => {
+    useSettingsStore.setState({ alphaVantageDailyRemaining: 12 });
+    await useSettingsStore.getState().markAlphaVantageLimitReached();
+    expect(useSettingsStore.getState().alphaVantageDailyRemaining).toBe(0);
+  });
+
+  it('ensureAlphaVantageQuotaCurrent resets an old quota date', async () => {
+    useSettingsStore.setState({
+      alphaVantageDailyRemaining: 4,
+      alphaVantageLastResetDate: '2000-01-01',
+    });
+    await useSettingsStore.getState().ensureAlphaVantageQuotaCurrent();
+    expect(useSettingsStore.getState().alphaVantageDailyRemaining).toBe(25);
+    expect(useSettingsStore.getState().alphaVantageLastResetDate).toBe(getLocalDateKey());
   });
 });

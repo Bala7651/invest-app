@@ -79,6 +79,9 @@ beforeEach(() => {
   useSettingsStore.setState({
     marketDataProvider: 'twse_yahoo',
     alphaVantageApiKey: '',
+    alphaVantageEnabled: false,
+    alphaVantageDailyRemaining: 25,
+    alphaVantageLastResetDate: '2099-01-01',
   });
 });
 
@@ -240,6 +243,7 @@ it('getQuotes uses Alpha Vantage fallback before Yahoo when enabled and TWSE has
   useSettingsStore.setState({
     marketDataProvider: 'alpha_vantage',
     alphaVantageApiKey: 'alpha-key',
+    alphaVantageEnabled: true,
   });
 
   const twseResponse = {
@@ -277,6 +281,7 @@ it('getQuotes uses Alpha Vantage fallback before Yahoo when enabled and TWSE has
     prevClose: 48,
     source: 'alpha_vantage',
   });
+  expect(useSettingsStore.getState().alphaVantageDailyRemaining).toBe(24);
   expect(global.fetch).toHaveBeenCalledTimes(2);
   expect((global.fetch as jest.Mock).mock.calls[1][0]).toContain('function=GLOBAL_QUOTE');
 });
@@ -285,6 +290,7 @@ it('getQuotes falls back to Alpha Vantage time series when GLOBAL_QUOTE is empty
   useSettingsStore.setState({
     marketDataProvider: 'alpha_vantage',
     alphaVantageApiKey: 'alpha-key',
+    alphaVantageEnabled: true,
   });
 
   const twseResponse = {
@@ -333,6 +339,7 @@ it('getQuotes falls back to Alpha Vantage daily series when intraday is unavaila
   useSettingsStore.setState({
     marketDataProvider: 'alpha_vantage',
     alphaVantageApiKey: 'alpha-key',
+    alphaVantageEnabled: true,
   });
 
   const twseResponse = {
@@ -381,6 +388,111 @@ it('getQuotes falls back to Alpha Vantage daily series when intraday is unavaila
   expect(global.fetch).toHaveBeenCalledTimes(4);
   expect((global.fetch as jest.Mock).mock.calls[2][0]).toContain('function=TIME_SERIES_INTRADAY');
   expect((global.fetch as jest.Mock).mock.calls[3][0]).toContain('function=TIME_SERIES_DAILY');
+});
+
+it('forceAlphaVantageLookup triggers Alpha Vantage search on manual refresh but keeps TWSE live price', async () => {
+  useSettingsStore.setState({
+    marketDataProvider: 'alpha_vantage',
+    alphaVantageApiKey: 'alpha-key',
+    alphaVantageEnabled: true,
+  });
+
+  const twseResponse = {
+    msgArray: [
+      {
+        c: '7777',
+        n: '手動刷新測試',
+        z: '80.00',
+        y: '79.00',
+        o: '79.50',
+        h: '80.50',
+        l: '79.20',
+        v: '9876',
+        tlong: '1742299200000',
+      },
+    ],
+  };
+
+  global.fetch = jest
+    .fn()
+    .mockResolvedValueOnce({
+      ok: true,
+      json: async () => twseResponse,
+    } as any)
+    .mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        'Global Quote': {
+          '01. symbol': '7777.TW',
+          '02. open': '78.00',
+          '03. high': '78.50',
+          '04. low': '77.50',
+          '05. price': '78.20',
+          '06. volume': '1234',
+          '08. previous close': '77.80',
+        },
+      }),
+    } as any);
+
+  const quotes = await StockService.getQuotes(['7777'], {
+    forceAlphaVantageLookup: true,
+    forceAlphaVantageNetwork: true,
+  });
+  expect(quotes).toHaveLength(1);
+  expect(quotes[0]).toMatchObject({
+    symbol: '7777',
+    price: 80,
+    source: 'twse_live',
+  });
+  expect(global.fetch).toHaveBeenCalledTimes(2);
+  expect((global.fetch as jest.Mock).mock.calls[1][0]).toContain('function=GLOBAL_QUOTE');
+});
+
+it('Alpha Vantage rate-limit response forces remaining quota to 0', async () => {
+  useSettingsStore.setState({
+    marketDataProvider: 'alpha_vantage',
+    alphaVantageApiKey: 'alpha-key',
+    alphaVantageEnabled: true,
+    alphaVantageDailyRemaining: 11,
+  });
+
+  const twseResponse = {
+    msgArray: [
+      {
+        c: '8888',
+        n: '限額測試',
+        z: '-',
+        y: '10.00',
+        o: '10.20',
+        h: '10.30',
+        l: '9.80',
+        v: '1000',
+        tlong: '1742299200000',
+      },
+    ],
+  };
+
+  global.fetch = jest
+    .fn()
+    .mockResolvedValueOnce({
+      ok: true,
+      json: async () => twseResponse,
+    } as any)
+    .mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        Information:
+          'Thank you for using Alpha Vantage! Please consider spreading out your free API requests more sparingly (1 request per second). You may subscribe to any of the premium plans to lift the free key rate limit.',
+      }),
+    } as any)
+    .mockResolvedValueOnce({
+      ok: true,
+      json: async () => MOCK_YAHOO_CHART_RESPONSE,
+    } as any);
+
+  const quotes = await StockService.getQuotes(['8888']);
+  expect(quotes).toHaveLength(1);
+  expect(useSettingsStore.getState().alphaVantageDailyRemaining).toBe(0);
 });
 
 // --- URL format test ---

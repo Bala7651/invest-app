@@ -17,6 +17,7 @@ import { SummaryScreen } from '../features/summary/components/SummaryScreen';
 import { PortfolioScreen } from '../features/portfolio/components/PortfolioScreen';
 import { MarketStatusBar } from '../features/market/MarketStatusBar';
 import { useQuoteStore } from '../features/market/quoteStore';
+import { useSettingsStore } from '../features/settings/store/settingsStore';
 import { EmptyWatchlist } from '../features/watchlist/components/EmptyWatchlist';
 import { SearchModal } from '../features/watchlist/components/SearchModal';
 import { StockCard } from '../features/watchlist/components/StockCard';
@@ -75,6 +76,14 @@ function WatchlistPage() {
   const { width } = useWindowDimensions();
   const isTablet = width >= 600;
 
+  function getSourceLabel(source: string | undefined): string {
+    if (source === 'twse_live') return 'TWSE';
+    if (source === 'yahoo_delayed') return 'Yahoo';
+    if (source === 'alpha_vantage') return 'Alpha Vantage';
+    if (source === 'twse_close' || source === 'prev_close') return '昨收';
+    return '其他資料源';
+  }
+
   function handleReorder({ from, to }: ReorderableListReorderEvent) {
     useWatchlistStore.getState().reorderItems(from, to);
   }
@@ -82,12 +91,40 @@ function WatchlistPage() {
   async function handleRefresh() {
     setRefreshing(true);
     const symbols = items.map(i => i.symbol);
+    const settingsBefore = useSettingsStore.getState();
+    const alphaActive =
+      settingsBefore.marketDataProvider === 'alpha_vantage' &&
+      settingsBefore.alphaVantageEnabled &&
+      !!settingsBefore.alphaVantageApiKey;
+    const quotaWasExhausted = alphaActive && settingsBefore.alphaVantageDailyRemaining <= 0;
     try {
       if (symbols.length > 0) {
-        await useQuoteStore.getState().forceRefresh(symbols, { forceNetwork: true });
+        await useQuoteStore.getState().forceRefresh(symbols, {
+          forceNetwork: true,
+          forceAlphaVantageLookup: alphaActive,
+          forceAlphaVantageNetwork: alphaActive,
+        });
 
         const { quotes, lastError } = useQuoteStore.getState();
+        const settingsAfter = useSettingsStore.getState();
+        const alphaQuotaExhausted =
+          alphaActive && settingsAfter.alphaVantageDailyRemaining <= 0;
+        const fallbackSources = items
+          .map(item => quotes[item.symbol]?.source)
+          .filter((source): source is 'twse_live' | 'yahoo_delayed' | 'twse_close' | 'prev_close' =>
+            source != null && source !== 'alpha_vantage'
+          );
+        const fallbackLabels = Array.from(new Set(fallbackSources.map(getSourceLabel)));
+        const fallbackLabelText = fallbackLabels.length > 0 ? fallbackLabels.join('、') : 'TWSE / Yahoo';
+
         if (lastError) {
+          if (alphaQuotaExhausted || quotaWasExhausted) {
+            Alert.alert(
+              '重新整理失敗',
+              `Alpha Vantage 今日額度已用完，已改用 ${fallbackLabelText} 嘗試更新，但仍失敗：\n${lastError}`
+            );
+            return;
+          }
           Alert.alert('重新整理失敗', lastError);
           return;
         }
@@ -95,6 +132,17 @@ function WatchlistPage() {
         const missing = items
           .filter(item => quotes[item.symbol]?.price == null)
           .map(item => `${item.symbol} ${item.name}`);
+
+        if (alphaQuotaExhausted || quotaWasExhausted) {
+          const messageLines = [
+            `Alpha Vantage 今日額度已用完，本次改用 ${fallbackLabelText} 更新價格。`,
+          ];
+          if (missing.length > 0) {
+            messageLines.push('', '以下股票重新整理後仍沒有價格：', ...missing);
+          }
+          Alert.alert('重新整理完成', messageLines.join('\n'));
+          return;
+        }
 
         if (missing.length > 0) {
           Alert.alert(

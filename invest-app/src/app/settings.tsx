@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import { ApiKeyInput } from '../features/settings/components/ApiKeyInput';
 import { AlphaVantageApiKeyInput } from '../features/settings/components/AlphaVantageApiKeyInput';
 import { GlowPillSelector } from '../features/settings/components/GlowPillSelector';
-import { useSettingsStore } from '../features/settings/store/settingsStore';
+import { ALPHA_VANTAGE_DAILY_QUOTA, useSettingsStore } from '../features/settings/store/settingsStore';
 import { AI_PROVIDERS, MARKET_DATA_PROVIDERS } from '../features/settings/constants/providers';
 
 function DropdownSelect({
@@ -75,6 +75,9 @@ export default function SettingsScreen() {
   const setAiNotificationsEnabled = useSettingsStore(s => s.setAiNotificationsEnabled);
   const marketDataProvider = useSettingsStore(s => s.marketDataProvider);
   const setMarketDataProvider = useSettingsStore(s => s.setMarketDataProvider);
+  const alphaVantageEnabled = useSettingsStore(s => s.alphaVantageEnabled);
+  const alphaVantageDailyRemaining = useSettingsStore(s => s.alphaVantageDailyRemaining);
+  const setAlphaVantageEnabled = useSettingsStore(s => s.setAlphaVantageEnabled);
 
   const currentProvider = AI_PROVIDERS.find(p => p.name === providerName) ?? AI_PROVIDERS[0];
   const currentMarketDataProvider =
@@ -169,6 +172,27 @@ export default function SettingsScreen() {
               <View className="mt-4">
                 <Text className="text-muted text-xs mb-1">Alpha Vantage API 金鑰</Text>
                 <AlphaVantageApiKeyInput />
+                <View className="mt-4 flex-row items-center justify-between">
+                  <View style={{ flex: 1, paddingRight: 12 }}>
+                    <Text className="text-text text-base">啟用 Alpha Vantage</Text>
+                    <Text className="text-muted text-xs mt-1">開啟後會在需要時使用 Alpha Vantage 補報價，手動下拉刷新也會主動檢查一次。</Text>
+                  </View>
+                  <Switch
+                    value={alphaVantageEnabled}
+                    onValueChange={(value) => setAlphaVantageEnabled(value)}
+                    trackColor={{ false: '#2a2a3a', true: '#4D7CFF' }}
+                    thumbColor={alphaVantageEnabled ? '#fff' : '#888'}
+                  />
+                </View>
+                <View className="mt-3 bg-bg border border-border rounded-lg px-3 py-3">
+                  <Text className="text-text text-sm">今日 Alpha Vantage 額度</Text>
+                  <Text className="text-primary text-lg font-semibold mt-1">
+                    {alphaVantageDailyRemaining}/{ALPHA_VANTAGE_DAILY_QUOTA}
+                  </Text>
+                  <Text className="text-muted text-xs mt-1">
+                    以實際 Alpha Vantage HTTP 請求數計算，每日重置；更換 API 金鑰也會重置。
+                  </Text>
+                </View>
                 <Text className="text-muted text-xs mt-2">
                   只作為穩定報價 fallback，若 Alpha Vantage 沒有台股資料仍會回退到 TWSE / Yahoo。
                 </Text>
