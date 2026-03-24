@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 import { callMiniMax, QuoteData } from '../services/minimaxApi';
-import { fetchLatestQuoteForSummary } from '../../summary/services/summaryService';
+import { fetchLatestQuoteForSummary, mergeQuoteData } from '../../summary/services/summaryService';
 import { AnalysisResult } from '../types';
+import { useQuoteStore } from '../../market/quoteStore';
+import { isMarketOpen } from '../../market/marketHours';
 
 const TTL_MS = 30 * 60 * 1000;
 
@@ -36,27 +38,27 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
     }));
 
     try {
-      // Always try STOCK_DAY first — gives full OHLCV + MA5/MA20/volumeRatio
+      await useQuoteStore.getState().forceRefresh([symbol]);
+      const liveQuote = useQuoteStore.getState().quotes[symbol];
       const fresh = await fetchLatestQuoteForSummary(symbol);
-      let effectiveQuote: QuoteData;
-      if (fresh) {
-        effectiveQuote = {
-          name: quote.name,
-          price: fresh.price,
-          change: fresh.change,
-          changePct: fresh.changePct,
-          prevClose: fresh.prevClose,
-          volume: fresh.volume,
-          open: fresh.open,
-          high: fresh.high,
-          low: fresh.low,
-          volumeRatio: fresh.volumeRatio,
-          ma5: fresh.ma5,
-          ma20: fresh.ma20,
-        };
-      } else {
-        effectiveQuote = quote;
-      }
+      const merged = mergeQuoteData(liveQuote ?? quote, fresh, isMarketOpen());
+
+      const effectiveQuote: QuoteData = merged
+        ? {
+            name: quote.name,
+            price: merged.price,
+            change: merged.change,
+            changePct: merged.changePct,
+            prevClose: merged.prevClose,
+            volume: merged.volume,
+            open: merged.open,
+            high: merged.high,
+            low: merged.low,
+            volumeRatio: merged.volumeRatio,
+            ma5: merged.ma5,
+            ma20: merged.ma20,
+          }
+        : quote;
 
       if (effectiveQuote.price == null) {
         set(s => ({

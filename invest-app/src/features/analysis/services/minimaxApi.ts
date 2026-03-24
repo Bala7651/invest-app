@@ -116,7 +116,7 @@ export async function callMiniMax(
   const url = `${credentials.baseUrl.replace(/\/$/, '')}/chat/completions`;
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 30_000);
+  const timer = setTimeout(() => controller.abort(), 60_000);
 
   try {
     const res = await fetch(url, {

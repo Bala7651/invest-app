@@ -5,6 +5,7 @@ import {
   getTodayISO,
   fetchTWIX,
   fetchLatestQuoteForSummary,
+  mergeQuoteData,
   buildSummaryPrompt,
   buildIndexSummaryPrompt,
   callSummaryMiniMax,
@@ -13,6 +14,7 @@ import {
   loadAllSummaries,
 } from '../services/summaryService';
 import { Credentials, ERROR_PREFIX, SummaryEntry } from '../types';
+import { isMarketOpen } from '../../market/marketHours';
 
 interface SummaryState {
   generating: boolean;
@@ -46,8 +48,13 @@ export const useSummaryStore = create<SummaryState>((set, get) => ({
 
     const date = getTodayISO();
     const watchlistItems = useWatchlistStore.getState().items;
+    const symbols = watchlistItems.map(item => item.symbol);
+    if (symbols.length > 0) {
+      await useQuoteStore.getState().forceRefresh(symbols);
+    }
     const quotes = useQuoteStore.getState().quotes;
     const total = watchlistItems.length + 1; // +1 for TAIEX index
+    const marketOpen = isMarketOpen();
 
     set({ generating: true, progress: { done: 0, total }, errors: {} });
 
@@ -77,22 +84,8 @@ export const useSummaryStore = create<SummaryState>((set, get) => ({
         // Always try fresh TWSE data first; fall back to in-memory quote
         const q = quotes[item.symbol];
         const freshQuote = await fetchLatestQuoteForSummary(item.symbol);
-        const quoteData = freshQuote
-          ?? (q ? {
-               price: q.price,
-               open: q.open,
-               high: q.high,
-               low: q.low,
-               volume: q.volume,
-               change: q.change,
-               changePct: q.changePct,
-               prevClose: q.prevClose,
-               ma5: null, ma20: null, avgVolume20: null, volumeRatio: null,
-             }
-             : { price: null, open: null, high: null, low: null, volume: null,
-                 change: 0, changePct: 0, prevClose: 0,
-                 ma5: null, ma20: null, avgVolume20: null, volumeRatio: null });
-        if (quoteData.price == null) {
+        const quoteData = mergeQuoteData(q, freshQuote, marketOpen);
+        if (!quoteData || quoteData.price == null) {
           await upsertSummary(item.symbol, date, `${ERROR_PREFIX}無法取得股價資料，請於收盤後重試`);
           set(s => ({ errors: { ...s.errors, [item.symbol]: '無法取得股價資料' } }));
         } else {

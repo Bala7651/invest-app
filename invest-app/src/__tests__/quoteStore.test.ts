@@ -14,11 +14,30 @@ jest.mock('../features/alerts/services/alertMonitor', () => ({
   checkAlerts: jest.fn().mockResolvedValue(undefined),
 }));
 
+jest.mock('../features/summary/services/summaryService', () => ({
+  fetchLatestQuoteForSummary: jest.fn().mockResolvedValue({
+    price: 200,
+    open: 198,
+    high: 202,
+    low: 197,
+    volume: 1234,
+    change: 5,
+    changePct: 2.56,
+    prevClose: 195,
+    ma5: 196,
+    ma20: 190,
+    avgVolume20: 1000,
+    volumeRatio: 1.2,
+  }),
+}));
+
 import { getQuotes } from '../services/stockService';
 import { isMarketOpen } from '../features/market/marketHours';
+import { fetchLatestQuoteForSummary } from '../features/summary/services/summaryService';
 
 const mockGetQuotes = getQuotes as jest.MockedFunction<typeof getQuotes>;
 const mockIsMarketOpen = isMarketOpen as jest.MockedFunction<typeof isMarketOpen>;
+const mockFetchLatestQuoteForSummary = fetchLatestQuoteForSummary as jest.MockedFunction<typeof fetchLatestQuoteForSummary>;
 
 const SYMBOLS = ['2330', '2317'];
 
@@ -51,6 +70,20 @@ beforeEach(() => {
   jest.useFakeTimers();
   mockGetQuotes.mockResolvedValue(MOCK_QUOTES);
   mockIsMarketOpen.mockReturnValue(true);
+  mockFetchLatestQuoteForSummary.mockResolvedValue({
+    price: 200,
+    open: 198,
+    high: 202,
+    low: 197,
+    volume: 1234,
+    change: 5,
+    changePct: 2.56,
+    prevClose: 195,
+    ma5: 196,
+    ma20: 190,
+    avgVolume20: 1000,
+    volumeRatio: 1.2,
+  });
   // Reset store state before each test
   useQuoteStore.setState({
     quotes: {},
@@ -198,9 +231,8 @@ describe('quoteStore polling lifecycle', () => {
     expect(q2330.changePct).toBeCloseTo((10 / 990) * 100, 5);
 
     const q2317 = useQuoteStore.getState().quotes['2317'];
-    // price=null => change=0, changePct=0
-    expect(q2317.change).toBe(0);
-    expect(q2317.changePct).toBe(0);
+    expect(q2317.change).toBe(5);
+    expect(q2317.changePct).toBeCloseTo(2.56, 5);
   });
 });
 
@@ -213,12 +245,40 @@ describe('quoteStore forceRefresh', () => {
     const quotes = useQuoteStore.getState().quotes;
     expect(quotes['2330']).toBeDefined();
     expect(quotes['2330'].price).toBe(1000);
-    // 2317 has null price — cold start so prevClose (200) used as fallback
+    // 2317 has null live price — daily fallback is used
     expect(quotes['2317']).toBeDefined();
     expect(quotes['2317'].price).toBe(200);
-    expect(quotes['2317'].change).toBe(0);
-    expect(quotes['2317'].changePct).toBe(0);
+    expect(quotes['2317'].change).toBe(5);
+    expect(quotes['2317'].changePct).toBeCloseTo(2.56, 5);
     expect(mockGetQuotes).toHaveBeenCalledWith(SYMBOLS);
+  });
+
+  test('forceRefresh heals an existing null quote using fallback data', async () => {
+    useQuoteStore.setState({
+      quotes: {
+        '2317': {
+          symbol: '2317',
+          name: 'Hon Hai',
+          price: null,
+          prevClose: 200,
+          open: null,
+          high: null,
+          low: null,
+          volume: 0,
+          change: 0,
+          changePct: 0,
+          fetchedAt: 1,
+        },
+      },
+    });
+
+    await act(async () => {
+      await useQuoteStore.getState().forceRefresh(['2317']);
+    });
+
+    const healed = useQuoteStore.getState().quotes['2317'];
+    expect(healed.price).toBe(200);
+    expect(healed.change).toBe(5);
   });
 
   test('forceRefresh updates tickHistory with new prices', async () => {

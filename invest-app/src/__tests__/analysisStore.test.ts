@@ -1,10 +1,23 @@
 import { useAnalysisStore } from '../features/analysis/store/analysisStore';
 import { callMiniMax } from '../features/analysis/services/minimaxApi';
 import { AnalysisResult } from '../features/analysis/types';
+import { useQuoteStore } from '../features/market/quoteStore';
 
 jest.mock('../features/analysis/services/minimaxApi');
 jest.mock('../features/summary/services/summaryService', () => ({
   fetchLatestQuoteForSummary: jest.fn().mockResolvedValue(null),
+  mergeQuoteData: jest.fn((liveQuote, dailyQuote) => dailyQuote ?? liveQuote ?? null),
+}));
+jest.mock('../features/market/quoteStore', () => ({
+  useQuoteStore: {
+    getState: jest.fn(() => ({
+      forceRefresh: jest.fn().mockResolvedValue(undefined),
+      quotes: {},
+    })),
+  },
+}));
+jest.mock('../features/market/marketHours', () => ({
+  isMarketOpen: jest.fn(() => true),
 }));
 
 const mockCallMiniMax = callMiniMax as jest.MockedFunction<typeof callMiniMax>;
@@ -38,6 +51,10 @@ const mockResult: AnalysisResult = {
 beforeEach(() => {
   useAnalysisStore.getState().clearAnalysis();
   jest.resetAllMocks();
+  (useQuoteStore.getState as jest.Mock).mockReturnValue({
+    forceRefresh: jest.fn().mockResolvedValue(undefined),
+    quotes: {},
+  });
 });
 
 describe('fetchAnalysis', () => {

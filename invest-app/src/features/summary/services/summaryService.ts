@@ -232,6 +232,63 @@ export interface SummaryQuoteData {
   volumeRatio: number | null;
 }
 
+export interface LiveQuoteData {
+  price: number | null;
+  prevClose: number;
+  open: number | null;
+  high: number | null;
+  low: number | null;
+  volume: number | null;
+  change: number;
+  changePct: number;
+}
+
+export function mergeQuoteData(
+  liveQuote: LiveQuoteData | null | undefined,
+  dailyQuote: SummaryQuoteData | null,
+  marketOpen: boolean
+): SummaryQuoteData | null {
+  if (marketOpen && liveQuote?.price != null) {
+    return {
+      price: liveQuote.price,
+      open: liveQuote.open ?? dailyQuote?.open ?? null,
+      high: liveQuote.high ?? dailyQuote?.high ?? null,
+      low: liveQuote.low ?? dailyQuote?.low ?? null,
+      volume: liveQuote.volume ?? dailyQuote?.volume ?? null,
+      change: liveQuote.change,
+      changePct: liveQuote.changePct,
+      prevClose: liveQuote.prevClose,
+      ma5: dailyQuote?.ma5 ?? null,
+      ma20: dailyQuote?.ma20 ?? null,
+      avgVolume20: dailyQuote?.avgVolume20 ?? null,
+      volumeRatio: dailyQuote?.volumeRatio ?? null,
+    };
+  }
+
+  if (dailyQuote?.price != null) {
+    return dailyQuote;
+  }
+
+  if (liveQuote?.price != null) {
+    return {
+      price: liveQuote.price,
+      open: liveQuote.open,
+      high: liveQuote.high,
+      low: liveQuote.low,
+      volume: liveQuote.volume,
+      change: liveQuote.change,
+      changePct: liveQuote.changePct,
+      prevClose: liveQuote.prevClose,
+      ma5: null,
+      ma20: null,
+      avgVolume20: null,
+      volumeRatio: null,
+    };
+  }
+
+  return null;
+}
+
 export function buildSummaryPrompt(symbol: string, name: string, quote: SummaryQuoteData): string {
   const sign = quote.change >= 0 ? '+' : '';
   return `請為台灣股票 ${symbol}（${name}）生成今日簡短摘要。
@@ -259,7 +316,7 @@ export async function callSummaryMiniMax(
   const url = `${credentials.baseUrl.replace(/\/$/, '')}/chat/completions`;
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 30_000);
+  const timer = setTimeout(() => controller.abort(), 60_000);
 
   try {
     const res = await fetch(url, {
@@ -275,7 +332,7 @@ export async function callSummaryMiniMax(
           { role: 'user', content: userPrompt },
         ],
         temperature: 0.3,
-        max_tokens: 500,
+        max_tokens: 900,
       }),
       signal: controller.signal,
     });
