@@ -17,11 +17,16 @@ interface HoldingsState {
   error: string | null;
   lastAnalysis: PortfolioAnalysis | null;
   chatHistory: ChatMessage[];
+  suggestedQuestions: string[];
   loadHoldings: () => Promise<void>;
   setQuantity: (symbol: string, name: string, quantity: number) => Promise<void>;
   clearHoldings: () => void;
   setLastAnalysis: (result: PortfolioAnalysis | null) => void;
   setChatHistory: (history: ChatMessage[]) => void;
+  setSuggestedQuestions: (questions: string[]) => void;
+  setPortfolioAiState: (
+    state: { lastAnalysis: PortfolioAnalysis | null; chatHistory: ChatMessage[]; suggestedQuestions: string[] }
+  ) => void;
   appendChatMessage: (msg: ChatMessage) => void;
   clearChatHistory: () => void;
 }
@@ -32,6 +37,7 @@ export const useHoldingsStore = create<HoldingsState>((set) => ({
   error: null,
   lastAnalysis: null,
   chatHistory: [],
+  suggestedQuestions: [],
 
   loadHoldings: async () => {
     set({ loading: true, error: null });
@@ -48,6 +54,7 @@ export const useHoldingsStore = create<HoldingsState>((set) => ({
         holdings: map,
         lastAnalysis: aiState.lastAnalysis,
         chatHistory: aiState.chatHistory,
+        suggestedQuestions: aiState.suggestedQuestions,
         loading: false,
       });
     } catch (e) {
@@ -86,23 +93,43 @@ export const useHoldingsStore = create<HoldingsState>((set) => ({
 
   setLastAnalysis: (result) =>
     set((state) => {
-      void savePortfolioAiState(result, state.chatHistory);
+      void savePortfolioAiState(result, state.chatHistory, state.suggestedQuestions);
       return { lastAnalysis: result };
     }),
   setChatHistory: (history) =>
     set((state) => {
-      void savePortfolioAiState(state.lastAnalysis, history);
+      void savePortfolioAiState(state.lastAnalysis, history, state.suggestedQuestions);
       return { chatHistory: history };
+    }),
+  setSuggestedQuestions: (questions) =>
+    set((state) => {
+      const nextQuestions = questions.slice(0, 5);
+      void savePortfolioAiState(state.lastAnalysis, state.chatHistory, nextQuestions);
+      return { suggestedQuestions: nextQuestions };
+    }),
+  setPortfolioAiState: (nextState) =>
+    set(() => {
+      const suggestedQuestions = nextState.suggestedQuestions.slice(0, 5);
+      void savePortfolioAiState(
+        nextState.lastAnalysis,
+        nextState.chatHistory,
+        suggestedQuestions,
+      );
+      return {
+        lastAnalysis: nextState.lastAnalysis,
+        chatHistory: nextState.chatHistory,
+        suggestedQuestions,
+      };
     }),
   appendChatMessage: (msg) =>
     set((state) => {
       const nextHistory = [...state.chatHistory, msg];
-      void savePortfolioAiState(state.lastAnalysis, nextHistory);
+      void savePortfolioAiState(state.lastAnalysis, nextHistory, state.suggestedQuestions);
       return { chatHistory: nextHistory };
     }),
   clearChatHistory: () =>
     set((state) => {
-      void savePortfolioAiState(state.lastAnalysis, []);
+      void savePortfolioAiState(state.lastAnalysis, [], state.suggestedQuestions);
       return { chatHistory: [] };
     }),
 }));

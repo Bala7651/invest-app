@@ -15,6 +15,7 @@ import { useHoldingsStore } from '../store/holdingsStore';
 import {
   callPortfolioMiniMax,
   callPortfolioFollowUp,
+  generatePortfolioSuggestedQuestions,
   buildDetailedAnalysisPrompt,
   ChatMessage,
 } from '../services/portfolioAiService';
@@ -37,9 +38,9 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
   const [isLots, setIsLots] = useState(true);
   const analysisResult = useHoldingsStore((s) => s.lastAnalysis);
   const chatHistory = useHoldingsStore((s) => s.chatHistory);
+  const suggestedQuestions = useHoldingsStore((s) => s.suggestedQuestions);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
-  const [followUpText, setFollowUpText] = useState('');
   const [followUpLoading, setFollowUpLoading] = useState(false);
 
   const hasLoaded = useRef(false);
@@ -101,8 +102,15 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
         { role: 'user', content: buildDetailedAnalysisPrompt(entries) },
         { role: 'assistant', content: result.paragraph },
       ];
-      useHoldingsStore.getState().setLastAnalysis(result);
-      useHoldingsStore.getState().setChatHistory(nextHistory);
+      const nextQuestions = await generatePortfolioSuggestedQuestions(
+        nextHistory,
+        { apiKey, modelName, baseUrl },
+      );
+      useHoldingsStore.getState().setPortfolioAiState({
+        lastAnalysis: result,
+        chatHistory: nextHistory,
+        suggestedQuestions: nextQuestions,
+      });
     } catch (e) {
       setAnalysisError(String(e));
     } finally {
@@ -110,10 +118,8 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
     }
   }
 
-  async function handleFollowUp() {
-    const question = followUpText.trim();
+  async function handleFollowUp(question: string) {
     if (!question || followUpLoading) return;
-    setFollowUpText('');
     setFollowUpLoading(true);
 
     try {
@@ -123,8 +129,20 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
         { apiKey, modelName, baseUrl },
       );
       if (response) {
-        useHoldingsStore.getState().appendChatMessage({ role: 'user', content: question });
-        useHoldingsStore.getState().appendChatMessage({ role: 'assistant', content: response });
+        const nextHistory = [
+          ...useHoldingsStore.getState().chatHistory,
+          { role: 'user', content: question } as ChatMessage,
+          { role: 'assistant', content: response } as ChatMessage,
+        ];
+        const nextQuestions = await generatePortfolioSuggestedQuestions(
+          nextHistory,
+          { apiKey, modelName, baseUrl },
+        );
+        useHoldingsStore.getState().setPortfolioAiState({
+          lastAnalysis: useHoldingsStore.getState().lastAnalysis,
+          chatHistory: nextHistory,
+          suggestedQuestions: nextQuestions,
+        });
       }
     } catch {
       // silently ignore follow-up errors
@@ -342,55 +360,32 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
               </View>
             ))}
 
-            {/* Follow-up input */}
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 8,
-                marginBottom: 16,
-                marginTop: 4,
-              }}
-            >
-              <TextInput
-                value={followUpText}
-                onChangeText={setFollowUpText}
-                onSubmitEditing={handleFollowUp}
-                placeholder="繼續追問..."
-                placeholderTextColor="#616161"
-                returnKeyType="send"
-                style={{
-                  flex: 1,
-                  color: '#E0E0E0',
-                  backgroundColor: '#0D0D14',
-                  borderColor: '#1E2A4A',
-                  borderWidth: 1,
-                  borderRadius: 8,
-                  paddingHorizontal: 12,
-                  paddingVertical: 8,
-                  fontSize: 14,
-                }}
-              />
-              <Pressable
-                onPress={handleFollowUp}
-                disabled={followUpLoading || !followUpText.trim()}
-                style={[
-                  {
-                    borderWidth: 1,
-                    borderColor: '#4D7CFF',
-                    borderRadius: 8,
-                    paddingHorizontal: 14,
-                    paddingVertical: 8,
-                  },
-                  (followUpLoading || !followUpText.trim()) ? { opacity: 0.4 } : undefined,
-                ]}
-              >
-                {followUpLoading ? (
-                  <ActivityIndicator size="small" color="#4D7CFF" />
-                ) : (
-                  <Text style={{ color: '#4D7CFF', fontSize: 14, fontWeight: '600' }}>送出</Text>
-                )}
-              </Pressable>
+            <View className="mb-4 mt-2">
+              <Text className="text-primary text-sm font-semibold mb-3">延伸追問</Text>
+              {followUpLoading ? (
+                <View
+                  className="bg-surface border border-border rounded-lg px-4 py-3"
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <ActivityIndicator size="small" color="#4D7CFF" />
+                    <Text className="text-muted text-sm">正在整理下一步問題...</Text>
+                  </View>
+                </View>
+              ) : (
+                <View style={{ gap: 10 }}>
+                  {suggestedQuestions.map((question, index) => (
+                    <Pressable
+                      key={`${index}-${question}`}
+                      onPress={() => handleFollowUp(question)}
+                      className="bg-surface border border-border rounded-lg px-4 py-3"
+                    >
+                      <Text className="text-text text-sm" style={{ lineHeight: 20 }}>
+                        {question}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              )}
             </View>
           </>
         ) : null}

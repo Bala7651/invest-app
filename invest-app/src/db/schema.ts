@@ -78,6 +78,7 @@ export const portfolio_ai_state = sqliteTable('portfolio_ai_state', {
   id: integer('id').primaryKey(),
   last_analysis: text('last_analysis'),
   chat_history: text('chat_history').notNull().default('[]'),
+  suggested_questions: text('suggested_questions').notNull().default('[]'),
   created_at: integer('created_at', { mode: 'timestamp' }).$defaultFn(
     () => new Date()
   ),

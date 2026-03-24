@@ -96,6 +96,96 @@ const PORTFOLIO_SYSTEM_PROMPT = `你是一位資深台灣股市投資組合顧�
 - 你的分析是參考建議，非投資指令。
 - 佔比與市值數字直接引用用戶提供的計算結果，不自行重新計算。`;
 
+const FOLLOW_UP_SUGGESTION_PROMPT = `請根據目前這位客戶的投資組合分析與既有對話內容，產生 5 個最值得追問的後續問題。
+
+限制：
+- 每題都要和客戶目前持有的台股組合直接相關。
+- 問題要像客戶下一步會點選追問的內容，聚焦在風險、加減碼、產業輪動、持股角色、觀察重點。
+- 每題使用繁體中文，長度控制在 12-30 個字。
+- 不要重複，不要過於籠統，不要問 API、模型、系統功能。
+
+回覆格式：
+- 只輸出一個 JSON 陣列
+- 陣列中必須剛好有 5 個字串
+- 不得包含 markdown、前言、解釋或其他文字`;
+
+const DEFAULT_SUGGESTED_QUESTIONS = [
+  '目前這個組合最大的風險集中在哪裡？',
+  '如果要分散風險，最先該調整哪一檔？',
+  '接下來一季這個組合最該觀察什麼訊號？',
+  '以目前配置來看，現在適合加碼還是先觀望？',
+  '如果景氣轉弱，哪些持股會最先受影響？',
+] as const;
+
+type ProviderKind = 'minimax' | 'openai' | 'gemini' | 'other';
+
+function detectProvider(baseUrl: string): ProviderKind {
+  if (baseUrl.includes('minimax.io')) return 'minimax';
+  if (baseUrl.includes('api.openai.com')) return 'openai';
+  if (baseUrl.includes('generativelanguage.googleapis.com')) return 'gemini';
+  return 'other';
+}
+
+function buildChatBody(
+  credentials: Credentials,
+  messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
+  options?: { temperature?: number; maxTokens?: number; jsonObject?: boolean },
+): Record<string, unknown> {
+  const provider = detectProvider(credentials.baseUrl);
+  const body: Record<string, unknown> = {
+    model: credentials.modelName,
+    messages,
+    temperature: options?.temperature ?? 0.3,
+    max_tokens: options?.maxTokens ?? 900,
+  };
+
+  if (options?.jsonObject && (provider === 'openai' || provider === 'gemini')) {
+    body.response_format = { type: 'json_object' };
+  }
+
+  return body;
+}
+
+function sanitizeAiText(content: string): string {
+  return content.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+}
+
+function parseSuggestedQuestions(content: string): string[] {
+  const cleaned = sanitizeAiText(content);
+  if (!cleaned) return [];
+
+  const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
+  if (jsonMatch) {
+    try {
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (Array.isArray(parsed)) {
+        const normalized = parsed
+          .filter((value): value is string => typeof value === 'string')
+          .map(value => value.trim().replace(/^[\-\d\.\)\s]+/, ''))
+          .filter(Boolean);
+        if (normalized.length >= 5) {
+          return normalized.slice(0, 5);
+        }
+      }
+    } catch {
+      // Fall through to line-based parsing.
+    }
+  }
+
+  const lines = cleaned
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean)
+    .map(line => line.replace(/^[\-\d\.\)\s]+/, '').trim())
+    .filter(Boolean);
+
+  if (lines.length >= 5) {
+    return lines.slice(0, 5);
+  }
+
+  return [];
+}
+
 // Build the data-rich user message (data + request in one message)
 export function buildDetailedAnalysisPrompt(entries: PortfolioEntry[]): string {
   const active = entries.filter((e) => e.quantity > 0).slice(0, MAX_STOCKS);
@@ -164,6 +254,10 @@ export function extractHealthScore(response: string): number {
   return Math.min(100, Math.max(0, parseInt(match[1], 10)));
 }
 
+export function fallbackSuggestedQuestions(): string[] {
+  return [...DEFAULT_SUGGESTED_QUESTIONS];
+}
+
 export async function callPortfolioMiniMax(
   entries: PortfolioEntry[],
   credentials: Credentials,
@@ -199,7 +293,7 @@ export async function callPortfolioMiniMax(
 
     const data = await res.json();
     let content: string = (data.choices?.[0]?.message?.content ?? '') as string;
-    content = content.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+    content = sanitizeAiText(content);
     if (!content) throw new Error('回應內容為空');
 
     const score = extractHealthScore(content);
@@ -245,10 +339,55 @@ export async function callPortfolioFollowUp(
 
     const data = await res.json();
     let content: string = (data.choices?.[0]?.message?.content ?? '') as string;
-    content = content.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+    content = sanitizeAiText(content);
     return content || null;
   } catch {
     return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export async function generatePortfolioSuggestedQuestions(
+  chatHistory: ChatMessage[],
+  credentials: Credentials,
+): Promise<string[]> {
+  const url = `${credentials.baseUrl.replace(/\/$/, '')}/chat/completions`;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30_000);
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${credentials.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(
+        buildChatBody(
+          credentials,
+          [
+            { role: 'system', content: PORTFOLIO_SYSTEM_PROMPT },
+            ...chatHistory,
+            { role: 'user', content: FOLLOW_UP_SUGGESTION_PROMPT },
+          ],
+          { temperature: 0.4, maxTokens: 400, jsonObject: true },
+        ),
+      ),
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      return fallbackSuggestedQuestions();
+    }
+
+    const data = await res.json();
+    const content: string = (data.choices?.[0]?.message?.content ?? '') as string;
+    const parsed = parseSuggestedQuestions(content);
+    return parsed.length === 5 ? parsed : fallbackSuggestedQuestions();
+  } catch {
+    return fallbackSuggestedQuestions();
   } finally {
     clearTimeout(timer);
   }

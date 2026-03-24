@@ -9,6 +9,7 @@ jest.mock('../features/portfolio/services/portfolioStateService', () => ({
   loadPortfolioAiState: jest.fn().mockResolvedValue({
     lastAnalysis: null,
     chatHistory: [],
+    suggestedQuestions: [],
   }),
   savePortfolioAiState: jest.fn().mockResolvedValue(undefined),
 }));
@@ -39,6 +40,7 @@ beforeEach(() => {
     error: null,
     lastAnalysis: null,
     chatHistory: [],
+    suggestedQuestions: [],
   });
   jest.clearAllMocks();
   mockUpsertHolding.mockResolvedValue(undefined);
@@ -46,6 +48,7 @@ beforeEach(() => {
   mockLoadPortfolioAiState.mockResolvedValue({
     lastAnalysis: null,
     chatHistory: [],
+    suggestedQuestions: [],
   });
   mockSavePortfolioAiState.mockResolvedValue(undefined);
 });
@@ -79,6 +82,7 @@ describe('loadHoldings', () => {
     mockLoadPortfolioAiState.mockResolvedValueOnce({
       lastAnalysis: { score: 75, paragraph: '既有投資組合分析' },
       chatHistory: [{ role: 'assistant', content: '既有追問內容' }],
+      suggestedQuestions: ['下一題一', '下一題二', '下一題三', '下一題四', '下一題五'],
     });
 
     await useHoldingsStore.getState().loadHoldings();
@@ -89,6 +93,13 @@ describe('loadHoldings', () => {
     });
     expect(useHoldingsStore.getState().chatHistory).toEqual([
       { role: 'assistant', content: '既有追問內容' },
+    ]);
+    expect(useHoldingsStore.getState().suggestedQuestions).toEqual([
+      '下一題一',
+      '下一題二',
+      '下一題三',
+      '下一題四',
+      '下一題五',
     ]);
   });
 });
@@ -125,6 +136,7 @@ describe('portfolio AI persistence', () => {
     expect(mockSavePortfolioAiState).toHaveBeenCalledWith(
       { score: 88, paragraph: '新的分析結果' },
       [],
+      [],
     );
   });
 
@@ -132,6 +144,7 @@ describe('portfolio AI persistence', () => {
     useHoldingsStore.setState({
       lastAnalysis: { score: 88, paragraph: '新的分析結果' },
       chatHistory: [{ role: 'assistant', content: '先前分析' }],
+      suggestedQuestions: ['題目一', '題目二'],
     });
 
     useHoldingsStore.getState().appendChatMessage({ role: 'user', content: '後續問題' });
@@ -142,6 +155,37 @@ describe('portfolio AI persistence', () => {
         { role: 'assistant', content: '先前分析' },
         { role: 'user', content: '後續問題' },
       ],
+      ['題目一', '題目二'],
     );
+  });
+
+  it('persists suggested questions when they change', () => {
+    useHoldingsStore.setState({
+      lastAnalysis: { score: 88, paragraph: '新的分析結果' },
+      chatHistory: [{ role: 'assistant', content: '先前分析' }],
+      suggestedQuestions: [],
+    });
+
+    useHoldingsStore.getState().setSuggestedQuestions([
+      '追問一',
+      '追問二',
+      '追問三',
+      '追問四',
+      '追問五',
+      '追問六',
+    ]);
+
+    expect(mockSavePortfolioAiState).toHaveBeenCalledWith(
+      { score: 88, paragraph: '新的分析結果' },
+      [{ role: 'assistant', content: '先前分析' }],
+      ['追問一', '追問二', '追問三', '追問四', '追問五'],
+    );
+    expect(useHoldingsStore.getState().suggestedQuestions).toEqual([
+      '追問一',
+      '追問二',
+      '追問三',
+      '追問四',
+      '追問五',
+    ]);
   });
 });

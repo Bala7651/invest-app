@@ -1,6 +1,8 @@
 import {
   buildPortfolioPrompt,
   callPortfolioMiniMax,
+  generatePortfolioSuggestedQuestions,
+  fallbackSuggestedQuestions,
 } from '../features/portfolio/services/portfolioAiService';
 
 // extractHealthScore is not exported separately; tested via callPortfolioMiniMax or
@@ -131,5 +133,56 @@ describe('callPortfolioMiniMax', () => {
     (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network failed'));
 
     await expect(callPortfolioMiniMax([makeEntry()], credentials)).rejects.toThrow('Network failed');
+  });
+});
+
+describe('generatePortfolioSuggestedQuestions', () => {
+  const credentials = {
+    apiKey: 'test-key',
+    modelName: 'MiniMax-M2.5',
+    baseUrl: 'https://api.minimax.io/v1',
+  };
+
+  it('parses a JSON array of five suggested questions', async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        choices: [{
+          message: {
+            content: JSON.stringify([
+              '目前組合最大的風險集中在哪裡？',
+              '如果要分散風險，最先該調整哪一檔？',
+              '接下來一季最該觀察什麼訊號？',
+              '以目前配置來看，現在適合加碼還是觀望？',
+              '若景氣轉弱，哪些持股會最先受影響？',
+            ]),
+          },
+        }],
+      }),
+    });
+
+    const result = await generatePortfolioSuggestedQuestions(
+      [{ role: 'assistant', content: '既有分析' }],
+      credentials,
+    );
+
+    expect(result).toHaveLength(5);
+    expect(result[0]).toContain('風險');
+  });
+
+  it('falls back to default suggestions when the model response is malformed', async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        choices: [{ message: { content: '這裡沒有合法格式' } }],
+      }),
+    });
+
+    const result = await generatePortfolioSuggestedQuestions(
+      [{ role: 'assistant', content: '既有分析' }],
+      credentials,
+    );
+
+    expect(result).toEqual(fallbackSuggestedQuestions());
   });
 });
