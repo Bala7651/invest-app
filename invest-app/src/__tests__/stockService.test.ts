@@ -1,4 +1,5 @@
 import * as StockService from '../services/stockService';
+import { useSettingsStore } from '../features/settings/store/settingsStore';
 
 const MOCK_YAHOO_CHART_RESPONSE = {
   chart: {
@@ -27,6 +28,59 @@ const MOCK_YAHOO_CHART_RESPONSE = {
     ],
   },
 };
+
+const MOCK_ALPHA_VANTAGE_GLOBAL_QUOTE_RESPONSE = {
+  'Global Quote': {
+    '01. symbol': '4321.TW',
+    '02. open': '50.00',
+    '03. high': '52.00',
+    '04. low': '49.00',
+    '05. price': '51.00',
+    '06. volume': '32100',
+    '08. previous close': '48.00',
+  },
+};
+
+const MOCK_ALPHA_VANTAGE_INTRADAY_RESPONSE = {
+  'Meta Data': {
+    '1. Information': 'Intraday Prices and Volumes',
+  },
+  'Time Series (60min)': {
+    '2026-03-24 10:00:00': {
+      '1. open': '50.00',
+      '2. high': '51.50',
+      '3. low': '49.50',
+      '4. close': '50.50',
+      '5. volume': '1234',
+    },
+  },
+};
+
+const MOCK_ALPHA_VANTAGE_DAILY_RESPONSE = {
+  'Time Series (Daily)': {
+    '2026-03-24': {
+      '1. open': '49.00',
+      '2. high': '52.00',
+      '3. low': '48.00',
+      '4. close': '50.00',
+      '5. volume': '4321',
+    },
+    '2026-03-23': {
+      '1. open': '48.00',
+      '2. high': '49.00',
+      '3. low': '47.50',
+      '4. close': '48.00',
+      '5. volume': '2222',
+    },
+  },
+};
+
+beforeEach(() => {
+  useSettingsStore.setState({
+    marketDataProvider: 'twse_yahoo',
+    alphaVantageApiKey: '',
+  });
+});
 
 // --- Export bypass tests ---
 
@@ -180,6 +234,153 @@ it('getQuotes falls back to Yahoo when TWSE returns a null live price', async ()
   expect(quotes[0].volume).toBe(14571374);
   expect(global.fetch).toHaveBeenCalledTimes(2);
   expect((global.fetch as jest.Mock).mock.calls[1][0]).toContain('2330.TW');
+});
+
+it('getQuotes uses Alpha Vantage fallback before Yahoo when enabled and TWSE has no live price', async () => {
+  useSettingsStore.setState({
+    marketDataProvider: 'alpha_vantage',
+    alphaVantageApiKey: 'alpha-key',
+  });
+
+  const twseResponse = {
+    msgArray: [
+      {
+        c: '4321',
+        n: '測試公司',
+        z: '-',
+        y: '48.00',
+        o: '49.00',
+        h: '51.00',
+        l: '47.50',
+        v: '12345',
+        tlong: '1742299200000',
+      },
+    ],
+  };
+
+  global.fetch = jest
+    .fn()
+    .mockResolvedValueOnce({
+      ok: true,
+      json: async () => twseResponse,
+    } as any)
+    .mockResolvedValueOnce({
+      ok: true,
+      json: async () => MOCK_ALPHA_VANTAGE_GLOBAL_QUOTE_RESPONSE,
+    } as any);
+
+  const quotes = await StockService.getQuotes(['4321']);
+  expect(quotes).toHaveLength(1);
+  expect(quotes[0]).toMatchObject({
+    symbol: '4321',
+    price: 51,
+    prevClose: 48,
+    source: 'alpha_vantage',
+  });
+  expect(global.fetch).toHaveBeenCalledTimes(2);
+  expect((global.fetch as jest.Mock).mock.calls[1][0]).toContain('function=GLOBAL_QUOTE');
+});
+
+it('getQuotes falls back to Alpha Vantage time series when GLOBAL_QUOTE is empty', async () => {
+  useSettingsStore.setState({
+    marketDataProvider: 'alpha_vantage',
+    alphaVantageApiKey: 'alpha-key',
+  });
+
+  const twseResponse = {
+    msgArray: [
+      {
+        c: '5432',
+        n: '另一家測試公司',
+        z: '-',
+        y: '48.00',
+        o: '49.00',
+        h: '51.00',
+        l: '47.50',
+        v: '12345',
+        tlong: '1742299200000',
+      },
+    ],
+  };
+
+  global.fetch = jest
+    .fn()
+    .mockResolvedValueOnce({
+      ok: true,
+      json: async () => twseResponse,
+    } as any)
+    .mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ 'Global Quote': {} }),
+    } as any)
+    .mockResolvedValueOnce({
+      ok: true,
+      json: async () => MOCK_ALPHA_VANTAGE_INTRADAY_RESPONSE,
+    } as any);
+
+  const quotes = await StockService.getQuotes(['5432']);
+  expect(quotes).toHaveLength(1);
+  expect(quotes[0]).toMatchObject({
+    symbol: '5432',
+    price: 50.5,
+    source: 'alpha_vantage',
+  });
+  expect(global.fetch).toHaveBeenCalledTimes(3);
+  expect((global.fetch as jest.Mock).mock.calls[2][0]).toContain('function=TIME_SERIES_INTRADAY');
+});
+
+it('getQuotes falls back to Alpha Vantage daily series when intraday is unavailable', async () => {
+  useSettingsStore.setState({
+    marketDataProvider: 'alpha_vantage',
+    alphaVantageApiKey: 'alpha-key',
+  });
+
+  const twseResponse = {
+    msgArray: [
+      {
+        c: '6543',
+        n: '日線測試公司',
+        z: '-',
+        y: '48.00',
+        o: '49.00',
+        h: '51.00',
+        l: '47.50',
+        v: '12345',
+        tlong: '1742299200000',
+      },
+    ],
+  };
+
+  global.fetch = jest
+    .fn()
+    .mockResolvedValueOnce({
+      ok: true,
+      json: async () => twseResponse,
+    } as any)
+    .mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ 'Global Quote': {} }),
+    } as any)
+    .mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({}),
+    } as any)
+    .mockResolvedValueOnce({
+      ok: true,
+      json: async () => MOCK_ALPHA_VANTAGE_DAILY_RESPONSE,
+    } as any);
+
+  const quotes = await StockService.getQuotes(['6543']);
+  expect(quotes).toHaveLength(1);
+  expect(quotes[0]).toMatchObject({
+    symbol: '6543',
+    price: 50,
+    prevClose: 48,
+    source: 'alpha_vantage',
+  });
+  expect(global.fetch).toHaveBeenCalledTimes(4);
+  expect((global.fetch as jest.Mock).mock.calls[2][0]).toContain('function=TIME_SERIES_INTRADAY');
+  expect((global.fetch as jest.Mock).mock.calls[3][0]).toContain('function=TIME_SERIES_DAILY');
 });
 
 // --- URL format test ---

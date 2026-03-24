@@ -20,6 +20,10 @@ beforeEach(() => {
     apiKey: '',
     modelName: 'MiniMax-M2.5',
     baseUrl: 'https://api.minimax.io/v1',
+    providerName: 'MiniMax',
+    marketDataProvider: 'twse_yahoo',
+    alphaVantageApiKey: '',
+    aiNotificationsEnabled: true,
   });
 });
 
@@ -34,6 +38,10 @@ describe('settingsStore initial state', () => {
 
   it('has correct default baseUrl', () => {
     expect(useSettingsStore.getState().baseUrl).toBe('https://api.minimax.io/v1');
+  });
+
+  it('has twse_yahoo as default marketDataProvider', () => {
+    expect(useSettingsStore.getState().marketDataProvider).toBe('twse_yahoo');
   });
 });
 
@@ -87,6 +95,17 @@ describe('loadFromSecureStore', () => {
     expect(useSettingsStore.getState().modelName).toBe('MiniMax-M2.5');
     expect(useSettingsStore.getState().baseUrl).toBe('https://api.minimax.io/v1');
   });
+
+  it('loads marketDataProvider and alphaVantageApiKey from SecureStore', async () => {
+    mockGetItemAsync.mockImplementation((key: string) => {
+      if (key === 'market_data_provider') return Promise.resolve('alpha_vantage');
+      if (key === 'alpha_vantage_api_key') return Promise.resolve('alpha-key');
+      return Promise.resolve(null);
+    });
+    await useSettingsStore.getState().loadFromSecureStore();
+    expect(useSettingsStore.getState().marketDataProvider).toBe('alpha_vantage');
+    expect(useSettingsStore.getState().alphaVantageApiKey).toBe('alpha-key');
+  });
 });
 
 describe('deleteApiKey', () => {
@@ -123,5 +142,29 @@ describe('setBaseUrl', () => {
   it('persists baseUrl to SecureStore', async () => {
     await useSettingsStore.getState().setBaseUrl('https://custom.url/v1');
     expect(mockSetItemAsync).toHaveBeenCalledWith('minimax_base_url', 'https://custom.url/v1');
+  });
+});
+
+describe('saveAlphaVantageApiKey', () => {
+  it('persists Alpha Vantage api key to SecureStore', async () => {
+    await useSettingsStore.getState().saveAlphaVantageApiKey('alpha-key');
+    expect(mockSetItemAsync).toHaveBeenCalledWith('alpha_vantage_api_key', 'alpha-key');
+  });
+
+  it('updates state.alphaVantageApiKey after save', async () => {
+    await useSettingsStore.getState().saveAlphaVantageApiKey('alpha-key');
+    expect(useSettingsStore.getState().alphaVantageApiKey).toBe('alpha-key');
+  });
+});
+
+describe('setMarketDataProvider', () => {
+  it('persists the selected market data provider', async () => {
+    await useSettingsStore.getState().setMarketDataProvider('alpha_vantage');
+    expect(mockSetItemAsync).toHaveBeenCalledWith('market_data_provider', 'alpha_vantage');
+  });
+
+  it('updates state.marketDataProvider', async () => {
+    await useSettingsStore.getState().setMarketDataProvider('alpha_vantage');
+    expect(useSettingsStore.getState().marketDataProvider).toBe('alpha_vantage');
   });
 });

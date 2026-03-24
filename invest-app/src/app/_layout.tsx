@@ -32,19 +32,22 @@ export default function RootLayout() {
   // Hydrate watchlist from SQLite after migration succeeds, then start polling
   useEffect(() => {
     if (!success) return;
-    useSettingsStore.getState().loadFromSecureStore();
-    useAlertStore.getState().loadFromDb();
-    Notifications.setNotificationChannelAsync('price-alerts', {
-      name: '價格提醒',
-      importance: AndroidImportance.HIGH,
-      vibrationPattern: [0, 250, 250, 250],
-      sound: 'default',
-    });
-    Notifications.setNotificationChannelAsync('monitoring-status', {
-      name: '監控狀態',
-      importance: AndroidImportance.LOW,
-    });
-    useWatchlistStore.getState().loadFromDb().then(() => {
+    (async () => {
+      await useSettingsStore.getState().loadFromSecureStore();
+      await useAlertStore.getState().loadFromDb();
+
+      Notifications.setNotificationChannelAsync('price-alerts', {
+        name: '價格提醒',
+        importance: AndroidImportance.HIGH,
+        vibrationPattern: [0, 250, 250, 250],
+        sound: 'default',
+      });
+      Notifications.setNotificationChannelAsync('monitoring-status', {
+        name: '監控狀態',
+        importance: AndroidImportance.LOW,
+      });
+
+      await useWatchlistStore.getState().loadFromDb();
       const symbols = useWatchlistStore.getState().items.map(i => i.symbol);
       if (symbols.length > 0) {
         useQuoteStore.getState().forceRefresh(symbols);
@@ -54,16 +57,15 @@ export default function RootLayout() {
       }
       if (isCatchUpNeeded()) {
         const todayISO = getTodayISO();
-        hasSummaryForDate(todayISO).then(has => {
-          if (!has) {
-            const { apiKey, modelName, baseUrl } = useSettingsStore.getState();
-            if (apiKey) {
-              useSummaryStore.getState().generateToday({ apiKey, modelName, baseUrl });
-            }
+        const has = await hasSummaryForDate(todayISO);
+        if (!has) {
+          const { apiKey, modelName, baseUrl } = useSettingsStore.getState();
+          if (apiKey) {
+            useSummaryStore.getState().generateToday({ apiKey, modelName, baseUrl });
           }
-        });
+        }
       }
-    });
+    })();
   }, [success]);
 
   // Handle foreground/background transitions

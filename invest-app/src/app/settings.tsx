@@ -3,9 +3,10 @@ import { useRef, useState } from 'react';
 import { KeyboardAvoidingView, PanResponder, Platform, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ApiKeyInput } from '../features/settings/components/ApiKeyInput';
+import { AlphaVantageApiKeyInput } from '../features/settings/components/AlphaVantageApiKeyInput';
 import { GlowPillSelector } from '../features/settings/components/GlowPillSelector';
 import { useSettingsStore } from '../features/settings/store/settingsStore';
-import { AI_PROVIDERS } from '../features/settings/constants/providers';
+import { AI_PROVIDERS, MARKET_DATA_PROVIDERS } from '../features/settings/constants/providers';
 
 function DropdownSelect({
   label,
@@ -72,8 +73,12 @@ export default function SettingsScreen() {
   const setGlowLevel = useSettingsStore(s => s.setGlowLevel);
   const aiNotificationsEnabled = useSettingsStore(s => s.aiNotificationsEnabled);
   const setAiNotificationsEnabled = useSettingsStore(s => s.setAiNotificationsEnabled);
+  const marketDataProvider = useSettingsStore(s => s.marketDataProvider);
+  const setMarketDataProvider = useSettingsStore(s => s.setMarketDataProvider);
 
   const currentProvider = AI_PROVIDERS.find(p => p.name === providerName) ?? AI_PROVIDERS[0];
+  const currentMarketDataProvider =
+    MARKET_DATA_PROVIDERS.find(p => p.id === marketDataProvider) ?? MARKET_DATA_PROVIDERS[0];
 
   function handleProviderSelect(name: string) {
     const provider = AI_PROVIDERS.find(p => p.name === name);
@@ -84,6 +89,13 @@ export default function SettingsScreen() {
 
   function handleModelSelect(model: string) {
     setModelName(model);
+  }
+
+  function handleMarketDataProviderSelect(label: string) {
+    const provider = MARKET_DATA_PROVIDERS.find(p => p.label === label);
+    if (provider) {
+      setMarketDataProvider(provider.id);
+    }
   }
 
   function handleBack() {
@@ -138,6 +150,30 @@ export default function SettingsScreen() {
               options={currentProvider.models}
               onSelect={handleModelSelect}
             />
+          </View>
+
+          <Text className="text-muted text-xs uppercase tracking-widest mb-3">行情資料</Text>
+          <View className="bg-surface border border-border rounded-lg p-4 mb-4">
+            <DropdownSelect
+              label="市場資料供應商"
+              value={currentMarketDataProvider.label}
+              options={MARKET_DATA_PROVIDERS.map(p => p.label)}
+              onSelect={handleMarketDataProviderSelect}
+            />
+
+            <Text className="text-muted text-xs mt-3">
+              {currentMarketDataProvider.description}
+            </Text>
+
+            {marketDataProvider === 'alpha_vantage' ? (
+              <View className="mt-4">
+                <Text className="text-muted text-xs mb-1">Alpha Vantage API 金鑰</Text>
+                <AlphaVantageApiKeyInput />
+                <Text className="text-muted text-xs mt-2">
+                  只作為穩定報價 fallback，若 Alpha Vantage 沒有台股資料仍會回退到 TWSE / Yahoo。
+                </Text>
+              </View>
+            ) : null}
           </View>
 
           {/* Display section */}

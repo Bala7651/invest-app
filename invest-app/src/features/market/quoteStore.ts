@@ -3,6 +3,7 @@ import { checkAlerts } from '../alerts/services/alertMonitor';
 import { getQuotes, QuoteFetchOptions } from '../../services/stockService';
 import { isMarketOpen } from './marketHours';
 import { fetchLatestQuoteForSummary, SummaryQuoteData } from '../summary/services/summaryService';
+import { useSettingsStore } from '../settings/store/settingsStore';
 
 interface Quote {
   symbol: string;
@@ -18,7 +19,7 @@ interface Quote {
   fetchedAt: number;
   bid: number | null;
   ask: number | null;
-  source: 'twse_live' | 'yahoo_delayed' | 'twse_close' | 'prev_close';
+  source: 'twse_live' | 'alpha_vantage' | 'yahoo_delayed' | 'twse_close' | 'prev_close';
 }
 
 interface QuoteState {
@@ -43,7 +44,7 @@ function buildResolvedQuote(q: {
   volume: number;
   bid?: number | null;
   ask?: number | null;
-  source?: 'twse_live' | 'yahoo_delayed' | 'twse_unpriced';
+  source?: 'twse_live' | 'alpha_vantage' | 'yahoo_delayed' | 'twse_unpriced';
 }, fetchedAt: number): Quote {
   const change = q.price - q.prevClose;
   const changePct = (change / q.prevClose) * 100;
@@ -61,7 +62,12 @@ function buildResolvedQuote(q: {
     fetchedAt,
     bid: q.bid ?? null,
     ask: q.ask ?? null,
-    source: q.source === 'yahoo_delayed' ? 'yahoo_delayed' : 'twse_live',
+    source:
+      q.source === 'alpha_vantage'
+        ? 'alpha_vantage'
+        : q.source === 'yahoo_delayed'
+          ? 'yahoo_delayed'
+          : 'twse_live',
   };
 }
 
@@ -258,6 +264,10 @@ export const useQuoteStore = create<QuoteState>((set, get) => ({
     try {
       const raw = await getQuotes(symbols, options);
       if (symbols.length > 0 && raw.length === 0) {
+        const { marketDataProvider, alphaVantageApiKey } = useSettingsStore.getState();
+        if (marketDataProvider === 'alpha_vantage' && alphaVantageApiKey) {
+          throw new Error('Alpha Vantage、TWSE 與 Yahoo 都沒有返回任何報價資料');
+        }
         throw new Error('TWSE 與 Yahoo 都沒有返回任何報價資料');
       }
       const fetchedAt = Date.now();

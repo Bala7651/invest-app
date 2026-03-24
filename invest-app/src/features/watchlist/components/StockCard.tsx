@@ -21,7 +21,7 @@ interface Quote {
   fetchedAt: number;
   bid: number | null;
   ask: number | null;
-  source: 'twse_live' | 'yahoo_delayed' | 'twse_close' | 'prev_close';
+  source: 'twse_live' | 'alpha_vantage' | 'yahoo_delayed' | 'twse_close' | 'prev_close';
 }
 
 interface StockCardProps {
@@ -50,7 +50,9 @@ export function StockCard({ item, quote, tickHistory, onPress, onLongPress }: St
         : 'text-stock-down'
       : 'text-muted';
   const sourceMeta =
-    quote?.source === 'yahoo_delayed'
+    quote?.source === 'alpha_vantage'
+      ? 'Alpha'
+      : quote?.source === 'yahoo_delayed'
       ? '延遲'
       : quote?.source === 'twse_close' || quote?.source === 'prev_close'
         ? '昨收'
