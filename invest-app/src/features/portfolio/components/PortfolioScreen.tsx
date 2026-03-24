@@ -16,6 +16,7 @@ import {
   callPortfolioMiniMax,
   callPortfolioFollowUp,
   buildDetailedAnalysisPrompt,
+  ChatMessage,
 } from '../services/portfolioAiService';
 import { NoApiKeyPrompt } from '../../analysis/components/NoApiKeyPrompt';
 
@@ -74,8 +75,6 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
 
     setAnalysisLoading(true);
     setAnalysisError(null);
-    useHoldingsStore.getState().setLastAnalysis(null);
-    useHoldingsStore.getState().clearChatHistory();
 
     try {
       const symbols = items.map(item => item.symbol);
@@ -98,11 +97,12 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
         setAnalysisError('AI 回應為空');
         return;
       }
-      useHoldingsStore.getState().setLastAnalysis(result);
-      useHoldingsStore.getState().setChatHistory([
+      const nextHistory: ChatMessage[] = [
         { role: 'user', content: buildDetailedAnalysisPrompt(entries) },
         { role: 'assistant', content: result.paragraph },
-      ]);
+      ];
+      useHoldingsStore.getState().setLastAnalysis(result);
+      useHoldingsStore.getState().setChatHistory(nextHistory);
     } catch (e) {
       setAnalysisError(String(e));
     } finally {

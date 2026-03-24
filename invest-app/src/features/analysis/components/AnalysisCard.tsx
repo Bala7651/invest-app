@@ -149,6 +149,13 @@ export function AnalysisCard({ symbol, name, quote, result, loading, error, onRe
             </View>
             <Text className="text-muted text-sm mt-1">{result.riskExplanation}</Text>
           </View>
+
+          <Pressable
+            className="border border-primary rounded px-4 py-2 self-start mt-4"
+            onPress={onRetry}
+          >
+            <Text className="text-primary text-sm font-semibold">重新生成</Text>
+          </Pressable>
         </Animated.View>
       )}
     </View>

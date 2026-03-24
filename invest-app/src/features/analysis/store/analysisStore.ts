@@ -4,8 +4,11 @@ import { fetchLatestQuoteForSummary, mergeQuoteData } from '../../summary/servic
 import { AnalysisResult } from '../types';
 import { useQuoteStore } from '../../market/quoteStore';
 import { isMarketOpen } from '../../market/marketHours';
-
-const TTL_MS = 30 * 60 * 1000;
+import {
+  clearPersistedAnalyses,
+  loadPersistedAnalyses,
+  upsertPersistedAnalysis,
+} from '../services/analysisCacheService';
 
 interface Credentials {
   apiKey: string;
@@ -13,12 +16,23 @@ interface Credentials {
   baseUrl: string;
 }
 
+interface FetchOptions {
+  force?: boolean;
+}
+
 interface AnalysisState {
   cache: Record<string, AnalysisResult>;
   cachedAt: Record<string, number>;
   loading: Record<string, boolean>;
   errors: Record<string, string | null>;
-  fetchAnalysis: (symbol: string, quote: QuoteData, credentials: Credentials) => Promise<void>;
+  hydrated: boolean;
+  loadPersistedAnalysis: () => Promise<void>;
+  fetchAnalysis: (
+    symbol: string,
+    quote: QuoteData,
+    credentials: Credentials,
+    options?: FetchOptions,
+  ) => Promise<void>;
   clearAnalysis: () => void;
 }
 
@@ -27,10 +41,29 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
   cachedAt: {},
   loading: {},
   errors: {},
+  hydrated: false,
 
-  async fetchAnalysis(symbol, quote, credentials) {
-    const cachedAt = get().cachedAt[symbol] ?? 0;
-    if (get().cache[symbol] && Date.now() - cachedAt < TTL_MS) return;
+  async loadPersistedAnalysis() {
+    if (get().hydrated) return;
+
+    const persisted = await loadPersistedAnalyses();
+    const cache: Record<string, AnalysisResult> = {};
+    const cachedAt: Record<string, number> = {};
+
+    for (const entry of persisted) {
+      cache[entry.symbol] = entry.result;
+      cachedAt[entry.symbol] = entry.cachedAt;
+    }
+
+    set((s) => ({
+      cache: { ...cache, ...s.cache },
+      cachedAt: { ...cachedAt, ...s.cachedAt },
+      hydrated: true,
+    }));
+  },
+
+  async fetchAnalysis(symbol, quote, credentials, options) {
+    if (!options?.force && get().cache[symbol]) return;
 
     set(s => ({
       loading: { ...s.loading, [symbol]: true },
@@ -69,9 +102,12 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
       }
 
       const result = await callMiniMax(symbol, effectiveQuote, credentials);
+      const fetchedAt = Date.now();
+      await upsertPersistedAnalysis(symbol, result, fetchedAt);
+
       set(s => ({
         cache: { ...s.cache, [symbol]: result },
-        cachedAt: { ...s.cachedAt, [symbol]: Date.now() },
+        cachedAt: { ...s.cachedAt, [symbol]: fetchedAt },
         loading: { ...s.loading, [symbol]: false },
         errors: { ...s.errors, [symbol]: null },
       }));
@@ -84,6 +120,7 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
   },
 
   clearAnalysis() {
-    set({ cache: {}, cachedAt: {}, loading: {}, errors: {} });
+    set({ cache: {}, cachedAt: {}, loading: {}, errors: {}, hydrated: false });
+    void clearPersistedAnalyses();
   },
 }));

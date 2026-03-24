@@ -6,6 +6,10 @@ import {
   HoldingRow,
 } from '../services/holdingsService';
 import { PortfolioAnalysis, ChatMessage } from '../services/portfolioAiService';
+import {
+  loadPortfolioAiState,
+  savePortfolioAiState,
+} from '../services/portfolioStateService';
 
 interface HoldingsState {
   holdings: Record<string, HoldingRow>;
@@ -32,12 +36,20 @@ export const useHoldingsStore = create<HoldingsState>((set) => ({
   loadHoldings: async () => {
     set({ loading: true, error: null });
     try {
-      const rows = await getAllHoldings();
+      const [rows, aiState] = await Promise.all([
+        getAllHoldings(),
+        loadPortfolioAiState(),
+      ]);
       const map: Record<string, HoldingRow> = {};
       for (const row of rows) {
         map[row.symbol] = row;
       }
-      set({ holdings: map, loading: false });
+      set({
+        holdings: map,
+        lastAnalysis: aiState.lastAnalysis,
+        chatHistory: aiState.chatHistory,
+        loading: false,
+      });
     } catch (e) {
       set({ loading: false, error: String(e) });
     }
@@ -72,8 +84,25 @@ export const useHoldingsStore = create<HoldingsState>((set) => ({
 
   clearHoldings: () => set({ holdings: {} }),
 
-  setLastAnalysis: (result) => set({ lastAnalysis: result }),
-  setChatHistory: (history) => set({ chatHistory: history }),
-  appendChatMessage: (msg) => set((s) => ({ chatHistory: [...s.chatHistory, msg] })),
-  clearChatHistory: () => set({ chatHistory: [] }),
+  setLastAnalysis: (result) =>
+    set((state) => {
+      void savePortfolioAiState(result, state.chatHistory);
+      return { lastAnalysis: result };
+    }),
+  setChatHistory: (history) =>
+    set((state) => {
+      void savePortfolioAiState(state.lastAnalysis, history);
+      return { chatHistory: history };
+    }),
+  appendChatMessage: (msg) =>
+    set((state) => {
+      const nextHistory = [...state.chatHistory, msg];
+      void savePortfolioAiState(state.lastAnalysis, nextHistory);
+      return { chatHistory: nextHistory };
+    }),
+  clearChatHistory: () =>
+    set((state) => {
+      void savePortfolioAiState(state.lastAnalysis, []);
+      return { chatHistory: [] };
+    }),
 }));

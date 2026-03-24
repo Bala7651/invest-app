@@ -1,4 +1,9 @@
-import { watchlist, daily_summaries } from '../db/schema';
+import {
+  watchlist,
+  daily_summaries,
+  analysis_cache,
+  portfolio_ai_state,
+} from '../db/schema';
 
 describe('drizzle schema exports', () => {
   it('exports watchlist table', () => {
@@ -7,6 +12,14 @@ describe('drizzle schema exports', () => {
 
   it('exports daily_summaries table', () => {
     expect(daily_summaries).toBeDefined();
+  });
+
+  it('exports analysis_cache table', () => {
+    expect(analysis_cache).toBeDefined();
+  });
+
+  it('exports portfolio_ai_state table', () => {
+    expect(portfolio_ai_state).toBeDefined();
   });
 
   it('watchlist has expected columns', () => {
@@ -25,6 +38,24 @@ describe('drizzle schema exports', () => {
     expect(columns).toContain('date');
     expect(columns).toContain('content');
     expect(columns).toContain('created_at');
+  });
+
+  it('analysis_cache has expected columns', () => {
+    const columns = Object.keys(analysis_cache);
+    expect(columns).toContain('id');
+    expect(columns).toContain('symbol');
+    expect(columns).toContain('content');
+    expect(columns).toContain('cached_at');
+    expect(columns).toContain('updated_at');
+  });
+
+  it('portfolio_ai_state has expected columns', () => {
+    const columns = Object.keys(portfolio_ai_state);
+    expect(columns).toContain('id');
+    expect(columns).toContain('last_analysis');
+    expect(columns).toContain('chat_history');
+    expect(columns).toContain('created_at');
+    expect(columns).toContain('updated_at');
   });
 
   it('watchlist.symbol has unique constraint', () => {

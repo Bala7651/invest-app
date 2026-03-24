@@ -2,11 +2,17 @@ import { useAnalysisStore } from '../features/analysis/store/analysisStore';
 import { callMiniMax } from '../features/analysis/services/minimaxApi';
 import { AnalysisResult } from '../features/analysis/types';
 import { useQuoteStore } from '../features/market/quoteStore';
+import * as analysisCacheService from '../features/analysis/services/analysisCacheService';
 
 jest.mock('../features/analysis/services/minimaxApi');
 jest.mock('../features/summary/services/summaryService', () => ({
   fetchLatestQuoteForSummary: jest.fn().mockResolvedValue(null),
   mergeQuoteData: jest.fn((liveQuote, dailyQuote) => dailyQuote ?? liveQuote ?? null),
+}));
+jest.mock('../features/analysis/services/analysisCacheService', () => ({
+  loadPersistedAnalyses: jest.fn().mockResolvedValue([]),
+  upsertPersistedAnalysis: jest.fn().mockResolvedValue(undefined),
+  clearPersistedAnalyses: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock('../features/market/quoteStore', () => ({
   useQuoteStore: {
@@ -21,6 +27,8 @@ jest.mock('../features/market/marketHours', () => ({
 }));
 
 const mockCallMiniMax = callMiniMax as jest.MockedFunction<typeof callMiniMax>;
+const mockLoadPersistedAnalyses = analysisCacheService.loadPersistedAnalyses as jest.MockedFunction<typeof analysisCacheService.loadPersistedAnalyses>;
+const mockUpsertPersistedAnalysis = analysisCacheService.upsertPersistedAnalysis as jest.MockedFunction<typeof analysisCacheService.upsertPersistedAnalysis>;
 
 const mockQuote = {
   name: 'Taiwan Semiconductor',
@@ -51,6 +59,8 @@ const mockResult: AnalysisResult = {
 beforeEach(() => {
   useAnalysisStore.getState().clearAnalysis();
   jest.resetAllMocks();
+  mockLoadPersistedAnalyses.mockResolvedValue([]);
+  mockUpsertPersistedAnalysis.mockResolvedValue(undefined);
   (useQuoteStore.getState as jest.Mock).mockReturnValue({
     forceRefresh: jest.fn().mockResolvedValue(undefined),
     quotes: {},
@@ -94,7 +104,7 @@ describe('fetchAnalysis', () => {
     expect(useAnalysisStore.getState().errors['2330']).toBeNull();
   });
 
-  it('skips API call when cache is fresh (within 30-minute TTL)', async () => {
+  it('skips API call when analysis already exists until user forces regeneration', async () => {
     mockCallMiniMax.mockResolvedValue(mockResult);
 
     await useAnalysisStore.getState().fetchAnalysis('2330', mockQuote, mockCredentials);
@@ -103,20 +113,30 @@ describe('fetchAnalysis', () => {
     expect(mockCallMiniMax).toHaveBeenCalledTimes(1);
   });
 
-  it('re-fetches when cache is expired (>= 30 minutes old)', async () => {
+  it('re-fetches when force option is passed', async () => {
     mockCallMiniMax.mockResolvedValue(mockResult);
 
     await useAnalysisStore.getState().fetchAnalysis('2330', mockQuote, mockCredentials);
+    await useAnalysisStore.getState().fetchAnalysis(
+      '2330',
+      mockQuote,
+      mockCredentials,
+      { force: true },
+    );
 
-    // Manually expire the cache by setting cachedAt to past time
-    const TTL_MS = 30 * 60 * 1000;
-    useAnalysisStore.setState(s => ({
-      cachedAt: { ...s.cachedAt, '2330': Date.now() - TTL_MS - 1 },
-    }));
+    expect(mockCallMiniMax).toHaveBeenCalledTimes(2);
+  });
+
+  it('persists successful analysis results', async () => {
+    mockCallMiniMax.mockResolvedValueOnce(mockResult);
 
     await useAnalysisStore.getState().fetchAnalysis('2330', mockQuote, mockCredentials);
 
-    expect(mockCallMiniMax).toHaveBeenCalledTimes(2);
+    expect(mockUpsertPersistedAnalysis).toHaveBeenCalledWith(
+      '2330',
+      mockResult,
+      expect.any(Number),
+    );
   });
 
   it('sets error message in errors[symbol] when fetch fails', async () => {
@@ -162,6 +182,21 @@ describe('fetchAnalysis', () => {
   });
 });
 
+describe('loadPersistedAnalysis', () => {
+  it('hydrates cached analysis from persistence', async () => {
+    mockLoadPersistedAnalyses.mockResolvedValueOnce([
+      { symbol: '2330', result: mockResult, cachedAt: 1234567890 },
+    ]);
+
+    await useAnalysisStore.getState().loadPersistedAnalysis();
+
+    const state = useAnalysisStore.getState();
+    expect(state.cache['2330']).toEqual(mockResult);
+    expect(state.cachedAt['2330']).toBe(1234567890);
+    expect(state.hydrated).toBe(true);
+  });
+});
+
 describe('clearAnalysis', () => {
   it('clears all cache state', async () => {
     mockCallMiniMax.mockResolvedValueOnce(mockResult);
@@ -174,5 +209,6 @@ describe('clearAnalysis', () => {
     expect(state.cachedAt).toEqual({});
     expect(state.loading).toEqual({});
     expect(state.errors).toEqual({});
+    expect(state.hydrated).toBe(false);
   });
 });

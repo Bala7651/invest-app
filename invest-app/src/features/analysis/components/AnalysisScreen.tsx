@@ -17,18 +17,24 @@ export function AnalysisScreen({ isActive }: AnalysisScreenProps) {
   const apiKey = useSettingsStore(s => s.apiKey);
   const items = useWatchlistStore(s => s.items);
   const quotes = useQuoteStore(s => s.quotes);
-  const { cache, loading, errors, fetchAnalysis } = useAnalysisStore();
+  const { cache, loading, errors, fetchAnalysis, loadPersistedAnalysis } = useAnalysisStore();
 
   useEffect(() => {
     if (!isActive || !apiKey) return;
 
-    const { apiKey: key, modelName, baseUrl } = useSettingsStore.getState();
-    const credentials = { apiKey: key, modelName, baseUrl };
-    const currentItems = useWatchlistStore.getState().items;
-    const currentQuotes = useQuoteStore.getState().quotes;
+    let cancelled = false;
 
     (async () => {
+      await loadPersistedAnalysis();
+      if (cancelled) return;
+
+      const { apiKey: key, modelName, baseUrl } = useSettingsStore.getState();
+      const credentials = { apiKey: key, modelName, baseUrl };
+      const currentItems = useWatchlistStore.getState().items;
+      const currentQuotes = useQuoteStore.getState().quotes;
+
       for (const item of currentItems) {
+        if (cancelled) return;
         const q = currentQuotes[item.symbol];
         const quoteData = q
           ? {
@@ -49,11 +55,15 @@ export function AnalysisScreen({ isActive }: AnalysisScreenProps) {
               changePct: 0,
               prevClose: 0,
               volume: 0,
-            };
+        };
         await fetchAnalysis(item.symbol, quoteData, credentials);
       }
     })();
-  }, [isActive]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [apiKey, fetchAnalysis, isActive, loadPersistedAnalysis]);
 
   if (!apiKey) {
     return <NoApiKeyPrompt />;
@@ -103,7 +113,12 @@ export function AnalysisScreen({ isActive }: AnalysisScreenProps) {
                         prevClose: 0,
                         volume: 0,
                       };
-                  fetchAnalysis(item.symbol, quoteData, { apiKey: key, modelName, baseUrl });
+                  fetchAnalysis(
+                    item.symbol,
+                    quoteData,
+                    { apiKey: key, modelName, baseUrl },
+                    { force: true },
+                  );
                 }}
               />
             );

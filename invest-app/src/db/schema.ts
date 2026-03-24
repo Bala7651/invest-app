@@ -41,6 +41,22 @@ export const daily_summaries = sqliteTable('daily_summaries', {
   ),
 });
 
+export const analysis_cache = sqliteTable(
+  'analysis_cache',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    symbol: text('symbol').notNull(),
+    content: text('content').notNull(),
+    cached_at: integer('cached_at', { mode: 'timestamp' }).$defaultFn(
+      () => new Date()
+    ),
+    updated_at: integer('updated_at', { mode: 'timestamp' }).$defaultFn(
+      () => new Date()
+    ),
+  },
+  (t) => [uniqueIndex('analysis_cache_symbol_unique').on(t.symbol)]
+);
+
 export const holdings = sqliteTable(
   'holdings',
   {
@@ -57,3 +73,15 @@ export const holdings = sqliteTable(
   },
   (t) => [uniqueIndex('holdings_symbol_unique').on(t.symbol)]
 );
+
+export const portfolio_ai_state = sqliteTable('portfolio_ai_state', {
+  id: integer('id').primaryKey(),
+  last_analysis: text('last_analysis'),
+  chat_history: text('chat_history').notNull().default('[]'),
+  created_at: integer('created_at', { mode: 'timestamp' }).$defaultFn(
+    () => new Date()
+  ),
+  updated_at: integer('updated_at', { mode: 'timestamp' }).$defaultFn(
+    () => new Date()
+  ),
+});
