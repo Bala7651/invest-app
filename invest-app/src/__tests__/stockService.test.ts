@@ -104,6 +104,40 @@ it('TWSEQuote interface has required fields via mock fetch response', async () =
   expect(q).toHaveProperty('updatedAt', 1742299200000);
 });
 
+it('getQuotes still works when AbortSignal.timeout is unavailable', async () => {
+  const mockResponse = {
+    msgArray: [
+      {
+        c: '2330',
+        n: '台積電',
+        z: '900.00',
+        y: '895.00',
+        o: '897.00',
+        h: '902.00',
+        l: '896.00',
+        v: '12345',
+        tlong: '1742299200000',
+      },
+    ],
+  };
+
+  const originalTimeout = (AbortSignal as any).timeout;
+  (AbortSignal as any).timeout = undefined;
+
+  global.fetch = jest.fn().mockResolvedValueOnce({
+    ok: true,
+    json: async () => mockResponse,
+  } as any);
+
+  try {
+    const quotes = await StockService.getQuotes(['2330']);
+    expect(quotes).toHaveLength(1);
+    expect(quotes[0].price).toBe(900);
+  } finally {
+    (AbortSignal as any).timeout = originalTimeout;
+  }
+});
+
 it('getQuotes falls back to Yahoo when TWSE returns a null live price', async () => {
   const twseResponse = {
     msgArray: [

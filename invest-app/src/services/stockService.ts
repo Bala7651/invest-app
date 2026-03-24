@@ -45,6 +45,15 @@ interface YahooChartResponse {
 const YAHOO_CACHE_TTL_MS = 60_000;
 const yahooFallbackCache = new Map<string, { quote: TWSEQuote; fetchedAt: number }>();
 
+function createTimeoutSignal(ms: number): { signal: AbortSignal; cleanup: () => void } {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), ms);
+  return {
+    signal: controller.signal,
+    cleanup: () => clearTimeout(timeoutId),
+  };
+}
+
 export function parseSentinel(val: string): number | null {
   if (val === '-' || val === '') return null;
   const n = parseFloat(val);
@@ -84,35 +93,40 @@ async function fetchYahooQuote(symbol: string, options: QuoteFetchOptions = {}):
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=1m&range=1d&includePrePost=false`;
 
   try {
-    const res = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0' },
-      signal: AbortSignal.timeout(10_000),
-    });
-    if (!res.ok) return null;
+    const { signal, cleanup } = createTimeoutSignal(10_000);
+    try {
+      const res = await fetch(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0' },
+        signal,
+      });
+      if (!res.ok) return null;
 
-    const data: YahooChartResponse = await res.json();
-    const result = data.chart?.result?.[0];
-    const meta = result?.meta;
-    const quote = result?.indicators?.quote?.[0];
+      const data: YahooChartResponse = await res.json();
+      const result = data.chart?.result?.[0];
+      const meta = result?.meta;
+      const quote = result?.indicators?.quote?.[0];
 
-    const price = parseNumber(meta?.regularMarketPrice);
-    const prevClose = parseNumber(meta?.previousClose) ?? parseNumber(meta?.chartPreviousClose);
-    if (price == null || prevClose == null) return null;
+      const price = parseNumber(meta?.regularMarketPrice);
+      const prevClose = parseNumber(meta?.previousClose) ?? parseNumber(meta?.chartPreviousClose);
+      if (price == null || prevClose == null) return null;
 
-    const yahooQuote: TWSEQuote = {
-      symbol,
-      name: meta?.longName ?? meta?.shortName ?? symbol,
-      price,
-      prevClose,
-      open: lastNumber(quote?.open),
-      high: parseNumber(meta?.regularMarketDayHigh) ?? lastNumber(quote?.high),
-      low: parseNumber(meta?.regularMarketDayLow) ?? lastNumber(quote?.low),
-      volume: parseNumber(meta?.regularMarketVolume) ?? 0,
-      updatedAt: (parseNumber(meta?.regularMarketTime) ?? Math.floor(Date.now() / 1000)) * 1000,
-    };
+      const yahooQuote: TWSEQuote = {
+        symbol,
+        name: meta?.longName ?? meta?.shortName ?? symbol,
+        price,
+        prevClose,
+        open: lastNumber(quote?.open),
+        high: parseNumber(meta?.regularMarketDayHigh) ?? lastNumber(quote?.high),
+        low: parseNumber(meta?.regularMarketDayLow) ?? lastNumber(quote?.low),
+        volume: parseNumber(meta?.regularMarketVolume) ?? 0,
+        updatedAt: (parseNumber(meta?.regularMarketTime) ?? Math.floor(Date.now() / 1000)) * 1000,
+      };
 
-    yahooFallbackCache.set(symbol, { quote: yahooQuote, fetchedAt: Date.now() });
-    return yahooQuote;
+      yahooFallbackCache.set(symbol, { quote: yahooQuote, fetchedAt: Date.now() });
+      return yahooQuote;
+    } finally {
+      cleanup();
+    }
   } catch {
     return null;
   }
@@ -206,23 +220,28 @@ async function _fetchQuotes(symbols: string[], options: QuoteFetchOptions = {}):
   const exCh = symbols.map(s => `tse_${s}.tw`).join('|');
   const url = `https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=${encodeURIComponent(exCh)}&json=1&delay=0`;
   const result = await withRetry(async () => {
-    const res = await fetch(url, {
-      headers: { 'User-Agent': 'invest-app/1.0' },
-      signal: AbortSignal.timeout(10_000),
-    });
-    if (!res.ok) throw new Error(`TWSE HTTP ${res.status}`);
-    const data = await res.json();
-    return (data.msgArray ?? []).map((item: any): TWSEQuote => ({
-      symbol: item.c,
-      name: item.n,
-      price: parseSentinel(item.z),
-      prevClose: parseFloat(item.y),
-      open: parseSentinel(item.o),
-      high: parseSentinel(item.h),
-      low: parseSentinel(item.l),
-      volume: parseFloat(item.v) || 0,
-      updatedAt: parseInt(item.tlong, 10),
-    }));
+    const { signal, cleanup } = createTimeoutSignal(10_000);
+    try {
+      const res = await fetch(url, {
+        headers: { 'User-Agent': 'invest-app/1.0' },
+        signal,
+      });
+      if (!res.ok) throw new Error(`TWSE HTTP ${res.status}`);
+      const data = await res.json();
+      return (data.msgArray ?? []).map((item: any): TWSEQuote => ({
+        symbol: item.c,
+        name: item.n,
+        price: parseSentinel(item.z),
+        prevClose: parseFloat(item.y),
+        open: parseSentinel(item.o),
+        high: parseSentinel(item.h),
+        low: parseSentinel(item.l),
+        volume: parseFloat(item.v) || 0,
+        updatedAt: parseInt(item.tlong, 10),
+      }));
+    } finally {
+      cleanup();
+    }
   });
   return applyYahooFallbacks(symbols, result ?? [], options);
 }
