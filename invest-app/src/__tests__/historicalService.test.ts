@@ -154,9 +154,9 @@ describe('fetchCandles', () => {
     await jest.runAllTimersAsync();
     const result = await resultPromise;
 
-    // Should have exactly the last 1 trading day
-    expect(result.length).toBe(1);
-    const point = result[0];
+    // 1D keeps the latest 2 candles so the chart still has a drawable segment.
+    expect(result.length).toBe(2);
+    const point = result[result.length - 1];
     expect(typeof point.open).toBe('number');
     expect(typeof point.high).toBe('number');
     expect(typeof point.low).toBe('number');

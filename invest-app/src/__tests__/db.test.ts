@@ -55,6 +55,7 @@ describe('drizzle schema exports', () => {
     expect(columns).toContain('last_analysis');
     expect(columns).toContain('chat_history');
     expect(columns).toContain('suggested_questions');
+    expect(columns).toContain('suggested_questions_source');
     expect(columns).toContain('created_at');
     expect(columns).toContain('updated_at');
   });

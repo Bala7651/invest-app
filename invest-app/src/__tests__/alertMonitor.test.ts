@@ -25,12 +25,31 @@ const mockMarkTriggered = alertService.markTriggered as jest.MockedFunction<type
 const mockSchedule = Notifications.scheduleNotificationAsync as jest.MockedFunction<typeof Notifications.scheduleNotificationAsync>;
 const mockGetState = (useSettingsStore as any).getState as jest.MockedFunction<() => any>;
 
+function makeSettingsState(overrides: Record<string, unknown> = {}) {
+  const baseState = {
+    aiNotificationsEnabled: false,
+    apiKey: '',
+    modelName: 'MiniMax-M2.5',
+    baseUrl: 'https://api.minimax.io/v1',
+  };
+  const nextState = { ...baseState, ...overrides };
+  return {
+    ...nextState,
+    getActiveAiCredentials: () => ({
+      apiKey: nextState.apiKey,
+      modelName: nextState.modelName,
+      baseUrl: nextState.baseUrl,
+      providerName: 'MiniMax',
+    }),
+  };
+}
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockMarkTriggered.mockResolvedValue(undefined);
   mockSchedule.mockResolvedValue('notification-id' as any);
   // Default: AI disabled (empty apiKey) so existing tests behave as before
-  mockGetState.mockReturnValue({ aiNotificationsEnabled: false, apiKey: '', modelName: 'MiniMax-M2.5', baseUrl: 'https://api.minimax.io/v1' });
+  mockGetState.mockReturnValue(makeSettingsState());
   global.fetch = jest.fn();
 });
 
@@ -202,10 +221,10 @@ describe('checkAlerts', () => {
   describe('AI-enriched notifications', () => {
     it('when aiNotificationsEnabled=true and apiKey set and fetch resolves, body includes AI sentence', async () => {
       mockGetState.mockReturnValue({
-        aiNotificationsEnabled: true,
-        apiKey: 'test-key',
-        modelName: 'MiniMax-M2.5',
-        baseUrl: 'https://api.minimax.io/v1',
+        ...makeSettingsState({
+          aiNotificationsEnabled: true,
+          apiKey: 'test-key',
+        }),
       });
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: true,
@@ -231,10 +250,10 @@ describe('checkAlerts', () => {
 
     it('body format is "{name} crossed {direction} {price} - current: {current} | {AI_SENTENCE}"', async () => {
       mockGetState.mockReturnValue({
-        aiNotificationsEnabled: true,
-        apiKey: 'test-key',
-        modelName: 'MiniMax-M2.5',
-        baseUrl: 'https://api.minimax.io/v1',
+        ...makeSettingsState({
+          aiNotificationsEnabled: true,
+          apiKey: 'test-key',
+        }),
       });
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: true,
@@ -259,10 +278,10 @@ describe('checkAlerts', () => {
 
     it('when AI fetch times out (AbortError), plain notification fires anyway', async () => {
       mockGetState.mockReturnValue({
-        aiNotificationsEnabled: true,
-        apiKey: 'test-key',
-        modelName: 'MiniMax-M2.5',
-        baseUrl: 'https://api.minimax.io/v1',
+        ...makeSettingsState({
+          aiNotificationsEnabled: true,
+          apiKey: 'test-key',
+        }),
       });
       // Simulate abort (timeout) by rejecting with AbortError
       (global.fetch as jest.Mock).mockRejectedValue(
@@ -286,10 +305,10 @@ describe('checkAlerts', () => {
 
     it('when aiNotificationsEnabled=false, fetch is never called, plain notification fires', async () => {
       mockGetState.mockReturnValue({
-        aiNotificationsEnabled: false,
-        apiKey: 'test-key',
-        modelName: 'MiniMax-M2.5',
-        baseUrl: 'https://api.minimax.io/v1',
+        ...makeSettingsState({
+          aiNotificationsEnabled: false,
+          apiKey: 'test-key',
+        }),
       });
 
       mockGetAll.mockResolvedValue([
@@ -310,10 +329,10 @@ describe('checkAlerts', () => {
 
     it('when apiKey is empty string, fetch is never called, plain notification fires', async () => {
       mockGetState.mockReturnValue({
-        aiNotificationsEnabled: true,
-        apiKey: '',
-        modelName: 'MiniMax-M2.5',
-        baseUrl: 'https://api.minimax.io/v1',
+        ...makeSettingsState({
+          aiNotificationsEnabled: true,
+          apiKey: '',
+        }),
       });
 
       mockGetAll.mockResolvedValue([

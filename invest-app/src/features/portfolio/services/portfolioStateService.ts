@@ -1,6 +1,6 @@
 import { db } from '../../../db/client';
 import { portfolio_ai_state } from '../../../db/schema';
-import { ChatMessage, PortfolioAnalysis } from './portfolioAiService';
+import { ChatMessage, PortfolioAnalysis, SuggestedQuestionsSource } from './portfolioAiService';
 
 const PORTFOLIO_STATE_ROW_ID = 1;
 
@@ -9,12 +9,14 @@ interface PortfolioAiStateRow {
   last_analysis: string | null;
   chat_history: string;
   suggested_questions?: string;
+  suggested_questions_source?: string;
 }
 
 export interface PortfolioAiSnapshot {
   lastAnalysis: PortfolioAnalysis | null;
   chatHistory: ChatMessage[];
   suggestedQuestions: string[];
+  suggestedQuestionsSource: SuggestedQuestionsSource;
 }
 
 function isChatMessage(value: unknown): value is ChatMessage {
@@ -39,12 +41,14 @@ export async function loadPortfolioAiState(): Promise<PortfolioAiSnapshot> {
   const rows = (await db.select().from(portfolio_ai_state)) as PortfolioAiStateRow[];
   const row = rows[0];
   if (!row) {
-    return { lastAnalysis: null, chatHistory: [], suggestedQuestions: [] };
+    return { lastAnalysis: null, chatHistory: [], suggestedQuestions: [], suggestedQuestionsSource: 'ai' };
   }
 
   let lastAnalysis: PortfolioAnalysis | null = null;
   let chatHistory: ChatMessage[] = [];
   let suggestedQuestions: string[] = [];
+  const suggestedQuestionsSource: SuggestedQuestionsSource =
+    row.suggested_questions_source === 'fallback' ? 'fallback' : 'ai';
 
   if (row.last_analysis) {
     try {
@@ -79,13 +83,14 @@ export async function loadPortfolioAiState(): Promise<PortfolioAiSnapshot> {
     suggestedQuestions = [];
   }
 
-  return { lastAnalysis, chatHistory, suggestedQuestions };
+  return { lastAnalysis, chatHistory, suggestedQuestions, suggestedQuestionsSource };
 }
 
 export async function savePortfolioAiState(
   lastAnalysis: PortfolioAnalysis | null,
   chatHistory: ChatMessage[],
   suggestedQuestions: string[],
+  suggestedQuestionsSource: SuggestedQuestionsSource,
 ): Promise<void> {
   await db.delete(portfolio_ai_state);
   await db.insert(portfolio_ai_state).values({
@@ -93,6 +98,7 @@ export async function savePortfolioAiState(
     last_analysis: lastAnalysis ? JSON.stringify(lastAnalysis) : null,
     chat_history: JSON.stringify(chatHistory),
     suggested_questions: JSON.stringify(suggestedQuestions),
+    suggested_questions_source: suggestedQuestionsSource,
     updated_at: new Date(),
   });
 }

@@ -8,10 +8,11 @@ import {
   mergeQuoteData,
   buildSummaryPrompt,
   buildIndexSummaryPrompt,
-  callSummaryMiniMax,
+  generateSummaryContent,
   upsertSummary,
   purgeOldSummaries,
   loadAllSummaries,
+  formatSummaryError,
 } from '../services/summaryService';
 import { Credentials, ERROR_PREFIX, SummaryEntry } from '../types';
 import { isMarketOpen } from '../../market/marketHours';
@@ -63,16 +64,14 @@ export const useSummaryStore = create<SummaryState>((set, get) => ({
       const indexData = await fetchTWIX();
       if (indexData) {
         const userPrompt = buildIndexSummaryPrompt(indexData);
-        const raw = await callSummaryMiniMax('TWSE', userPrompt, credentials);
-        const content = raw.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
-        if (!content) throw new Error('AI 回應為空');
+        const content = await generateSummaryContent('TWSE', userPrompt, credentials);
         await upsertSummary('TWSE', date, content);
       } else {
         await upsertSummary('TWSE', date, `${ERROR_PREFIX}無法取得大盤資料`);
         set(s => ({ errors: { ...s.errors, 'TWSE': '無法取得大盤資料' } }));
       }
     } catch (e) {
-      const msg = String(e);
+      const msg = formatSummaryError(e);
       await upsertSummary('TWSE', date, `${ERROR_PREFIX}${msg}`);
       set(s => ({ errors: { ...s.errors, 'TWSE': msg } }));
     }
@@ -90,13 +89,11 @@ export const useSummaryStore = create<SummaryState>((set, get) => ({
           set(s => ({ errors: { ...s.errors, [item.symbol]: '無法取得股價資料' } }));
         } else {
           const userPrompt = buildSummaryPrompt(item.symbol, item.name, quoteData);
-          const raw = await callSummaryMiniMax(item.symbol, userPrompt, credentials);
-          const content = raw.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
-          if (!content) throw new Error('AI 回應為空');
+          const content = await generateSummaryContent(item.symbol, userPrompt, credentials);
           await upsertSummary(item.symbol, date, content);
         }
       } catch (e) {
-        const msg = String(e);
+        const msg = formatSummaryError(e);
         await upsertSummary(item.symbol, date, `${ERROR_PREFIX}${msg}`);
         set(s => ({ errors: { ...s.errors, [item.symbol]: msg } }));
       }

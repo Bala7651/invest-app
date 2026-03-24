@@ -5,6 +5,9 @@ import {
   fetchTWIX,
   buildSummaryPrompt,
   buildIndexSummaryPrompt,
+  sanitizeSummaryContent,
+  formatSummaryError,
+  generateSummaryContent,
   upsertSummary,
   purgeOldSummaries,
 } from '../features/summary/services/summaryService';
@@ -273,6 +276,45 @@ describe('buildSummaryPrompt', () => {
   it('handles null price gracefully', () => {
     const quoteWithNull = { ...quote, price: null };
     expect(buildSummaryPrompt('2330', '台積電', quoteWithNull)).toContain('無資料');
+  });
+});
+
+describe('summary AI response helpers', () => {
+  beforeEach(() => {
+    global.fetch = jest.fn();
+  });
+
+  it('sanitizeSummaryContent strips think tags', () => {
+    expect(sanitizeSummaryContent('<think>hidden</think>整理後內容')).toBe('整理後內容');
+  });
+
+  it('formatSummaryError converts AbortError wording into a user-friendly message', () => {
+    expect(formatSummaryError(new Error('AbortError: Aborted'))).toBe('AI 請求逾時，請稍後重試');
+  });
+
+  it('generateSummaryContent retries once when the first response is empty after sanitizing', async () => {
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          choices: [{ message: { content: '<think>only hidden</think>' } }],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          choices: [{ message: { content: '第二次成功內容' } }],
+        }),
+      });
+
+    const result = await generateSummaryContent('2330', 'prompt', {
+      apiKey: 'test-key',
+      modelName: 'MiniMax-M2.5',
+      baseUrl: 'https://api.minimax.io/v1',
+    });
+
+    expect(result).toBe('第二次成功內容');
+    expect(global.fetch).toHaveBeenCalledTimes(2);
   });
 });
 

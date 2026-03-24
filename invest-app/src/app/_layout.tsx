@@ -59,7 +59,7 @@ export default function RootLayout() {
         const todayISO = getTodayISO();
         const has = await hasSummaryForDate(todayISO);
         if (!has) {
-          const { apiKey, modelName, baseUrl } = useSettingsStore.getState();
+          const { apiKey, modelName, baseUrl } = useSettingsStore.getState().getActiveAiCredentials();
           if (apiKey) {
             useSummaryStore.getState().generateToday({ apiKey, modelName, baseUrl });
           }

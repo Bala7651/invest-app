@@ -19,7 +19,7 @@ export const AI_PROVIDERS: AIProvider[] = [
   {
     name: 'OpenAI',
     baseUrl: 'https://api.openai.com/v1',
-    models: ['o3', 'o3-mini', 'o4-mini', 'gpt-4.1', 'gpt-4.1-mini', 'gpt-4.1-nano', 'gpt-4o', 'gpt-4o-mini'],
+    models: ['gpt-4.1', 'gpt-4.1-mini', 'gpt-4.1-nano', 'gpt-4o', 'gpt-4o-mini'],
   },
   {
     name: 'Google Gemini',

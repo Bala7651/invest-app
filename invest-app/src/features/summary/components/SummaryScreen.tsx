@@ -25,7 +25,7 @@ export function SummaryScreen({ isActive }: SummaryScreenProps) {
   }, [isActive]);
 
   function handleGenerateNow() {
-    const { apiKey, modelName, baseUrl } = useSettingsStore.getState();
+    const { apiKey, modelName, baseUrl } = useSettingsStore.getState().getActiveAiCredentials();
     if (!apiKey) {
       Alert.alert('需要 API Key', '請先在設定頁面輸入 API Key');
       return;
@@ -35,7 +35,10 @@ export function SummaryScreen({ isActive }: SummaryScreenProps) {
 
   const sortedDates = Object.keys(summariesByDate).sort((a, b) => b.localeCompare(a));
   const isEmpty = sortedDates.length === 0;
-  const errorCount = Object.values(errors).filter(e => e !== null).length;
+  const twseError = errors.TWSE ?? null;
+  const stockErrors = Object.entries(errors).filter(
+    ([symbol, error]) => symbol !== 'TWSE' && error !== null
+  );
 
   return (
     <View className="flex-1 bg-bg px-4" style={{ paddingTop: insets.top + 24, paddingBottom: Math.max(insets.bottom, 8) + 54 }}>
@@ -63,13 +66,34 @@ export function SummaryScreen({ isActive }: SummaryScreenProps) {
         </View>
       )}
 
-      {!generating && errorCount > 0 && (
+      {!generating && (twseError || stockErrors.length > 0) && (
         <View
-          className="bg-surface border border-border rounded-lg px-4 py-2 mb-4"
+          className="bg-surface border border-border rounded-lg px-4 py-3 mb-4"
         >
-          <Text className="text-stock-down text-sm">
-            部分股票生成失敗（{errorCount} 支）
-          </Text>
+          {twseError ? (
+            <Text className="text-stock-down text-sm">
+              大盤摘要失敗：{twseError}
+            </Text>
+          ) : null}
+          {stockErrors.length > 0 ? (
+            <Text className="text-stock-down text-sm" style={{ marginTop: twseError ? 8 : 0 }}>
+              個股摘要失敗（{stockErrors.length} 支）
+            </Text>
+          ) : null}
+          {stockErrors.slice(0, 3).map(([symbol, error]) => (
+            <Text
+              key={symbol}
+              className="text-muted text-xs"
+              style={{ marginTop: 4, lineHeight: 18 }}
+            >
+              {symbol}：{error}
+            </Text>
+          ))}
+          {stockErrors.length > 3 ? (
+            <Text className="text-muted text-xs" style={{ marginTop: 4 }}>
+              還有 {stockErrors.length - 3} 支個股失敗，請展開當日摘要查看詳細內容。
+            </Text>
+          ) : null}
         </View>
       )}
 

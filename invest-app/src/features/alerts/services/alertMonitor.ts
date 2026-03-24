@@ -99,7 +99,9 @@ export async function checkAlerts(
       price >= alert.upper_price
     ) {
       await alertService.markTriggered(alert.symbol, 'upper');
-      const { aiNotificationsEnabled, apiKey, modelName, baseUrl } = useSettingsStore.getState();
+      const settings = useSettingsStore.getState();
+      const { aiNotificationsEnabled } = settings;
+      const { apiKey, modelName, baseUrl } = settings.getActiveAiCredentials();
       let aiContext: string | undefined;
       if (aiNotificationsEnabled && apiKey !== '') {
         aiContext = await getAlertContext(alert.name, 'upper', alert.upper_price, price, { apiKey, modelName, baseUrl }) ?? undefined;
@@ -113,7 +115,9 @@ export async function checkAlerts(
       price <= alert.lower_price
     ) {
       await alertService.markTriggered(alert.symbol, 'lower');
-      const { aiNotificationsEnabled, apiKey, modelName, baseUrl } = useSettingsStore.getState();
+      const settings = useSettingsStore.getState();
+      const { aiNotificationsEnabled } = settings;
+      const { apiKey, modelName, baseUrl } = settings.getActiveAiCredentials();
       let aiContext: string | undefined;
       if (aiNotificationsEnabled && apiKey !== '') {
         aiContext = await getAlertContext(alert.name, 'lower', alert.lower_price, price, { apiKey, modelName, baseUrl }) ?? undefined;

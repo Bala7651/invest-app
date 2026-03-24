@@ -15,7 +15,7 @@ interface AnalysisScreenProps {
 
 export function AnalysisScreen({ isActive }: AnalysisScreenProps) {
   const insets = useSafeAreaInsets();
-  const apiKey = useSettingsStore(s => s.apiKey);
+  const hasActiveAiKey = useSettingsStore(s => s.hasActiveAiKey);
   const items = useWatchlistStore(s => s.items);
   const quotes = useQuoteStore(s => s.quotes);
   const { cache, loading, errors, fetchAnalysis, loadPersistedAnalysis } = useAnalysisStore();
@@ -36,7 +36,7 @@ export function AnalysisScreen({ isActive }: AnalysisScreenProps) {
   }
 
   useEffect(() => {
-    if (!isActive || !apiKey) return;
+    if (!isActive || !hasActiveAiKey()) return;
 
     let cancelled = false;
 
@@ -44,7 +44,7 @@ export function AnalysisScreen({ isActive }: AnalysisScreenProps) {
       await loadPersistedAnalysis();
       if (cancelled) return;
 
-      const { apiKey: key, modelName, baseUrl } = useSettingsStore.getState();
+      const { apiKey: key, modelName, baseUrl } = useSettingsStore.getState().getActiveAiCredentials();
       const credentials = { apiKey: key, modelName, baseUrl };
       const currentItems = useWatchlistStore.getState().items;
       const currentQuotes = useQuoteStore.getState().quotes;
@@ -67,9 +67,9 @@ export function AnalysisScreen({ isActive }: AnalysisScreenProps) {
     return () => {
       cancelled = true;
     };
-  }, [apiKey, fetchAnalysis, isActive, loadPersistedAnalysis]);
+  }, [fetchAnalysis, hasActiveAiKey, isActive, loadPersistedAnalysis]);
 
-  if (!apiKey) {
+  if (!hasActiveAiKey()) {
     return <NoApiKeyPrompt />;
   }
 
@@ -95,7 +95,7 @@ export function AnalysisScreen({ isActive }: AnalysisScreenProps) {
                 loading={loading[item.symbol] ?? false}
                 error={errors[item.symbol] ?? null}
                 onRetry={() => {
-                  const { apiKey: key, modelName, baseUrl } = useSettingsStore.getState();
+                  const { apiKey: key, modelName, baseUrl } = useSettingsStore.getState().getActiveAiCredentials();
                   const q = useQuoteStore.getState().quotes[item.symbol];
                   const quoteData = q
                     ? buildAnalysisQuoteData(item.name, q)

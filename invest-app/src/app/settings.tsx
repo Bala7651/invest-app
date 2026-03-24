@@ -82,6 +82,7 @@ export default function SettingsScreen() {
   const currentProvider = AI_PROVIDERS.find(p => p.name === providerName) ?? AI_PROVIDERS[0];
   const currentMarketDataProvider =
     MARKET_DATA_PROVIDERS.find(p => p.id === marketDataProvider) ?? MARKET_DATA_PROVIDERS[0];
+  const activeConfigLabel = `${providerName} / ${modelName}`;
 
   function handleProviderSelect(name: string) {
     const provider = AI_PROVIDERS.find(p => p.name === name);
@@ -136,8 +137,15 @@ export default function SettingsScreen() {
           {/* API 設定 */}
           <Text className="text-muted text-xs uppercase tracking-widest mb-3">API 設定</Text>
           <View className="bg-surface border border-border rounded-lg p-4 mb-4">
+            <View className="bg-bg border border-border rounded-lg px-3 py-3 mb-4">
+              <Text className="text-muted text-xs">目前實際使用</Text>
+              <Text className="text-text text-base mt-1">{activeConfigLabel}</Text>
+              <Text className="text-muted text-xs mt-1">
+                每個 AI 供應商各自保存 API 金鑰，切換供應商時會自動帶入對應金鑰。
+              </Text>
+            </View>
 
-            <Text className="text-muted text-xs mb-1">API 金鑰</Text>
+            <Text className="text-muted text-xs mb-1">{providerName} API 金鑰</Text>
             <ApiKeyInput />
 
             <DropdownSelect

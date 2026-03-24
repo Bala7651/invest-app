@@ -1,11 +1,15 @@
 import { create } from 'zustand';
 import { setItemAsync, getItemAsync, deleteItemAsync } from 'expo-secure-store';
+import { AI_PROVIDERS } from '../constants/providers';
 
 export type GlowLevel = 'subtle' | 'medium' | 'heavy';
 export type MarketDataProvider = 'twse_yahoo' | 'alpha_vantage';
+export type AIProviderName = 'MiniMax' | 'OpenAI' | 'Google Gemini';
 export const ALPHA_VANTAGE_DAILY_QUOTA = 25;
 
-const API_KEY_STORE_KEY = 'minimax_api_key';
+const MINIMAX_API_KEY_STORE_KEY = 'minimax_api_key';
+const OPENAI_API_KEY_STORE_KEY = 'openai_api_key';
+const GEMINI_API_KEY_STORE_KEY = 'gemini_api_key';
 const MODEL_NAME_STORE_KEY = 'minimax_model_name';
 const BASE_URL_STORE_KEY = 'minimax_base_url';
 const PROVIDER_NAME_STORE_KEY = 'ai_provider_name';
@@ -23,12 +27,74 @@ function getLocalDateKey(now = new Date()): string {
   return `${year}-${month}-${day}`;
 }
 
+function resolveProvider(name?: string): typeof AI_PROVIDERS[number] {
+  return AI_PROVIDERS.find(provider => provider.name === name) ?? AI_PROVIDERS[0];
+}
+
+function getApiKeyStoreKey(providerName: AIProviderName): string {
+  switch (providerName) {
+    case 'OpenAI':
+      return OPENAI_API_KEY_STORE_KEY;
+    case 'Google Gemini':
+      return GEMINI_API_KEY_STORE_KEY;
+    case 'MiniMax':
+    default:
+      return MINIMAX_API_KEY_STORE_KEY;
+  }
+}
+
+function getProviderApiKey(
+  providerName: AIProviderName,
+  apiKeys: { minimaxApiKey: string; openAiApiKey: string; geminiApiKey: string }
+): string {
+  switch (providerName) {
+    case 'OpenAI':
+      return apiKeys.openAiApiKey;
+    case 'Google Gemini':
+      return apiKeys.geminiApiKey;
+    case 'MiniMax':
+    default:
+      return apiKeys.minimaxApiKey;
+  }
+}
+
+function setProviderApiKeyInState(
+  providerName: AIProviderName,
+  key: string,
+  state: Pick<SettingsState, 'minimaxApiKey' | 'openAiApiKey' | 'geminiApiKey'>
+) {
+  switch (providerName) {
+    case 'OpenAI':
+      return {
+        minimaxApiKey: state.minimaxApiKey,
+        openAiApiKey: key,
+        geminiApiKey: state.geminiApiKey,
+      };
+    case 'Google Gemini':
+      return {
+        minimaxApiKey: state.minimaxApiKey,
+        openAiApiKey: state.openAiApiKey,
+        geminiApiKey: key,
+      };
+    case 'MiniMax':
+    default:
+      return {
+        minimaxApiKey: key,
+        openAiApiKey: state.openAiApiKey,
+        geminiApiKey: state.geminiApiKey,
+      };
+  }
+}
+
 interface SettingsState {
   glowLevel: GlowLevel;
   apiKey: string;
+  minimaxApiKey: string;
+  openAiApiKey: string;
+  geminiApiKey: string;
   modelName: string;
   baseUrl: string;
-  providerName: string;
+  providerName: AIProviderName;
   aiNotificationsEnabled: boolean;
   marketDataProvider: MarketDataProvider;
   alphaVantageApiKey: string;
@@ -37,6 +103,9 @@ interface SettingsState {
   alphaVantageLastResetDate: string;
   setGlowLevel: (level: GlowLevel) => void;
   saveApiKey: (key: string) => Promise<void>;
+  getApiKeyForProvider: (providerName: AIProviderName) => string;
+  getActiveAiCredentials: () => { apiKey: string; modelName: string; baseUrl: string; providerName: AIProviderName };
+  hasActiveAiKey: () => boolean;
   saveAlphaVantageApiKey: (key: string) => Promise<void>;
   loadFromSecureStore: () => Promise<void>;
   deleteApiKey: () => Promise<void>;
@@ -56,6 +125,9 @@ interface SettingsState {
 export const useSettingsStore = create<SettingsState>((set, get) => ({
   glowLevel: 'subtle',
   apiKey: '',
+  minimaxApiKey: '',
+  openAiApiKey: '',
+  geminiApiKey: '',
   modelName: 'MiniMax-M2.5',
   baseUrl: 'https://api.minimax.io/v1',
   providerName: 'MiniMax',
@@ -68,9 +140,25 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
   setGlowLevel: (level) => set({ glowLevel: level }),
 
+  getApiKeyForProvider: (providerName) => {
+    const { minimaxApiKey, openAiApiKey, geminiApiKey } = get();
+    return getProviderApiKey(providerName, { minimaxApiKey, openAiApiKey, geminiApiKey });
+  },
+
+  getActiveAiCredentials: () => {
+    const { apiKey, modelName, baseUrl, providerName } = get();
+    return { apiKey, modelName, baseUrl, providerName };
+  },
+
+  hasActiveAiKey: () => get().apiKey.trim().length > 0,
+
   saveApiKey: async (key) => {
-    await setItemAsync(API_KEY_STORE_KEY, key);
-    set({ apiKey: key });
+    const providerName = get().providerName;
+    await setItemAsync(getApiKeyStoreKey(providerName), key);
+    set((state) => ({
+      ...setProviderApiKeyInState(providerName, key, state),
+      apiKey: key,
+    }));
   },
 
   saveAlphaVantageApiKey: async (key) => {
@@ -89,7 +177,9 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
   loadFromSecureStore: async () => {
     const [
-      apiKey,
+      minimaxApiKey,
+      openAiApiKey,
+      geminiApiKey,
       modelName,
       baseUrl,
       providerName,
@@ -100,7 +190,9 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       alphaVantageDailyRemaining,
       alphaVantageLastResetDate,
     ] = await Promise.all([
-      getItemAsync(API_KEY_STORE_KEY),
+      getItemAsync(MINIMAX_API_KEY_STORE_KEY),
+      getItemAsync(OPENAI_API_KEY_STORE_KEY),
+      getItemAsync(GEMINI_API_KEY_STORE_KEY),
       getItemAsync(MODEL_NAME_STORE_KEY),
       getItemAsync(BASE_URL_STORE_KEY),
       getItemAsync(PROVIDER_NAME_STORE_KEY),
@@ -111,6 +203,28 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       getItemAsync(ALPHA_VANTAGE_DAILY_REMAINING_STORE_KEY),
       getItemAsync(ALPHA_VANTAGE_LAST_RESET_STORE_KEY),
     ]);
+    const provider = resolveProvider(providerName ?? undefined);
+    const resolvedProviderName = provider.name as AIProviderName;
+    const resolvedBaseUrl = provider.baseUrl;
+    let resolvedMinimaxApiKey = minimaxApiKey ?? '';
+    let resolvedOpenAiApiKey = openAiApiKey ?? '';
+    let resolvedGeminiApiKey = geminiApiKey ?? '';
+
+    // Migrate the legacy shared API key into the currently selected provider slot
+    // so existing users do not lose access after switching to per-provider storage.
+    if (resolvedProviderName === 'OpenAI' && !resolvedOpenAiApiKey && minimaxApiKey) {
+      resolvedOpenAiApiKey = minimaxApiKey;
+      await setItemAsync(OPENAI_API_KEY_STORE_KEY, minimaxApiKey);
+    }
+    if (resolvedProviderName === 'Google Gemini' && !resolvedGeminiApiKey && minimaxApiKey) {
+      resolvedGeminiApiKey = minimaxApiKey;
+      await setItemAsync(GEMINI_API_KEY_STORE_KEY, minimaxApiKey);
+    }
+
+    const compatibleModelNames = provider.models;
+    const resolvedModelName = compatibleModelNames.includes(modelName ?? '')
+      ? (modelName ?? compatibleModelNames[0])
+      : compatibleModelNames[0];
     const today = getLocalDateKey();
     const parsedRemaining = Number.parseInt(alphaVantageDailyRemaining ?? '', 10);
     const quotaResetNeeded = alphaVantageLastResetDate !== today;
@@ -128,11 +242,30 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       ]);
     }
 
+    if (resolvedModelName !== modelName) {
+      await setItemAsync(MODEL_NAME_STORE_KEY, resolvedModelName);
+    }
+    if (resolvedBaseUrl !== (baseUrl ?? '')) {
+      await setItemAsync(BASE_URL_STORE_KEY, resolvedBaseUrl);
+    }
+    if (resolvedProviderName !== providerName) {
+      await setItemAsync(PROVIDER_NAME_STORE_KEY, resolvedProviderName);
+    }
+
+    const activeApiKey = getProviderApiKey(resolvedProviderName, {
+      minimaxApiKey: resolvedMinimaxApiKey,
+      openAiApiKey: resolvedOpenAiApiKey,
+      geminiApiKey: resolvedGeminiApiKey,
+    });
+
     set({
-      apiKey: apiKey ?? '',
-      modelName: modelName ?? 'MiniMax-M2.5',
-      baseUrl: baseUrl ?? 'https://api.minimax.io/v1',
-      providerName: providerName ?? 'MiniMax',
+      apiKey: activeApiKey,
+      minimaxApiKey: resolvedMinimaxApiKey,
+      openAiApiKey: resolvedOpenAiApiKey,
+      geminiApiKey: resolvedGeminiApiKey,
+      modelName: resolvedModelName,
+      baseUrl: resolvedBaseUrl,
+      providerName: resolvedProviderName,
       aiNotificationsEnabled: aiNotif !== 'false',
       marketDataProvider: marketDataProvider === 'alpha_vantage' ? 'alpha_vantage' : 'twse_yahoo',
       alphaVantageApiKey: alphaVantageApiKey ?? '',
@@ -143,8 +276,12 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   },
 
   deleteApiKey: async () => {
-    await deleteItemAsync(API_KEY_STORE_KEY);
-    set({ apiKey: '' });
+    const providerName = get().providerName;
+    await deleteItemAsync(getApiKeyStoreKey(providerName));
+    set((state) => ({
+      ...setProviderApiKeyInState(providerName, '', state),
+      apiKey: '',
+    }));
   },
 
   deleteAlphaVantageApiKey: async () => {
@@ -174,12 +311,14 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   },
 
   setProvider: async (name, baseUrl, defaultModel) => {
+    const providerName = name as AIProviderName;
+    const providerApiKey = get().getApiKeyForProvider(providerName);
     await Promise.all([
-      setItemAsync(PROVIDER_NAME_STORE_KEY, name),
+      setItemAsync(PROVIDER_NAME_STORE_KEY, providerName),
       setItemAsync(BASE_URL_STORE_KEY, baseUrl),
       setItemAsync(MODEL_NAME_STORE_KEY, defaultModel),
     ]);
-    set({ providerName: name, baseUrl, modelName: defaultModel });
+    set({ providerName, baseUrl, modelName: defaultModel, apiKey: providerApiKey });
   },
 
   setAiNotificationsEnabled: async (enabled) => {

@@ -25,6 +25,9 @@ beforeEach(() => {
   mockDeleteItemAsync.mockResolvedValue(undefined);
   useSettingsStore.setState({
     apiKey: '',
+    minimaxApiKey: '',
+    openAiApiKey: '',
+    geminiApiKey: '',
     modelName: 'MiniMax-M2.5',
     baseUrl: 'https://api.minimax.io/v1',
     providerName: 'MiniMax',
@@ -56,7 +59,7 @@ describe('settingsStore initial state', () => {
 });
 
 describe('saveApiKey', () => {
-  it('calls SecureStore.setItemAsync with correct key and value', async () => {
+  it('calls SecureStore.setItemAsync with the current provider key slot', async () => {
     await useSettingsStore.getState().saveApiKey('test-key-1234');
     expect(mockSetItemAsync).toHaveBeenCalledWith('minimax_api_key', 'test-key-1234');
   });
@@ -64,11 +67,26 @@ describe('saveApiKey', () => {
   it('updates state.apiKey after save', async () => {
     await useSettingsStore.getState().saveApiKey('test-key-1234');
     expect(useSettingsStore.getState().apiKey).toBe('test-key-1234');
+    expect(useSettingsStore.getState().minimaxApiKey).toBe('test-key-1234');
+  });
+
+  it('stores OpenAI key separately when the selected provider is OpenAI', async () => {
+    useSettingsStore.setState({
+      providerName: 'OpenAI',
+      modelName: 'gpt-4.1',
+      baseUrl: 'https://api.openai.com/v1',
+    });
+
+    await useSettingsStore.getState().saveApiKey('openai-key');
+
+    expect(mockSetItemAsync).toHaveBeenCalledWith('openai_api_key', 'openai-key');
+    expect(useSettingsStore.getState().openAiApiKey).toBe('openai-key');
+    expect(useSettingsStore.getState().apiKey).toBe('openai-key');
   });
 });
 
 describe('loadFromSecureStore', () => {
-  it('populates state.apiKey from SecureStore', async () => {
+  it('populates state.apiKey from the active provider key', async () => {
     mockGetItemAsync.mockImplementation((key: string) => {
       if (key === 'minimax_api_key') return Promise.resolve('loaded-key');
       return Promise.resolve(null);
@@ -86,23 +104,25 @@ describe('loadFromSecureStore', () => {
   it('calls SecureStore.getItemAsync for minimax_api_key', async () => {
     await useSettingsStore.getState().loadFromSecureStore();
     expect(mockGetItemAsync).toHaveBeenCalledWith('minimax_api_key');
+    expect(mockGetItemAsync).toHaveBeenCalledWith('openai_api_key');
+    expect(mockGetItemAsync).toHaveBeenCalledWith('gemini_api_key');
   });
 
-  it('loads modelName and baseUrl from SecureStore', async () => {
+  it('keeps a compatible stored model and normalizes baseUrl to the selected provider', async () => {
     mockGetItemAsync.mockImplementation((key: string) => {
-      if (key === 'minimax_model_name') return Promise.resolve('custom-model');
+      if (key === 'minimax_model_name') return Promise.resolve('MiniMax-Text-01');
       if (key === 'minimax_base_url') return Promise.resolve('https://custom.url/v1');
       return Promise.resolve(null);
     });
     await useSettingsStore.getState().loadFromSecureStore();
-    expect(useSettingsStore.getState().modelName).toBe('custom-model');
-    expect(useSettingsStore.getState().baseUrl).toBe('https://custom.url/v1');
+    expect(useSettingsStore.getState().modelName).toBe('MiniMax-Text-01');
+    expect(useSettingsStore.getState().baseUrl).toBe('https://api.minimax.io/v1');
   });
 
-  it('keeps defaults for modelName/baseUrl when SecureStore returns null', async () => {
+  it('normalizes modelName/baseUrl to the provider defaults when SecureStore returns null', async () => {
     mockGetItemAsync.mockResolvedValue(null);
     await useSettingsStore.getState().loadFromSecureStore();
-    expect(useSettingsStore.getState().modelName).toBe('MiniMax-M2.5');
+    expect(useSettingsStore.getState().modelName).toBe('MiniMax-M2.7');
     expect(useSettingsStore.getState().baseUrl).toBe('https://api.minimax.io/v1');
   });
 
@@ -121,18 +141,48 @@ describe('loadFromSecureStore', () => {
     expect(useSettingsStore.getState().alphaVantageEnabled).toBe(true);
     expect(useSettingsStore.getState().alphaVantageDailyRemaining).toBe(17);
   });
+
+  it('hydrates the OpenAI key into the active apiKey when providerName is OpenAI', async () => {
+    mockGetItemAsync.mockImplementation((key: string) => {
+      if (key === 'ai_provider_name') return Promise.resolve('OpenAI');
+      if (key === 'openai_api_key') return Promise.resolve('openai-key');
+      if (key === 'minimax_model_name') return Promise.resolve('gpt-4.1');
+      return Promise.resolve(null);
+    });
+
+    await useSettingsStore.getState().loadFromSecureStore();
+
+    expect(useSettingsStore.getState().providerName).toBe('OpenAI');
+    expect(useSettingsStore.getState().apiKey).toBe('openai-key');
+    expect(useSettingsStore.getState().baseUrl).toBe('https://api.openai.com/v1');
+  });
+
+  it('migrates the legacy shared key into the selected provider slot', async () => {
+    mockGetItemAsync.mockImplementation((key: string) => {
+      if (key === 'ai_provider_name') return Promise.resolve('Google Gemini');
+      if (key === 'minimax_api_key') return Promise.resolve('legacy-shared-key');
+      return Promise.resolve(null);
+    });
+
+    await useSettingsStore.getState().loadFromSecureStore();
+
+    expect(mockSetItemAsync).toHaveBeenCalledWith('gemini_api_key', 'legacy-shared-key');
+    expect(useSettingsStore.getState().geminiApiKey).toBe('legacy-shared-key');
+    expect(useSettingsStore.getState().apiKey).toBe('legacy-shared-key');
+  });
 });
 
 describe('deleteApiKey', () => {
-  it('calls SecureStore.deleteItemAsync with correct key', async () => {
+  it('calls SecureStore.deleteItemAsync with the active provider key', async () => {
     await useSettingsStore.getState().deleteApiKey();
     expect(mockDeleteItemAsync).toHaveBeenCalledWith('minimax_api_key');
   });
 
   it('clears state.apiKey to empty string', async () => {
-    useSettingsStore.setState({ apiKey: 'existing-key' });
+    useSettingsStore.setState({ apiKey: 'existing-key', minimaxApiKey: 'existing-key' });
     await useSettingsStore.getState().deleteApiKey();
     expect(useSettingsStore.getState().apiKey).toBe('');
+    expect(useSettingsStore.getState().minimaxApiKey).toBe('');
   });
 });
 
@@ -157,6 +207,39 @@ describe('setBaseUrl', () => {
   it('persists baseUrl to SecureStore', async () => {
     await useSettingsStore.getState().setBaseUrl('https://custom.url/v1');
     expect(mockSetItemAsync).toHaveBeenCalledWith('minimax_base_url', 'https://custom.url/v1');
+  });
+});
+
+describe('provider-specific AI config helpers', () => {
+  it('setProvider switches the active apiKey to the selected provider key', async () => {
+    useSettingsStore.setState({
+      minimaxApiKey: 'mini-key',
+      openAiApiKey: 'open-key',
+      geminiApiKey: 'gem-key',
+    });
+
+    await useSettingsStore.getState().setProvider('OpenAI', 'https://api.openai.com/v1', 'gpt-4.1');
+
+    expect(useSettingsStore.getState().providerName).toBe('OpenAI');
+    expect(useSettingsStore.getState().apiKey).toBe('open-key');
+  });
+
+  it('getActiveAiCredentials returns the currently selected provider bundle', async () => {
+    useSettingsStore.setState({
+      providerName: 'Google Gemini',
+      baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+      modelName: 'gemini-2.5-flash',
+      apiKey: 'gem-key',
+      geminiApiKey: 'gem-key',
+    });
+
+    expect(useSettingsStore.getState().getActiveAiCredentials()).toEqual({
+      providerName: 'Google Gemini',
+      baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+      modelName: 'gemini-2.5-flash',
+      apiKey: 'gem-key',
+    });
+    expect(useSettingsStore.getState().hasActiveAiKey()).toBe(true);
   });
 });
 

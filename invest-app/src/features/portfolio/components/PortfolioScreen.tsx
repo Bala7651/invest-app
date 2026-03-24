@@ -32,17 +32,18 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
   const items = useWatchlistStore((s) => s.items);
   const quotes = useQuoteStore((s) => s.quotes);
   const holdings = useHoldingsStore((s) => s.holdings);
-  const apiKey = useSettingsStore((s) => s.apiKey);
-  const modelName = useSettingsStore((s) => s.modelName);
-  const baseUrl = useSettingsStore((s) => s.baseUrl);
+  const hasActiveAiKey = useSettingsStore((s) => s.hasActiveAiKey);
 
   const [isLots, setIsLots] = useState(true);
   const analysisResult = useHoldingsStore((s) => s.lastAnalysis);
   const chatHistory = useHoldingsStore((s) => s.chatHistory);
   const suggestedQuestions = useHoldingsStore((s) => s.suggestedQuestions);
+  const suggestedQuestionsSource = useHoldingsStore((s) => s.suggestedQuestionsSource);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [followUpLoading, setFollowUpLoading] = useState(false);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [followUpError, setFollowUpError] = useState<string | null>(null);
 
   const hasLoaded = useRef(false);
 
@@ -72,28 +73,33 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
     useHoldingsStore.getState().setQuantity(symbol, name, shares);
   }
 
+  function buildPortfolioEntries(sourceQuotes = quotes) {
+    return items.map((item) => {
+      const q = sourceQuotes[item.symbol];
+      const snapshot = buildQuoteSnapshot(item.name, q);
+      const holding = holdings[item.symbol];
+      return {
+        symbol: item.symbol,
+        name: item.name,
+        quantity: holding?.quantity ?? 0,
+        currentPrice: snapshot.price,
+      };
+    });
+  }
+
   async function handleAnalyze() {
+    const { apiKey, modelName, baseUrl } = useSettingsStore.getState().getActiveAiCredentials();
     if (!apiKey || items.length === 0 || analysisLoading) return;
 
     setAnalysisLoading(true);
     setAnalysisError(null);
+    setFollowUpError(null);
 
     try {
       const symbols = items.map(item => item.symbol);
       await useQuoteStore.getState().forceRefresh(symbols);
       const latestQuotes = useQuoteStore.getState().quotes;
-
-      const entries = items.map((item) => {
-        const q = latestQuotes[item.symbol] ?? quotes[item.symbol];
-        const snapshot = buildQuoteSnapshot(item.name, q);
-        const holding = holdings[item.symbol];
-        return {
-          symbol: item.symbol,
-          name: item.name,
-          quantity: holding?.quantity ?? 0,
-          currentPrice: snapshot.price,
-        };
-      });
+      const entries = buildPortfolioEntries(latestQuotes);
 
       const result = await callPortfolioMiniMax(entries, { apiKey, modelName, baseUrl });
       if (!result) {
@@ -106,12 +112,14 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
       ];
       const nextQuestions = await generatePortfolioSuggestedQuestions(
         nextHistory,
+        entries,
         { apiKey, modelName, baseUrl },
       );
       useHoldingsStore.getState().setPortfolioAiState({
         lastAnalysis: result,
         chatHistory: nextHistory,
-        suggestedQuestions: nextQuestions,
+        suggestedQuestions: nextQuestions.questions,
+        suggestedQuestionsSource: nextQuestions.source,
       });
     } catch (e) {
       setAnalysisError(String(e));
@@ -122,7 +130,9 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
 
   async function handleFollowUp(question: string) {
     if (!question || followUpLoading) return;
+    const { apiKey, modelName, baseUrl } = useSettingsStore.getState().getActiveAiCredentials();
     setFollowUpLoading(true);
+    setFollowUpError(null);
 
     try {
       const response = await callPortfolioFollowUp(
@@ -138,22 +148,51 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
         ];
         const nextQuestions = await generatePortfolioSuggestedQuestions(
           nextHistory,
+          buildPortfolioEntries(useQuoteStore.getState().quotes),
           { apiKey, modelName, baseUrl },
         );
         useHoldingsStore.getState().setPortfolioAiState({
           lastAnalysis: useHoldingsStore.getState().lastAnalysis,
           chatHistory: nextHistory,
-          suggestedQuestions: nextQuestions,
+          suggestedQuestions: nextQuestions.questions,
+          suggestedQuestionsSource: nextQuestions.source,
         });
+      } else {
+        setFollowUpError('追問暫時沒有收到 AI 回覆，請稍後再試。');
       }
-    } catch {
-      // silently ignore follow-up errors
+    } catch (error) {
+      setFollowUpError(String(error));
     } finally {
       setFollowUpLoading(false);
     }
   }
 
-  if (!apiKey) {
+  async function handleRegenerateSuggestedQuestions() {
+    if (!analysisResult || suggestionsLoading || followUpLoading) return;
+    const { apiKey, modelName, baseUrl } = useSettingsStore.getState().getActiveAiCredentials();
+    setSuggestionsLoading(true);
+    setFollowUpError(null);
+
+    try {
+      const nextQuestions = await generatePortfolioSuggestedQuestions(
+        useHoldingsStore.getState().chatHistory,
+        buildPortfolioEntries(useQuoteStore.getState().quotes),
+        { apiKey, modelName, baseUrl },
+      );
+      useHoldingsStore.getState().setPortfolioAiState({
+        lastAnalysis: useHoldingsStore.getState().lastAnalysis,
+        chatHistory: useHoldingsStore.getState().chatHistory,
+        suggestedQuestions: nextQuestions.questions,
+        suggestedQuestionsSource: nextQuestions.source,
+      });
+    } catch (error) {
+      setFollowUpError(String(error));
+    } finally {
+      setSuggestionsLoading(false);
+    }
+  }
+
+  if (!hasActiveAiKey()) {
     return (
       <View
         className="flex-1 bg-bg px-4"
@@ -371,14 +410,44 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
             ))}
 
             <View className="mb-4 mt-2">
-              <Text className="text-primary text-sm font-semibold mb-3">延伸追問</Text>
-              {followUpLoading ? (
+              <View className="flex-row items-center justify-between mb-3">
+                <Text className="text-primary text-sm font-semibold">延伸追問</Text>
+                <Pressable
+                  onPress={handleRegenerateSuggestedQuestions}
+                  disabled={followUpLoading || suggestionsLoading}
+                >
+                  <Text
+                    className="text-primary text-xs"
+                    style={followUpLoading || suggestionsLoading ? { opacity: 0.45 } : undefined}
+                  >
+                    重新產生 5 題
+                  </Text>
+                </Pressable>
+              </View>
+
+              <Text className="text-muted text-xs mb-3" style={{ lineHeight: 18 }}>
+                {suggestedQuestionsSource === 'fallback'
+                  ? 'AI 追問建議暫時不可用，以下為依持股內容整理的預設問題。'
+                  : '以下問題由 AI 依目前持股與既有對話內容整理。'}
+              </Text>
+
+              {followUpError ? (
+                <View className="bg-surface border border-border rounded-lg px-4 py-3 mb-3">
+                  <Text className="text-stock-down text-xs" style={{ lineHeight: 18 }}>
+                    {followUpError}
+                  </Text>
+                </View>
+              ) : null}
+
+              {followUpLoading || suggestionsLoading ? (
                 <View
                   className="bg-surface border border-border rounded-lg px-4 py-3"
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <ActivityIndicator size="small" color="#4D7CFF" />
-                    <Text className="text-muted text-sm">正在整理下一步問題...</Text>
+                    <Text className="text-muted text-sm">
+                      {followUpLoading ? '正在整理下一步問題...' : '正在重新產生追問...'}
+                    </Text>
                   </View>
                 </View>
               ) : (

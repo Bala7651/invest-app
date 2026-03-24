@@ -10,6 +10,7 @@ jest.mock('../features/portfolio/services/portfolioStateService', () => ({
     lastAnalysis: null,
     chatHistory: [],
     suggestedQuestions: [],
+    suggestedQuestionsSource: 'ai',
   }),
   savePortfolioAiState: jest.fn().mockResolvedValue(undefined),
 }));
@@ -41,6 +42,7 @@ beforeEach(() => {
     lastAnalysis: null,
     chatHistory: [],
     suggestedQuestions: [],
+    suggestedQuestionsSource: 'ai',
   });
   jest.clearAllMocks();
   mockUpsertHolding.mockResolvedValue(undefined);
@@ -49,6 +51,7 @@ beforeEach(() => {
     lastAnalysis: null,
     chatHistory: [],
     suggestedQuestions: [],
+    suggestedQuestionsSource: 'ai',
   });
   mockSavePortfolioAiState.mockResolvedValue(undefined);
 });
@@ -83,6 +86,7 @@ describe('loadHoldings', () => {
       lastAnalysis: { score: 75, paragraph: '既有投資組合分析' },
       chatHistory: [{ role: 'assistant', content: '既有追問內容' }],
       suggestedQuestions: ['下一題一', '下一題二', '下一題三', '下一題四', '下一題五'],
+      suggestedQuestionsSource: 'fallback',
     });
 
     await useHoldingsStore.getState().loadHoldings();
@@ -101,6 +105,7 @@ describe('loadHoldings', () => {
       '下一題四',
       '下一題五',
     ]);
+    expect(useHoldingsStore.getState().suggestedQuestionsSource).toBe('fallback');
   });
 });
 
@@ -137,6 +142,7 @@ describe('portfolio AI persistence', () => {
       { score: 88, paragraph: '新的分析結果' },
       [],
       [],
+      'ai',
     );
   });
 
@@ -156,6 +162,7 @@ describe('portfolio AI persistence', () => {
         { role: 'user', content: '後續問題' },
       ],
       ['題目一', '題目二'],
+      'ai',
     );
   });
 
@@ -179,6 +186,7 @@ describe('portfolio AI persistence', () => {
       { score: 88, paragraph: '新的分析結果' },
       [{ role: 'assistant', content: '先前分析' }],
       ['追問一', '追問二', '追問三', '追問四', '追問五'],
+      'ai',
     );
     expect(useHoldingsStore.getState().suggestedQuestions).toEqual([
       '追問一',
@@ -187,5 +195,20 @@ describe('portfolio AI persistence', () => {
       '追問四',
       '追問五',
     ]);
+  });
+
+  it('persists suggested question source when fallback defaults are used', () => {
+    useHoldingsStore.getState().setSuggestedQuestions(
+      ['題目一', '題目二', '題目三', '題目四', '題目五'],
+      'fallback',
+    );
+
+    expect(mockSavePortfolioAiState).toHaveBeenCalledWith(
+      null,
+      [],
+      ['題目一', '題目二', '題目三', '題目四', '題目五'],
+      'fallback',
+    );
+    expect(useHoldingsStore.getState().suggestedQuestionsSource).toBe('fallback');
   });
 });

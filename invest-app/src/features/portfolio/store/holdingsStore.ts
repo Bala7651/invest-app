@@ -5,7 +5,7 @@ import {
   deleteHolding,
   HoldingRow,
 } from '../services/holdingsService';
-import { PortfolioAnalysis, ChatMessage } from '../services/portfolioAiService';
+import { PortfolioAnalysis, ChatMessage, SuggestedQuestionsSource } from '../services/portfolioAiService';
 import {
   loadPortfolioAiState,
   savePortfolioAiState,
@@ -18,14 +18,20 @@ interface HoldingsState {
   lastAnalysis: PortfolioAnalysis | null;
   chatHistory: ChatMessage[];
   suggestedQuestions: string[];
+  suggestedQuestionsSource: SuggestedQuestionsSource;
   loadHoldings: () => Promise<void>;
   setQuantity: (symbol: string, name: string, quantity: number) => Promise<void>;
   clearHoldings: () => void;
   setLastAnalysis: (result: PortfolioAnalysis | null) => void;
   setChatHistory: (history: ChatMessage[]) => void;
-  setSuggestedQuestions: (questions: string[]) => void;
+  setSuggestedQuestions: (questions: string[], source?: SuggestedQuestionsSource) => void;
   setPortfolioAiState: (
-    state: { lastAnalysis: PortfolioAnalysis | null; chatHistory: ChatMessage[]; suggestedQuestions: string[] }
+    state: {
+      lastAnalysis: PortfolioAnalysis | null;
+      chatHistory: ChatMessage[];
+      suggestedQuestions: string[];
+      suggestedQuestionsSource: SuggestedQuestionsSource;
+    }
   ) => void;
   appendChatMessage: (msg: ChatMessage) => void;
   clearChatHistory: () => void;
@@ -38,6 +44,7 @@ export const useHoldingsStore = create<HoldingsState>((set) => ({
   lastAnalysis: null,
   chatHistory: [],
   suggestedQuestions: [],
+  suggestedQuestionsSource: 'ai',
 
   loadHoldings: async () => {
     set({ loading: true, error: null });
@@ -55,6 +62,7 @@ export const useHoldingsStore = create<HoldingsState>((set) => ({
         lastAnalysis: aiState.lastAnalysis,
         chatHistory: aiState.chatHistory,
         suggestedQuestions: aiState.suggestedQuestions,
+        suggestedQuestionsSource: aiState.suggestedQuestionsSource,
         loading: false,
       });
     } catch (e) {
@@ -93,19 +101,19 @@ export const useHoldingsStore = create<HoldingsState>((set) => ({
 
   setLastAnalysis: (result) =>
     set((state) => {
-      void savePortfolioAiState(result, state.chatHistory, state.suggestedQuestions);
+      void savePortfolioAiState(result, state.chatHistory, state.suggestedQuestions, state.suggestedQuestionsSource);
       return { lastAnalysis: result };
     }),
   setChatHistory: (history) =>
     set((state) => {
-      void savePortfolioAiState(state.lastAnalysis, history, state.suggestedQuestions);
+      void savePortfolioAiState(state.lastAnalysis, history, state.suggestedQuestions, state.suggestedQuestionsSource);
       return { chatHistory: history };
     }),
-  setSuggestedQuestions: (questions) =>
+  setSuggestedQuestions: (questions, source = 'ai') =>
     set((state) => {
       const nextQuestions = questions.slice(0, 5);
-      void savePortfolioAiState(state.lastAnalysis, state.chatHistory, nextQuestions);
-      return { suggestedQuestions: nextQuestions };
+      void savePortfolioAiState(state.lastAnalysis, state.chatHistory, nextQuestions, source);
+      return { suggestedQuestions: nextQuestions, suggestedQuestionsSource: source };
     }),
   setPortfolioAiState: (nextState) =>
     set(() => {
@@ -114,22 +122,24 @@ export const useHoldingsStore = create<HoldingsState>((set) => ({
         nextState.lastAnalysis,
         nextState.chatHistory,
         suggestedQuestions,
+        nextState.suggestedQuestionsSource,
       );
       return {
         lastAnalysis: nextState.lastAnalysis,
         chatHistory: nextState.chatHistory,
         suggestedQuestions,
+        suggestedQuestionsSource: nextState.suggestedQuestionsSource,
       };
     }),
   appendChatMessage: (msg) =>
     set((state) => {
       const nextHistory = [...state.chatHistory, msg];
-      void savePortfolioAiState(state.lastAnalysis, nextHistory, state.suggestedQuestions);
+      void savePortfolioAiState(state.lastAnalysis, nextHistory, state.suggestedQuestions, state.suggestedQuestionsSource);
       return { chatHistory: nextHistory };
     }),
   clearChatHistory: () =>
     set((state) => {
-      void savePortfolioAiState(state.lastAnalysis, [], state.suggestedQuestions);
+      void savePortfolioAiState(state.lastAnalysis, [], state.suggestedQuestions, state.suggestedQuestionsSource);
       return { chatHistory: [] };
     }),
 }));

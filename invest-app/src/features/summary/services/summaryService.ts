@@ -6,10 +6,13 @@ import { Credentials, SummaryEntry } from '../types';
 
 const CUTOFF_DAYS = 14;
 
-function timeoutSignal(ms: number): AbortSignal {
+function createTimeoutController(ms: number): { signal: AbortSignal; clear: () => void } {
   const controller = new AbortController();
-  setTimeout(() => controller.abort(), ms);
-  return controller.signal;
+  const timeoutId = setTimeout(() => controller.abort(), ms);
+  return {
+    signal: controller.signal,
+    clear: () => clearTimeout(timeoutId),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -69,11 +72,50 @@ interface TWIXEntry {
   '漲跌百分比': string;
 }
 
+function extractMessageText(content: unknown): string {
+  if (typeof content === 'string') return content;
+  if (!Array.isArray(content)) return '';
+
+  return content
+    .map((part) => {
+      if (typeof part === 'string') return part;
+      if (part && typeof part === 'object') {
+        if ('text' in part && typeof part.text === 'string') return part.text;
+        if ('content' in part && typeof part.content === 'string') return part.content;
+      }
+      return '';
+    })
+    .filter(Boolean)
+    .join('\n')
+    .trim();
+}
+
+export function sanitizeSummaryContent(raw: string): string {
+  return raw.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+}
+
+export function formatSummaryError(error: unknown): string {
+  const rawMessage = error instanceof Error ? error.message : String(error);
+  const message = rawMessage.replace(/^Error:\s*/, '').trim();
+
+  if (message.includes('AbortError')) {
+    return 'AI 請求逾時，請稍後重試';
+  }
+  if (message.startsWith('AI 請求失敗')) {
+    return message;
+  }
+  if (message.startsWith('AI 回應為空')) {
+    return message;
+  }
+  return message || '摘要生成失敗';
+}
+
 export async function fetchTWIX(): Promise<{ close: number; change: number; changePct: number } | null> {
+  const timeout = createTimeoutController(6_000);
   try {
     const res = await fetch('https://openapi.twse.com.tw/v1/exchangeReport/MI_INDEX', {
       headers: { 'User-Agent': 'invest-app/1.0' },
-      signal: timeoutSignal(6_000),
+      signal: timeout.signal,
     });
     if (!res.ok) return null;
     const data: TWIXEntry[] = await res.json();
@@ -87,6 +129,8 @@ export async function fetchTWIX(): Promise<{ close: number; change: number; chan
     };
   } catch {
     return null;
+  } finally {
+    timeout.clear();
   }
 }
 
@@ -101,16 +145,19 @@ function prevMonthYear(year: number, month: number): { year: number; month: numb
 async function fetchStockDayRows(symbol: string, year: number, month: number): Promise<string[][]> {
   const mm = String(month).padStart(2, '0');
   const url = `https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=${year}${mm}01&stockNo=${symbol}`;
+  const timeout = createTimeoutController(6_000);
   try {
     const res = await fetch(url, {
       headers: { 'User-Agent': 'invest-app/1.0' },
-      signal: timeoutSignal(6_000),
+      signal: timeout.signal,
     });
     if (!res.ok) return [];
     const data = await res.json();
     return Array.isArray(data.data) ? data.data : [];
   } catch {
     return [];
+  } finally {
+    timeout.clear();
   }
 }
 
@@ -337,13 +384,39 @@ export async function callSummaryMiniMax(
       signal: controller.signal,
     });
 
-    if (!res.ok) throw new Error(`MiniMax HTTP ${res.status}`);
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      const suffix = body ? `：${body.slice(0, 80)}` : '';
+      throw new Error(`AI 請求失敗（HTTP ${res.status}）${suffix}`);
+    }
 
     const data = await res.json();
-    return (data.choices?.[0]?.message?.content ?? '') as string;
+    return extractMessageText(data.choices?.[0]?.message?.content)
+      || (typeof data.output_text === 'string' ? data.output_text : '');
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('AI 請求逾時，請稍後重試');
+    }
+    throw error;
   } finally {
     clearTimeout(timer);
   }
+}
+
+export async function generateSummaryContent(
+  symbol: string,
+  userPrompt: string,
+  credentials: Credentials
+): Promise<string> {
+  const firstRaw = await callSummaryMiniMax(symbol, userPrompt, credentials);
+  const firstContent = sanitizeSummaryContent(firstRaw);
+  if (firstContent) return firstContent;
+
+  const retryRaw = await callSummaryMiniMax(symbol, userPrompt, credentials);
+  const retryContent = sanitizeSummaryContent(retryRaw);
+  if (retryContent) return retryContent;
+
+  throw new Error('AI 回應為空（已自動重試 1 次）');
 }
 
 // ---------------------------------------------------------------------------

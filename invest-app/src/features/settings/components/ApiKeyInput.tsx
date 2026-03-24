@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, Animated, Pressable, Text, TextInput, View } from 'react-native';
 import { useSettingsStore } from '../store/settingsStore';
 
@@ -12,6 +12,7 @@ export function ApiKeyInput() {
   const apiKey = useSettingsStore(s => s.apiKey);
   const baseUrl = useSettingsStore(s => s.baseUrl);
   const modelName = useSettingsStore(s => s.modelName);
+  const providerName = useSettingsStore(s => s.providerName);
   const saveApiKey = useSettingsStore(s => s.saveApiKey);
   const deleteApiKey = useSettingsStore(s => s.deleteApiKey);
 
@@ -21,6 +22,12 @@ export function ApiKeyInput() {
   const [testResult, setTestResult] = useState<'success' | 'error' | null>(null);
   const [isFocused, setIsFocused] = useState(false);
   const toastOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!isFocused) {
+      setInputValue(apiKey);
+    }
+  }, [apiKey, isFocused, providerName]);
 
   function showSavedToast() {
     Animated.sequence([
@@ -104,7 +111,7 @@ export function ApiKeyInput() {
           }}
           onBlur={handleBlur}
           secureTextEntry={!isRevealed}
-          placeholder="輸入 API 金鑰"
+          placeholder={`輸入 ${providerName} API 金鑰`}
           placeholderTextColor="#666"
           autoCapitalize="none"
           autoCorrect={false}

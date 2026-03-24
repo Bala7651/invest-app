@@ -163,11 +163,13 @@ describe('generatePortfolioSuggestedQuestions', () => {
 
     const result = await generatePortfolioSuggestedQuestions(
       [{ role: 'assistant', content: '既有分析' }],
+      [makeEntry()],
       credentials,
     );
 
-    expect(result).toHaveLength(5);
-    expect(result[0]).toContain('風險');
+    expect(result.questions).toHaveLength(5);
+    expect(result.questions[0]).toContain('風險');
+    expect(result.source).toBe('ai');
   });
 
   it('falls back to default suggestions when the model response is malformed', async () => {
@@ -180,9 +182,11 @@ describe('generatePortfolioSuggestedQuestions', () => {
 
     const result = await generatePortfolioSuggestedQuestions(
       [{ role: 'assistant', content: '既有分析' }],
+      [makeEntry({ name: '台積電' })],
       credentials,
     );
 
-    expect(result).toEqual(fallbackSuggestedQuestions());
+    expect(result.questions).toEqual(fallbackSuggestedQuestions([makeEntry({ name: '台積電' })]));
+    expect(result.source).toBe('fallback');
   });
 });
