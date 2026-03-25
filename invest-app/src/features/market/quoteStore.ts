@@ -284,12 +284,25 @@ function buildNoQuotesError(): Error {
 }
 
 export const useQuoteStore = create<QuoteState>((set, get) => {
+  let activePollRun: Promise<void> | null = null;
+
   const clearPollTimer = () => {
     const timeoutId = get()._pollTimeoutId;
     if (timeoutId !== null) {
       clearTimeout(timeoutId);
     }
     set({ _pollTimeoutId: null });
+  };
+
+  const waitForPollIdle = async () => {
+    while (get()._pollInFlight) {
+      const inFlightRun = activePollRun;
+      if (inFlightRun) {
+        await inFlightRun.catch(() => {});
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 25));
+      }
+    }
   };
 
   const markSymbolsStale = (symbols: string[], fetchedAt = Date.now()) => {
@@ -550,69 +563,78 @@ export const useQuoteStore = create<QuoteState>((set, get) => {
     const symbols = get()._pollSymbols;
     set({ _pollInFlight: true });
 
-    try {
-      if (!isMarketOpen()) {
-        await refreshQuotes(symbols, {}, {
-          preserveMarketOpenCarryForward: false,
-          updateRestTimestamp: true,
-        });
-        get().stopPolling();
-        return;
-      }
-
-      connectFugleIfNeeded(symbols);
-
-      const {
-        fugleEnabled,
-        fugleApiKey,
-      } = useSettingsStore.getState();
-      const fugleActive = Boolean(fugleEnabled && fugleApiKey);
-      const now = Date.now();
-
-      if (get()._lastRestRefreshAt === 0) {
-        await refreshQuotes(symbols, {
-          forceNetwork: true,
-          forceFugleLookup: fugleActive,
-          forceFugleNetwork: fugleActive,
-        }, {
-          preserveMarketOpenCarryForward: false,
-          updateRestTimestamp: true,
-          updateFugleBootstrapAt: fugleActive,
-          treatEmptyAsError: false,
-        });
-      } else {
-        const staleSymbols = findStaleFugleSymbols(symbols, now);
-        if (
-          staleSymbols.length > 0 &&
-          now - get()._lastFugleStaleRefreshAt >= FUGLE_STALE_REFRESH_INTERVAL_MS
-        ) {
-          await refreshQuotes(staleSymbols, {
-            forceFugleLookup: true,
-            forceFugleNetwork: true,
-          }, {
-            preserveMarketOpenCarryForward: true,
-            updateFugleStaleRefreshAt: true,
-            fugleRefreshSymbols: staleSymbols,
-          });
-        }
-
-        if (now - get()._lastRestRefreshAt >= REST_POLL_INTERVAL_MS) {
+    let run!: Promise<void>;
+    run = (async () => {
+      try {
+        if (!isMarketOpen()) {
           await refreshQuotes(symbols, {}, {
-            preserveMarketOpenCarryForward: true,
+            preserveMarketOpenCarryForward: false,
             updateRestTimestamp: true,
           });
+          get().stopPolling();
+          return;
+        }
+
+        connectFugleIfNeeded(symbols);
+
+        const {
+          fugleEnabled,
+          fugleApiKey,
+        } = useSettingsStore.getState();
+        const fugleActive = Boolean(fugleEnabled && fugleApiKey);
+        const now = Date.now();
+
+        if (get()._lastRestRefreshAt === 0) {
+          await refreshQuotes(symbols, {
+            forceNetwork: true,
+            forceFugleLookup: fugleActive,
+            forceFugleNetwork: fugleActive,
+          }, {
+            preserveMarketOpenCarryForward: false,
+            updateRestTimestamp: true,
+            updateFugleBootstrapAt: fugleActive,
+            treatEmptyAsError: false,
+          });
+        } else {
+          const staleSymbols = findStaleFugleSymbols(symbols, now);
+          if (
+            staleSymbols.length > 0 &&
+            now - get()._lastFugleStaleRefreshAt >= FUGLE_STALE_REFRESH_INTERVAL_MS
+          ) {
+            await refreshQuotes(staleSymbols, {
+              forceFugleLookup: true,
+              forceFugleNetwork: true,
+            }, {
+              preserveMarketOpenCarryForward: true,
+              updateFugleStaleRefreshAt: true,
+              fugleRefreshSymbols: staleSymbols,
+            });
+          }
+
+          if (now - get()._lastRestRefreshAt >= REST_POLL_INTERVAL_MS) {
+            await refreshQuotes(symbols, {}, {
+              preserveMarketOpenCarryForward: true,
+              updateRestTimestamp: true,
+            });
+          }
+        }
+      } catch (e) {
+        set({ lastError: String(e) });
+        markSymbolsStale(findStaleFugleSymbols(get()._pollSymbols));
+      } finally {
+        const stillCurrent = get()._pollGeneration === generation;
+        set({ _pollInFlight: false });
+        if (activePollRun === run) {
+          activePollRun = null;
+        }
+        if (stillCurrent) {
+          scheduleNextPoll(generation);
         }
       }
-    } catch (e) {
-      set({ lastError: String(e) });
-      markSymbolsStale(findStaleFugleSymbols(get()._pollSymbols));
-    } finally {
-      const stillCurrent = get()._pollGeneration === generation;
-      set({ _pollInFlight: false });
-      if (stillCurrent) {
-        scheduleNextPoll(generation);
-      }
-    }
+    })();
+
+    activePollRun = run;
+    await run;
   };
 
   return {
@@ -670,9 +692,7 @@ export const useQuoteStore = create<QuoteState>((set, get) => {
 
     async forceRefresh(symbols: string[], options: QuoteFetchOptions = {}) {
       try {
-        if (get()._pollInFlight) {
-          await new Promise(resolve => setTimeout(resolve, 250));
-        }
+        await waitForPollIdle();
 
         await refreshQuotes(symbols, options, {
           preserveMarketOpenCarryForward: true,

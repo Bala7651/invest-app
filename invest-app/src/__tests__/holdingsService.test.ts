@@ -37,7 +37,8 @@ function makeDeleteChain() {
 }
 
 function makeInsertChain() {
-  const chain = { values: jest.fn().mockResolvedValue(undefined) };
+  const conflictChain = { onConflictDoUpdate: jest.fn().mockResolvedValue(undefined) };
+  const chain = { values: jest.fn(() => conflictChain) };
   return chain;
 }
 
@@ -50,10 +51,8 @@ beforeEach(() => {
 });
 
 describe('upsertHolding', () => {
-  it('inserts new row when symbol not in db', async () => {
-    const deleteChain = makeDeleteChain();
+  it('inserts or updates holdings rows via conflict handling', async () => {
     const insertChain = makeInsertChain();
-    (mockDb.delete as jest.Mock).mockReturnValue(deleteChain);
     (mockDb.insert as jest.Mock).mockReturnValue(insertChain);
 
     await upsertHolding('2330', '台積電', 5000);
@@ -65,24 +64,14 @@ describe('upsertHolding', () => {
       quantity: 5000,
       entry_price: null,
     });
-  });
-
-  it('updates quantity when symbol already exists (delete-then-insert)', async () => {
-    const deleteChain = makeDeleteChain();
-    const insertChain = makeInsertChain();
-    (mockDb.delete as jest.Mock).mockReturnValue(deleteChain);
-    (mockDb.insert as jest.Mock).mockReturnValue(insertChain);
-
-    await upsertHolding('2330', '台積電', 10000, 850);
-
-    expect(mockDb.delete).toHaveBeenCalledTimes(1);
-    expect(deleteChain.where).toHaveBeenCalledTimes(1);
-    expect(mockDb.insert).toHaveBeenCalledTimes(1);
-    expect(insertChain.values).toHaveBeenCalledWith({
-      symbol: '2330',
-      name: '台積電',
-      quantity: 10000,
-      entry_price: 850,
+    const conflictChain = insertChain.values.mock.results[0].value;
+    expect(conflictChain.onConflictDoUpdate).toHaveBeenCalledWith({
+      target: 'symbol',
+      set: expect.objectContaining({
+        name: '台積電',
+        quantity: 5000,
+        entry_price: null,
+      }),
     });
   });
 });

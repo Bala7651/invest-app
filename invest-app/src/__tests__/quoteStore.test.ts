@@ -373,6 +373,33 @@ describe('quoteStore forceRefresh', () => {
     expect(useQuoteStore.getState().polling).toBe(true);
   });
 
+  test('forceRefresh waits for the active poll run to finish before issuing a new fetch', async () => {
+    let resolveInitialFetch: ((quotes: typeof MOCK_QUOTES) => void) | undefined;
+    mockGetQuotes.mockImplementationOnce(
+      () =>
+        new Promise<typeof MOCK_QUOTES>((resolve) => {
+          resolveInitialFetch = resolve;
+        }),
+    );
+
+    await act(async () => {
+      useQuoteStore.getState().startPolling(SYMBOLS);
+      await Promise.resolve();
+    });
+
+    const refreshPromise = act(async () => {
+      await useQuoteStore.getState().forceRefresh(SYMBOLS);
+    });
+
+    await Promise.resolve();
+    expect(mockGetQuotes).toHaveBeenCalledTimes(1);
+
+    resolveInitialFetch?.(MOCK_QUOTES);
+    await refreshPromise;
+
+    expect(mockGetQuotes).toHaveBeenCalledTimes(2);
+  });
+
   test('forceRefresh sets lastError on fetch failure', async () => {
     mockGetQuotes.mockRejectedValueOnce(new Error('Network error'));
 

@@ -18,8 +18,18 @@ export async function upsertHolding(
   quantity: number,
   entryPrice: number | null = null,
 ): Promise<void> {
-  await db.delete(holdings).where(eq(holdings.symbol, symbol));
-  await db.insert(holdings).values({ symbol, name, quantity, entry_price: entryPrice });
+  await db
+    .insert(holdings)
+    .values({ symbol, name, quantity, entry_price: entryPrice })
+    .onConflictDoUpdate({
+      target: holdings.symbol,
+      set: {
+        name,
+        quantity,
+        entry_price: entryPrice,
+        updated_at: new Date(),
+      },
+    });
 }
 
 export async function getAllHoldings(): Promise<HoldingRow[]> {

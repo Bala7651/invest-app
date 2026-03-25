@@ -134,6 +134,17 @@ describe('setQuantity', () => {
     expect(holdings['2330']).toBeUndefined();
   });
 
+  it('preserves entry price when quantity changes', async () => {
+    useHoldingsStore.setState({
+      holdings: { '2330': makeHolding({ quantity: 5000, entry_price: 1810 }) },
+    });
+
+    await useHoldingsStore.getState().setQuantity('2330', '台積電', 8000);
+
+    expect(mockUpsertHolding).toHaveBeenCalledWith('2330', '台積電', 8000, 1810);
+    expect(useHoldingsStore.getState().holdings['2330'].entry_price).toBe(1810);
+  });
+
   it('persists entry price and keeps it in store memory until cleared', async () => {
     useHoldingsStore.setState({
       holdings: { '2330': makeHolding({ quantity: 5000, entry_price: null }) },

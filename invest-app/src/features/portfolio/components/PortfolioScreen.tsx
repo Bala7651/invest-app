@@ -44,6 +44,7 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
   const [followUpLoading, setFollowUpLoading] = useState(false);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const [followUpError, setFollowUpError] = useState<string | null>(null);
+  const [quantityDrafts, setQuantityDrafts] = useState<Record<string, string>>({});
 
   const hasLoaded = useRef(false);
 
@@ -53,6 +54,10 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
       useHoldingsStore.getState().loadHoldings();
     }
   }, [isActive]);
+
+  useEffect(() => {
+    setQuantityDrafts({});
+  }, [isLots]);
 
   function getDisplayQuantity(symbol: string): string {
     const holding = holdings[symbol];
@@ -69,14 +74,49 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
     return String(holding.entry_price);
   }
 
-  function handleQuantityChange(symbol: string, name: string, text: string) {
-    const raw = parseFloat(text);
-    if (isNaN(raw) || raw < 0) {
-      useHoldingsStore.getState().setQuantity(symbol, name, 0);
+  function getQuantityInputValue(symbol: string): string {
+    return quantityDrafts[symbol] ?? getDisplayQuantity(symbol);
+  }
+
+  function handleQuantityDraftChange(symbol: string, text: string) {
+    setQuantityDrafts((state) => ({
+      ...state,
+      [symbol]: text,
+    }));
+  }
+
+  function clearQuantityDraft(symbol: string) {
+    setQuantityDrafts((state) => {
+      if (!(symbol in state)) return state;
+      const next = { ...state };
+      delete next[symbol];
+      return next;
+    });
+  }
+
+  async function commitQuantityDraft(symbol: string, name: string) {
+    const draft = quantityDrafts[symbol];
+    if (draft == null) return;
+
+    const trimmed = draft.trim();
+    clearQuantityDraft(symbol);
+
+    if (trimmed === '') {
       return;
     }
+
+    const raw = parseFloat(trimmed);
+    if (isNaN(raw) || raw < 0) {
+      return;
+    }
+
     const shares = isLots ? raw * 1000 : raw;
-    useHoldingsStore.getState().setQuantity(symbol, name, shares);
+    await useHoldingsStore.getState().setQuantity(symbol, name, shares);
+  }
+
+  async function clearQuantity(symbol: string, name: string) {
+    clearQuantityDraft(symbol);
+    await useHoldingsStore.getState().setQuantity(symbol, name, 0);
   }
 
   function handleEntryPriceChange(symbol: string, name: string, text: string) {
@@ -401,11 +441,14 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
                   </View>
 
                   <View style={{ alignItems: 'flex-end' }}>
-                  <TextInput
-                    value={getDisplayQuantity(item.symbol)}
+                    <TextInput
+                    value={getQuantityInputValue(item.symbol)}
                     onChangeText={(text) =>
-                      handleQuantityChange(item.symbol, item.name, text)
+                      handleQuantityDraftChange(item.symbol, text)
                     }
+                    onEndEditing={() => {
+                      void commitQuantityDraft(item.symbol, item.name);
+                    }}
                     keyboardType="numeric"
                     placeholder={isLots ? '張數' : '股數'}
                     placeholderTextColor="#616161"
@@ -425,6 +468,18 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
                   <Text className="text-muted" style={{ fontSize: 10, marginTop: 2 }}>
                     {isLots ? '張 (×1000股)' : '股'}
                   </Text>
+                  {sharesHeld > 0 ? (
+                    <Pressable
+                      onPress={() => {
+                        void clearQuantity(item.symbol, item.name);
+                      }}
+                      style={{ marginTop: 4, alignSelf: 'flex-end' }}
+                    >
+                      <Text className="text-primary" style={{ fontSize: 10 }}>
+                        清除持股
+                      </Text>
+                    </Pressable>
+                  ) : null}
                   </View>
                 </View>
               </View>
