@@ -11,6 +11,11 @@ describe('quotePresentation', () => {
     expect(getQuoteSourceDetail('twse_live')).toBe('TWSE');
   });
 
+  it('maps Fugle live quotes to 即時', () => {
+    expect(getQuoteSourceLabel('fugle_live')).toBe('即時');
+    expect(getQuoteSourceDetail('fugle_live')).toBe('Fugle');
+  });
+
   it('maps delayed providers to 延遲', () => {
     expect(getQuoteSourceLabel('alpha_vantage')).toBe('延遲');
     expect(getQuoteSourceLabel('yahoo_delayed')).toBe('延遲');

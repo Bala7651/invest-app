@@ -2,6 +2,7 @@ import {
   watchlist,
   daily_summaries,
   analysis_cache,
+  holdings,
   portfolio_ai_state,
 } from '../db/schema';
 
@@ -16,6 +17,10 @@ describe('drizzle schema exports', () => {
 
   it('exports analysis_cache table', () => {
     expect(analysis_cache).toBeDefined();
+  });
+
+  it('exports holdings table', () => {
+    expect(holdings).toBeDefined();
   });
 
   it('exports portfolio_ai_state table', () => {
@@ -47,6 +52,15 @@ describe('drizzle schema exports', () => {
     expect(columns).toContain('content');
     expect(columns).toContain('cached_at');
     expect(columns).toContain('updated_at');
+  });
+
+  it('holdings has expected columns', () => {
+    const columns = Object.keys(holdings);
+    expect(columns).toContain('id');
+    expect(columns).toContain('symbol');
+    expect(columns).toContain('name');
+    expect(columns).toContain('quantity');
+    expect(columns).toContain('entry_price');
   });
 
   it('portfolio_ai_state has expected columns', () => {

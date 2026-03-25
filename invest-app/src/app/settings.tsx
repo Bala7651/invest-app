@@ -1,12 +1,16 @@
 import { startActivityAsync, ActivityAction } from 'expo-intent-launcher';
 import { useRef, useState } from 'react';
-import { KeyboardAvoidingView, PanResponder, Platform, Pressable, ScrollView, Switch, Text, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, PanResponder, Platform, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ApiKeyInput } from '../features/settings/components/ApiKeyInput';
 import { AlphaVantageApiKeyInput } from '../features/settings/components/AlphaVantageApiKeyInput';
+import { FugleApiKeyInput } from '../features/settings/components/FugleApiKeyInput';
 import { GlowPillSelector } from '../features/settings/components/GlowPillSelector';
 import { ALPHA_VANTAGE_DAILY_QUOTA, useSettingsStore } from '../features/settings/store/settingsStore';
 import { AI_PROVIDERS, MARKET_DATA_PROVIDERS } from '../features/settings/constants/providers';
+import { useWatchlistStore } from '../features/watchlist/store/watchlistStore';
+import { useQuoteStore } from '../features/market/quoteStore';
+import { isMarketOpen } from '../features/market/marketHours';
 
 function DropdownSelect({
   label,
@@ -78,6 +82,8 @@ export default function SettingsScreen() {
   const alphaVantageEnabled = useSettingsStore(s => s.alphaVantageEnabled);
   const alphaVantageDailyRemaining = useSettingsStore(s => s.alphaVantageDailyRemaining);
   const setAlphaVantageEnabled = useSettingsStore(s => s.setAlphaVantageEnabled);
+  const fugleEnabled = useSettingsStore(s => s.fugleEnabled);
+  const setFugleEnabled = useSettingsStore(s => s.setFugleEnabled);
 
   const currentProvider = AI_PROVIDERS.find(p => p.name === providerName) ?? AI_PROVIDERS[0];
   const currentMarketDataProvider =
@@ -100,6 +106,51 @@ export default function SettingsScreen() {
     if (provider) {
       setMarketDataProvider(provider.id);
     }
+  }
+
+  async function restartQuotePipeline() {
+    const symbols = useWatchlistStore.getState().items.map(item => item.symbol);
+    const quoteStore = useQuoteStore.getState();
+    quoteStore.stopPolling();
+    if (symbols.length === 0) return;
+    await quoteStore.forceRefresh(symbols);
+    if (isMarketOpen()) {
+      quoteStore.startPolling(symbols);
+    }
+  }
+
+  async function handleAlphaVantageToggle(value: boolean) {
+    if (value) {
+      Alert.alert(
+        'Alpha Vantage 已啟用',
+        '下拉刷新將只使用 Alpha Vantage，Fugle 不會在下拉刷新時使用，但如果 Fugle 已啟用，仍可持續提供即時推送。'
+      );
+      await setAlphaVantageEnabled(true);
+      await setMarketDataProvider('alpha_vantage');
+    } else {
+      await setAlphaVantageEnabled(false);
+      if (useSettingsStore.getState().marketDataProvider === 'alpha_vantage') {
+        await setMarketDataProvider(useSettingsStore.getState().fugleEnabled ? 'fugle' : 'twse_yahoo');
+      }
+    }
+    await restartQuotePipeline();
+  }
+
+  async function handleFugleToggle(value: boolean) {
+    if (value) {
+      Alert.alert(
+        'Fugle 已啟用',
+        '下拉刷新將只使用 Fugle，Alpha Vantage 不會在下拉刷新時使用。Fugle 啟用後，自選清單也會嘗試維持即時推送。'
+      );
+      await setFugleEnabled(true);
+      await setMarketDataProvider('fugle');
+    } else {
+      await setFugleEnabled(false);
+      if (useSettingsStore.getState().marketDataProvider === 'fugle') {
+        await setMarketDataProvider(useSettingsStore.getState().alphaVantageEnabled ? 'alpha_vantage' : 'twse_yahoo');
+      }
+    }
+    await restartQuotePipeline();
   }
 
   function handleBack() {
@@ -187,7 +238,7 @@ export default function SettingsScreen() {
                   </View>
                   <Switch
                     value={alphaVantageEnabled}
-                    onValueChange={(value) => setAlphaVantageEnabled(value)}
+                    onValueChange={handleAlphaVantageToggle}
                     trackColor={{ false: '#2a2a3a', true: '#4D7CFF' }}
                     thumbColor={alphaVantageEnabled ? '#fff' : '#888'}
                   />
@@ -203,6 +254,28 @@ export default function SettingsScreen() {
                 </View>
                 <Text className="text-muted text-xs mt-2">
                   只作為穩定報價 fallback，若 Alpha Vantage 沒有台股資料仍會回退到 TWSE / Yahoo。
+                </Text>
+              </View>
+            ) : null}
+
+            {marketDataProvider === 'fugle' ? (
+              <View className="mt-4">
+                <Text className="text-muted text-xs mb-1">Fugle API 金鑰</Text>
+                <FugleApiKeyInput />
+                <View className="mt-4 flex-row items-center justify-between">
+                  <View style={{ flex: 1, paddingRight: 12 }}>
+                    <Text className="text-text text-base">啟用 Fugle</Text>
+                    <Text className="text-muted text-xs mt-1">開啟後會在 TWSE 回價不穩時優先補值，手動下拉刷新也會主動查詢 Fugle。</Text>
+                  </View>
+                  <Switch
+                    value={fugleEnabled}
+                    onValueChange={handleFugleToggle}
+                    trackColor={{ false: '#2a2a3a', true: '#4D7CFF' }}
+                    thumbColor={fugleEnabled ? '#fff' : '#888'}
+                  />
+                </View>
+                <Text className="text-muted text-xs mt-2">
+                  Fugle 比較適合做台股主力補值來源；若 Fugle 失敗，仍會回退到 TWSE / Yahoo。
                 </Text>
               </View>
             ) : null}

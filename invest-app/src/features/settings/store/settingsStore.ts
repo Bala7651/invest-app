@@ -3,7 +3,7 @@ import { setItemAsync, getItemAsync, deleteItemAsync } from 'expo-secure-store';
 import { AI_PROVIDERS } from '../constants/providers';
 
 export type GlowLevel = 'subtle' | 'medium' | 'heavy';
-export type MarketDataProvider = 'twse_yahoo' | 'alpha_vantage';
+export type MarketDataProvider = 'twse_yahoo' | 'alpha_vantage' | 'fugle';
 export type AIProviderName = 'MiniMax' | 'OpenAI' | 'Google Gemini';
 export const ALPHA_VANTAGE_DAILY_QUOTA = 25;
 
@@ -19,6 +19,8 @@ const ALPHA_VANTAGE_API_KEY_STORE_KEY = 'alpha_vantage_api_key';
 const ALPHA_VANTAGE_ENABLED_STORE_KEY = 'alpha_vantage_enabled';
 const ALPHA_VANTAGE_DAILY_REMAINING_STORE_KEY = 'alpha_vantage_daily_remaining';
 const ALPHA_VANTAGE_LAST_RESET_STORE_KEY = 'alpha_vantage_last_reset';
+const FUGLE_API_KEY_STORE_KEY = 'fugle_api_key';
+const FUGLE_ENABLED_STORE_KEY = 'fugle_enabled';
 
 function getLocalDateKey(now = new Date()): string {
   const year = now.getFullYear();
@@ -101,21 +103,26 @@ interface SettingsState {
   alphaVantageEnabled: boolean;
   alphaVantageDailyRemaining: number;
   alphaVantageLastResetDate: string;
+  fugleApiKey: string;
+  fugleEnabled: boolean;
   setGlowLevel: (level: GlowLevel) => void;
   saveApiKey: (key: string) => Promise<void>;
   getApiKeyForProvider: (providerName: AIProviderName) => string;
   getActiveAiCredentials: () => { apiKey: string; modelName: string; baseUrl: string; providerName: AIProviderName };
   hasActiveAiKey: () => boolean;
   saveAlphaVantageApiKey: (key: string) => Promise<void>;
+  saveFugleApiKey: (key: string) => Promise<void>;
   loadFromSecureStore: () => Promise<void>;
   deleteApiKey: () => Promise<void>;
   deleteAlphaVantageApiKey: () => Promise<void>;
+  deleteFugleApiKey: () => Promise<void>;
   setModelName: (name: string) => Promise<void>;
   setBaseUrl: (url: string) => Promise<void>;
   setProvider: (name: string, baseUrl: string, defaultModel: string) => Promise<void>;
   setAiNotificationsEnabled: (enabled: boolean) => Promise<void>;
   setMarketDataProvider: (provider: MarketDataProvider) => Promise<void>;
   setAlphaVantageEnabled: (enabled: boolean) => Promise<void>;
+  setFugleEnabled: (enabled: boolean) => Promise<void>;
   ensureAlphaVantageQuotaCurrent: () => Promise<void>;
   resetAlphaVantageQuota: () => Promise<void>;
   recordAlphaVantageRequest: () => Promise<number>;
@@ -137,6 +144,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   alphaVantageEnabled: false,
   alphaVantageDailyRemaining: ALPHA_VANTAGE_DAILY_QUOTA,
   alphaVantageLastResetDate: getLocalDateKey(),
+  fugleApiKey: '',
+  fugleEnabled: false,
 
   setGlowLevel: (level) => set({ glowLevel: level }),
 
@@ -175,6 +184,11 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     });
   },
 
+  saveFugleApiKey: async (key) => {
+    await setItemAsync(FUGLE_API_KEY_STORE_KEY, key);
+    set({ fugleApiKey: key });
+  },
+
   loadFromSecureStore: async () => {
     const [
       minimaxApiKey,
@@ -189,6 +203,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       alphaVantageEnabled,
       alphaVantageDailyRemaining,
       alphaVantageLastResetDate,
+      fugleApiKey,
+      fugleEnabled,
     ] = await Promise.all([
       getItemAsync(MINIMAX_API_KEY_STORE_KEY),
       getItemAsync(OPENAI_API_KEY_STORE_KEY),
@@ -202,6 +218,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       getItemAsync(ALPHA_VANTAGE_ENABLED_STORE_KEY),
       getItemAsync(ALPHA_VANTAGE_DAILY_REMAINING_STORE_KEY),
       getItemAsync(ALPHA_VANTAGE_LAST_RESET_STORE_KEY),
+      getItemAsync(FUGLE_API_KEY_STORE_KEY),
+      getItemAsync(FUGLE_ENABLED_STORE_KEY),
     ]);
     const provider = resolveProvider(providerName ?? undefined);
     const resolvedProviderName = provider.name as AIProviderName;
@@ -267,11 +285,18 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       baseUrl: resolvedBaseUrl,
       providerName: resolvedProviderName,
       aiNotificationsEnabled: aiNotif !== 'false',
-      marketDataProvider: marketDataProvider === 'alpha_vantage' ? 'alpha_vantage' : 'twse_yahoo',
+      marketDataProvider:
+        marketDataProvider === 'alpha_vantage'
+          ? 'alpha_vantage'
+          : marketDataProvider === 'fugle'
+            ? 'fugle'
+            : 'twse_yahoo',
       alphaVantageApiKey: alphaVantageApiKey ?? '',
       alphaVantageEnabled: alphaVantageEnabled === 'true',
       alphaVantageDailyRemaining: resolvedRemaining,
       alphaVantageLastResetDate: resolvedResetDate,
+      fugleApiKey: fugleApiKey ?? '',
+      fugleEnabled: fugleEnabled === 'true',
     });
   },
 
@@ -297,6 +322,17 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       alphaVantageEnabled: false,
       alphaVantageDailyRemaining: ALPHA_VANTAGE_DAILY_QUOTA,
       alphaVantageLastResetDate: today,
+    });
+  },
+
+  deleteFugleApiKey: async () => {
+    await Promise.all([
+      deleteItemAsync(FUGLE_API_KEY_STORE_KEY),
+      setItemAsync(FUGLE_ENABLED_STORE_KEY, 'false'),
+    ]);
+    set({
+      fugleApiKey: '',
+      fugleEnabled: false,
     });
   },
 
@@ -334,6 +370,11 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   setAlphaVantageEnabled: async (enabled) => {
     await setItemAsync(ALPHA_VANTAGE_ENABLED_STORE_KEY, String(enabled));
     set({ alphaVantageEnabled: enabled });
+  },
+
+  setFugleEnabled: async (enabled) => {
+    await setItemAsync(FUGLE_ENABLED_STORE_KEY, String(enabled));
+    set({ fugleEnabled: enabled });
   },
 
   ensureAlphaVantageQuotaCurrent: async () => {

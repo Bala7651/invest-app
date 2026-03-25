@@ -21,6 +21,7 @@ interface HoldingsState {
   suggestedQuestionsSource: SuggestedQuestionsSource;
   loadHoldings: () => Promise<void>;
   setQuantity: (symbol: string, name: string, quantity: number) => Promise<void>;
+  setEntryPrice: (symbol: string, name: string, entryPrice: number | null) => Promise<void>;
   clearHoldings: () => void;
   setLastAnalysis: (result: PortfolioAnalysis | null) => void;
   setChatHistory: (history: ChatMessage[]) => void;
@@ -71,8 +72,9 @@ export const useHoldingsStore = create<HoldingsState>((set) => ({
   },
 
   setQuantity: async (symbol: string, name: string, quantity: number) => {
+    const existing = useHoldingsStore.getState().holdings[symbol];
     if (quantity > 0) {
-      await upsertHolding(symbol, name, quantity);
+      await upsertHolding(symbol, name, quantity, existing?.entry_price ?? null);
       set((state) => ({
         holdings: {
           ...state.holdings,
@@ -82,6 +84,7 @@ export const useHoldingsStore = create<HoldingsState>((set) => ({
             symbol,
             name,
             quantity,
+            entry_price: state.holdings[symbol]?.entry_price ?? null,
             created_at: state.holdings[symbol]?.created_at ?? null,
             updated_at: null,
           },
@@ -95,6 +98,28 @@ export const useHoldingsStore = create<HoldingsState>((set) => ({
         return { holdings: next };
       });
     }
+  },
+
+  setEntryPrice: async (symbol: string, name: string, entryPrice: number | null) => {
+    const existing = useHoldingsStore.getState().holdings[symbol];
+    if (!existing) return;
+
+    await upsertHolding(symbol, name, existing.quantity, entryPrice);
+    set((state) => ({
+      holdings: {
+        ...state.holdings,
+        [symbol]: {
+          ...state.holdings[symbol],
+          id: state.holdings[symbol]?.id ?? existing.id ?? 0,
+          symbol,
+          name,
+          quantity: state.holdings[symbol]?.quantity ?? existing.quantity,
+          entry_price: entryPrice,
+          created_at: state.holdings[symbol]?.created_at ?? existing.created_at ?? null,
+          updated_at: null,
+        },
+      },
+    }));
   },
 
   clearHoldings: () => set({ holdings: {} }),

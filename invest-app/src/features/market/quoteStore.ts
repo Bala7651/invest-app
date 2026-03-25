@@ -5,6 +5,11 @@ import { isMarketOpen } from './marketHours';
 import { fetchLatestQuoteForSummary, SummaryQuoteData } from '../summary/services/summaryService';
 import { useSettingsStore } from '../settings/store/settingsStore';
 import { QuoteSource } from './quotePresentation';
+import {
+  connectFugleWatchlistStream,
+  disconnectFugleWatchlistStream,
+  FugleTradeUpdate,
+} from './services/fugleStreamService';
 
 export interface Quote {
   symbol: string;
@@ -45,7 +50,7 @@ function buildResolvedQuote(q: {
   volume: number;
   bid?: number | null;
   ask?: number | null;
-  source?: 'twse_live' | 'alpha_vantage' | 'yahoo_delayed' | 'twse_unpriced';
+  source?: 'twse_live' | 'fugle_live' | 'alpha_vantage' | 'yahoo_delayed' | 'twse_unpriced';
 }, fetchedAt: number): Quote {
   const change = q.price - q.prevClose;
   const changePct = (change / q.prevClose) * 100;
@@ -64,7 +69,9 @@ function buildResolvedQuote(q: {
     bid: q.bid ?? null,
     ask: q.ask ?? null,
     source:
-      q.source === 'alpha_vantage'
+      q.source === 'fugle_live'
+        ? 'fugle_live'
+        : q.source === 'alpha_vantage'
         ? 'alpha_vantage'
         : q.source === 'yahoo_delayed'
           ? 'yahoo_delayed'
@@ -249,11 +256,60 @@ export const useQuoteStore = create<QuoteState>((set, get) => ({
 
     tick();
 
+    const {
+      fugleApiKey,
+      fugleEnabled,
+    } = useSettingsStore.getState();
+    if (fugleApiKey && fugleEnabled && symbols.length > 0) {
+      connectFugleWatchlistStream(fugleApiKey, symbols, {
+        onTrade: (update: FugleTradeUpdate) => {
+          const previous = get().quotes[update.symbol];
+          const prevClose = previous?.prevClose ?? update.price;
+          const nextQuote: Quote = {
+            symbol: update.symbol,
+            name: previous?.name ?? update.symbol,
+            price: update.price,
+            prevClose,
+            open: previous?.open ?? null,
+            high: previous ? Math.max(previous.high ?? update.price, update.price) : update.price,
+            low: previous ? Math.min(previous.low ?? update.price, update.price) : update.price,
+            volume: update.volume || previous?.volume || 0,
+            change: update.price - prevClose,
+            changePct: prevClose === 0 ? 0 : ((update.price - prevClose) / prevClose) * 100,
+            fetchedAt: update.updatedAt,
+            bid: update.bid ?? previous?.bid ?? null,
+            ask: update.ask ?? previous?.ask ?? null,
+            source: 'fugle_live',
+          };
+
+          const tickHistory = { ...get().tickHistory };
+          tickHistory[update.symbol] = [...(tickHistory[update.symbol] ?? []), update.price];
+          set({
+            quotes: {
+              ...get().quotes,
+              [update.symbol]: nextQuote,
+            },
+            tickHistory,
+            lastError: null,
+          });
+          checkAlerts({ [update.symbol]: nextQuote }).catch(() => {});
+        },
+        onStatus: (message) => {
+          if (message) {
+            set({ lastError: message });
+          }
+        },
+      });
+    } else {
+      disconnectFugleWatchlistStream();
+    }
+
     const id = setInterval(tick, 30_000);
     set({ polling: true, _intervalId: id });
   },
 
   stopPolling() {
+    disconnectFugleWatchlistStream();
     const { _intervalId } = get();
     if (_intervalId !== null) {
       clearInterval(_intervalId);
@@ -265,7 +321,16 @@ export const useQuoteStore = create<QuoteState>((set, get) => ({
     try {
       const raw = await getQuotes(symbols, options);
       if (symbols.length > 0 && raw.length === 0) {
-        const { marketDataProvider, alphaVantageApiKey, alphaVantageEnabled } = useSettingsStore.getState();
+        const {
+          marketDataProvider,
+          alphaVantageApiKey,
+          alphaVantageEnabled,
+          fugleApiKey,
+          fugleEnabled,
+        } = useSettingsStore.getState();
+        if (marketDataProvider === 'fugle' && fugleApiKey && fugleEnabled) {
+          throw new Error('Fugle、TWSE 與 Yahoo 都沒有返回任何報價資料');
+        }
         if (marketDataProvider === 'alpha_vantage' && alphaVantageApiKey && alphaVantageEnabled) {
           throw new Error('Alpha Vantage、TWSE 與 Yahoo 都沒有返回任何報價資料');
         }

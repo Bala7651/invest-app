@@ -29,6 +29,21 @@ const MOCK_YAHOO_CHART_RESPONSE = {
   },
 };
 
+const MOCK_FUGLE_QUOTE_RESPONSE = {
+  symbol: '2330',
+  name: '台積電',
+  previousClose: 1810,
+  openPrice: 1815,
+  highPrice: 1848,
+  lowPrice: 1812,
+  closePrice: 1845,
+  lastPrice: 1845,
+  bids: [{ price: 1845, size: 10 }],
+  asks: [{ price: 1850, size: 12 }],
+  total: { tradeVolume: 40899 },
+  lastUpdated: 1774420200000000,
+};
+
 const MOCK_ALPHA_VANTAGE_GLOBAL_QUOTE_RESPONSE = {
   'Global Quote': {
     '01. symbol': '4321.TW',
@@ -76,8 +91,12 @@ const MOCK_ALPHA_VANTAGE_DAILY_RESPONSE = {
 };
 
 beforeEach(() => {
+  StockService.resetFugleCache();
+  StockService.resetAlphaVantageCache();
   useSettingsStore.setState({
     marketDataProvider: 'twse_yahoo',
+    fugleApiKey: '',
+    fugleEnabled: false,
     alphaVantageApiKey: '',
     alphaVantageEnabled: false,
     alphaVantageDailyRemaining: 25,
@@ -147,7 +166,7 @@ it('TWSEQuote interface has required fields via mock fetch response', async () =
     json: async () => mockResponse,
   } as any);
 
-  const quotes = await StockService.getQuotes(['2330']);
+  const quotes = await StockService.getQuotes(['2330'], { forceNetwork: true });
   expect(quotes).toHaveLength(1);
   const q = quotes[0];
   expect(q).toHaveProperty('symbol', '2330');
@@ -223,7 +242,7 @@ it('getQuotes falls back to Yahoo when TWSE returns a null live price', async ()
       json: async () => MOCK_YAHOO_CHART_RESPONSE,
     } as any);
 
-  const quotes = await StockService.getQuotes(['2330']);
+  const quotes = await StockService.getQuotes(['2330'], { forceNetwork: true });
   expect(quotes).toHaveLength(1);
   expect(quotes[0]).toMatchObject({
     symbol: '2330',
@@ -284,6 +303,214 @@ it('getQuotes uses Alpha Vantage fallback before Yahoo when enabled and TWSE has
   expect(useSettingsStore.getState().alphaVantageDailyRemaining).toBe(24);
   expect(global.fetch).toHaveBeenCalledTimes(2);
   expect((global.fetch as jest.Mock).mock.calls[1][0]).toContain('function=GLOBAL_QUOTE');
+});
+
+it('getQuotes uses Fugle fallback before Yahoo when enabled and TWSE has no live price', async () => {
+  useSettingsStore.setState({
+    marketDataProvider: 'fugle',
+    fugleApiKey: 'fugle-key',
+    fugleEnabled: true,
+  });
+
+  const twseResponse = {
+    msgArray: [
+      {
+        c: '2330',
+        n: '台積電',
+        z: '-',
+        y: '1810.00',
+        o: '1815.00',
+        h: '1848.00',
+        l: '1812.00',
+        v: '12345',
+        tlong: '1742299200000',
+      },
+    ],
+  };
+
+  global.fetch = jest
+    .fn()
+    .mockResolvedValueOnce({
+      ok: true,
+      json: async () => twseResponse,
+    } as any)
+    .mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => MOCK_FUGLE_QUOTE_RESPONSE,
+    } as any);
+
+  const quotes = await StockService.getQuotes(['2330'], { forceNetwork: true });
+  expect(quotes).toHaveLength(1);
+  expect(quotes[0]).toMatchObject({
+    symbol: '2330',
+    price: 1845,
+    prevClose: 1810,
+    source: 'fugle_live',
+    bid: 1845,
+    ask: 1850,
+  });
+  expect(global.fetch).toHaveBeenCalledTimes(2);
+  expect((global.fetch as jest.Mock).mock.calls[1][0]).toContain('/stock/intraday/quote/2330');
+});
+
+it('forceFugleLookup triggers Fugle search on manual refresh and replaces TWSE live price', async () => {
+  useSettingsStore.setState({
+    marketDataProvider: 'fugle',
+    fugleApiKey: 'fugle-key',
+    fugleEnabled: true,
+  });
+
+  const twseResponse = {
+    msgArray: [
+      {
+        c: '2330',
+        n: '台積電',
+        z: '1840.00',
+        y: '1810.00',
+        o: '1815.00',
+        h: '1840.00',
+        l: '1812.00',
+        v: '12345',
+        tlong: '1742299200000',
+      },
+    ],
+  };
+
+  global.fetch = jest
+    .fn()
+    .mockResolvedValueOnce({
+      ok: true,
+      json: async () => twseResponse,
+    } as any)
+    .mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => MOCK_FUGLE_QUOTE_RESPONSE,
+    } as any);
+
+  const quotes = await StockService.getQuotes(['2330'], {
+    forceFugleLookup: true,
+    forceFugleNetwork: true,
+  });
+
+  expect(quotes).toHaveLength(1);
+  expect(quotes[0]).toMatchObject({
+    symbol: '2330',
+    price: 1845,
+    source: 'fugle_live',
+  });
+  expect(global.fetch).toHaveBeenCalledTimes(2);
+});
+
+it('forceAlphaVantageLookup skips Fugle during manual refresh when both providers are enabled', async () => {
+  useSettingsStore.setState({
+    marketDataProvider: 'alpha_vantage',
+    fugleApiKey: 'fugle-key',
+    fugleEnabled: true,
+    alphaVantageApiKey: 'alpha-key',
+    alphaVantageEnabled: true,
+  });
+
+  const twseResponse = {
+    msgArray: [
+      {
+        c: '2330',
+        n: '台積電',
+        z: '-',
+        y: '1810.00',
+        o: '1815.00',
+        h: '1840.00',
+        l: '1812.00',
+        v: '12345',
+        tlong: '1742299200000',
+      },
+    ],
+  };
+
+  global.fetch = jest
+    .fn()
+    .mockResolvedValueOnce({
+      ok: true,
+      json: async () => twseResponse,
+    } as any)
+    .mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        'Global Quote': {
+          '01. symbol': '2330.TW',
+          '02. open': '1820.00',
+          '03. high': '1830.00',
+          '04. low': '1805.00',
+          '05. price': '1822.00',
+          '06. volume': '4321',
+          '08. previous close': '1810.00',
+        },
+      }),
+    } as any);
+
+  const quotes = await StockService.getQuotes(['2330'], {
+    forceAlphaVantageLookup: true,
+    forceAlphaVantageNetwork: true,
+  });
+
+  expect(quotes).toHaveLength(1);
+  expect(quotes[0]).toMatchObject({
+    symbol: '2330',
+    price: 1822,
+    source: 'alpha_vantage',
+  });
+  expect(global.fetch).toHaveBeenCalledTimes(2);
+  expect((global.fetch as jest.Mock).mock.calls[1][0]).toContain('function=GLOBAL_QUOTE');
+});
+
+it('getQuotes falls back to Yahoo when Fugle is unauthorized', async () => {
+  useSettingsStore.setState({
+    marketDataProvider: 'fugle',
+    fugleApiKey: 'bad-fugle-key',
+    fugleEnabled: true,
+  });
+
+  const twseResponse = {
+    msgArray: [
+      {
+        c: '2330',
+        n: '台積電',
+        z: '-',
+        y: '1810.00',
+        o: '1815.00',
+        h: '1848.00',
+        l: '1812.00',
+        v: '12345',
+        tlong: '1742299200000',
+      },
+    ],
+  };
+
+  global.fetch = jest
+    .fn()
+    .mockResolvedValueOnce({
+      ok: true,
+      json: async () => twseResponse,
+    } as any)
+    .mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      json: async () => ({ message: 'Unauthorized' }),
+    } as any)
+    .mockResolvedValueOnce({
+      ok: true,
+      json: async () => MOCK_YAHOO_CHART_RESPONSE,
+    } as any);
+
+  const quotes = await StockService.getQuotes(['2330'], { forceNetwork: true });
+  expect(quotes).toHaveLength(1);
+  expect(quotes[0]).toMatchObject({
+    symbol: '2330',
+    price: 1820,
+    source: 'yahoo_delayed',
+  });
+  expect(global.fetch).toHaveBeenCalledTimes(3);
 });
 
 it('getQuotes falls back to Alpha Vantage time series when GLOBAL_QUOTE is empty', async () => {

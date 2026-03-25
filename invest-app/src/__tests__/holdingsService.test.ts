@@ -19,6 +19,7 @@ jest.mock('../db/schema', () => ({
     symbol: 'symbol',
     name: 'name',
     quantity: 'quantity',
+    entry_price: 'entry_price',
   },
 }));
 
@@ -62,6 +63,7 @@ describe('upsertHolding', () => {
       symbol: '2330',
       name: '台積電',
       quantity: 5000,
+      entry_price: null,
     });
   });
 
@@ -71,7 +73,7 @@ describe('upsertHolding', () => {
     (mockDb.delete as jest.Mock).mockReturnValue(deleteChain);
     (mockDb.insert as jest.Mock).mockReturnValue(insertChain);
 
-    await upsertHolding('2330', '台積電', 10000);
+    await upsertHolding('2330', '台積電', 10000, 850);
 
     expect(mockDb.delete).toHaveBeenCalledTimes(1);
     expect(deleteChain.where).toHaveBeenCalledTimes(1);
@@ -80,6 +82,7 @@ describe('upsertHolding', () => {
       symbol: '2330',
       name: '台積電',
       quantity: 10000,
+      entry_price: 850,
     });
   });
 });

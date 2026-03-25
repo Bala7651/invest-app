@@ -78,6 +78,7 @@ function WatchlistPage() {
 
   function getSourceLabel(source: string | undefined): string {
     if (source === 'twse_live') return 'TWSE';
+    if (source === 'fugle_live') return 'Fugle';
     if (source === 'yahoo_delayed') return 'Yahoo';
     if (source === 'alpha_vantage') return 'Alpha Vantage';
     if (source === 'twse_close' || source === 'prev_close') return '昨收';
@@ -96,11 +97,17 @@ function WatchlistPage() {
       settingsBefore.marketDataProvider === 'alpha_vantage' &&
       settingsBefore.alphaVantageEnabled &&
       !!settingsBefore.alphaVantageApiKey;
+    const fugleActive =
+      settingsBefore.marketDataProvider === 'fugle' &&
+      settingsBefore.fugleEnabled &&
+      !!settingsBefore.fugleApiKey;
     const quotaWasExhausted = alphaActive && settingsBefore.alphaVantageDailyRemaining <= 0;
     try {
       if (symbols.length > 0) {
         await useQuoteStore.getState().forceRefresh(symbols, {
           forceNetwork: true,
+          forceFugleLookup: fugleActive,
+          forceFugleNetwork: fugleActive,
           forceAlphaVantageLookup: alphaActive,
           forceAlphaVantageNetwork: alphaActive,
         });
@@ -112,12 +119,19 @@ function WatchlistPage() {
         const fallbackSources = items
           .map(item => quotes[item.symbol]?.source)
           .filter((source): source is 'twse_live' | 'yahoo_delayed' | 'twse_close' | 'prev_close' =>
-            source != null && source !== 'alpha_vantage'
+            source != null && source !== 'alpha_vantage' && source !== 'fugle_live'
           );
         const fallbackLabels = Array.from(new Set(fallbackSources.map(getSourceLabel)));
         const fallbackLabelText = fallbackLabels.length > 0 ? fallbackLabels.join('、') : 'TWSE / Yahoo';
 
         if (lastError) {
+          if (fugleActive) {
+            Alert.alert(
+              '重新整理失敗',
+              `Fugle、TWSE 與 Yahoo 都沒有成功更新報價：\n${lastError}`
+            );
+            return;
+          }
           if (alphaQuotaExhausted || quotaWasExhausted) {
             Alert.alert(
               '重新整理失敗',
@@ -132,6 +146,16 @@ function WatchlistPage() {
         const missing = items
           .filter(item => quotes[item.symbol]?.price == null)
           .map(item => `${item.symbol} ${item.name}`);
+
+        if (fugleActive) {
+          if (missing.length > 0) {
+            Alert.alert(
+              '價格仍未取得',
+              `以下股票重新整理後仍沒有價格：\n${missing.join('\n')}\n\n本次已先嘗試 Fugle，再回退到 TWSE / Yahoo。`
+            );
+          }
+          return;
+        }
 
         if (alphaQuotaExhausted || quotaWasExhausted) {
           const messageLines = [

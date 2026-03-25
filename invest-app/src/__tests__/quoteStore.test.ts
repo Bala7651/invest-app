@@ -14,6 +14,11 @@ jest.mock('../features/alerts/services/alertMonitor', () => ({
   checkAlerts: jest.fn().mockResolvedValue(undefined),
 }));
 
+jest.mock('../features/market/services/fugleStreamService', () => ({
+  connectFugleWatchlistStream: jest.fn(),
+  disconnectFugleWatchlistStream: jest.fn(),
+}));
+
 jest.mock('../features/summary/services/summaryService', () => ({
   fetchLatestQuoteForSummary: jest.fn().mockResolvedValue({
     price: 200,
@@ -34,10 +39,17 @@ jest.mock('../features/summary/services/summaryService', () => ({
 import { getQuotes } from '../services/stockService';
 import { isMarketOpen } from '../features/market/marketHours';
 import { fetchLatestQuoteForSummary } from '../features/summary/services/summaryService';
+import { useSettingsStore } from '../features/settings/store/settingsStore';
+import {
+  connectFugleWatchlistStream,
+  disconnectFugleWatchlistStream,
+} from '../features/market/services/fugleStreamService';
 
 const mockGetQuotes = getQuotes as jest.MockedFunction<typeof getQuotes>;
 const mockIsMarketOpen = isMarketOpen as jest.MockedFunction<typeof isMarketOpen>;
 const mockFetchLatestQuoteForSummary = fetchLatestQuoteForSummary as jest.MockedFunction<typeof fetchLatestQuoteForSummary>;
+const mockConnectFugleWatchlistStream = connectFugleWatchlistStream as jest.MockedFunction<typeof connectFugleWatchlistStream>;
+const mockDisconnectFugleWatchlistStream = disconnectFugleWatchlistStream as jest.MockedFunction<typeof disconnectFugleWatchlistStream>;
 
 const SYMBOLS = ['2330', '2317'];
 
@@ -120,6 +132,7 @@ describe('quoteStore polling lifecycle', () => {
 
     expect(useQuoteStore.getState().polling).toBe(false);
     expect(useQuoteStore.getState()._intervalId).toBeNull();
+    expect(mockDisconnectFugleWatchlistStream).toHaveBeenCalled();
   });
 
   test('startPolling is idempotent — calling twice does not create two intervals', async () => {
@@ -152,6 +165,28 @@ describe('quoteStore polling lifecycle', () => {
 
     expect(useQuoteStore.getState().polling).toBe(false);
     expect(mockGetQuotes).not.toHaveBeenCalled();
+  });
+
+  test('startPolling opens Fugle stream when Fugle is enabled even if manual refresh provider is Alpha Vantage', async () => {
+    useSettingsStore.setState({
+      marketDataProvider: 'alpha_vantage',
+      fugleApiKey: 'fugle-key',
+      fugleEnabled: true,
+    });
+
+    await act(async () => {
+      useQuoteStore.getState().startPolling(['2330']);
+      await Promise.resolve();
+    });
+
+    expect(mockConnectFugleWatchlistStream).toHaveBeenCalledWith(
+      'fugle-key',
+      ['2330'],
+      expect.objectContaining({
+        onTrade: expect.any(Function),
+        onStatus: expect.any(Function),
+      })
+    );
   });
 
   test('When isMarketOpen returns false in tick, stopPolling is called with final fetch', async () => {

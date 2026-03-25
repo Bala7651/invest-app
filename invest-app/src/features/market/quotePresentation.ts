@@ -1,4 +1,4 @@
-export type QuoteSource = 'twse_live' | 'alpha_vantage' | 'yahoo_delayed' | 'twse_close' | 'prev_close';
+export type QuoteSource = 'twse_live' | 'fugle_live' | 'alpha_vantage' | 'yahoo_delayed' | 'twse_close' | 'prev_close';
 export type QuoteSourceLabel = '即時' | '延遲' | '收盤';
 
 export interface QuotePresentationInput {
@@ -39,13 +39,14 @@ export interface QuoteSnapshot {
 }
 
 export function getQuoteSourceLabel(source: QuoteSource): QuoteSourceLabel {
-  if (source === 'twse_live') return '即時';
+  if (source === 'twse_live' || source === 'fugle_live') return '即時';
   if (source === 'alpha_vantage' || source === 'yahoo_delayed') return '延遲';
   return '收盤';
 }
 
 export function getQuoteSourceDetail(source: QuoteSource): string {
   if (source === 'twse_live') return 'TWSE';
+  if (source === 'fugle_live') return 'Fugle';
   if (source === 'alpha_vantage') return 'Alpha Vantage';
   if (source === 'yahoo_delayed') return 'Yahoo';
   return 'TWSE';

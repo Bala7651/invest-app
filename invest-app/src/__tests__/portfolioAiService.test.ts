@@ -25,6 +25,7 @@ const makeEntry = (overrides = {}) => ({
   name: '台積電',
   quantity: 5000,
   currentPrice: 850,
+  entryPrice: 810,
   ...overrides,
 });
 
@@ -35,6 +36,13 @@ describe('buildPortfolioPrompt', () => {
 
     expect(prompt).toContain('台積電');
     expect(prompt).toContain('5,000');
+  });
+
+  it('includes entry price and unrealized P/L context when available', () => {
+    const prompt = buildPortfolioPrompt([makeEntry({ entryPrice: 810, currentPrice: 850 })]);
+
+    expect(prompt).toContain('買入價 810 元');
+    expect(prompt).toContain('未實現損益');
   });
 
   it('caps at 15 stocks when given 16+ entries', () => {

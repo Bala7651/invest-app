@@ -7,13 +7,19 @@ export interface HoldingRow {
   symbol: string;
   name: string;
   quantity: number;
+  entry_price: number | null;
   created_at: Date | null;
   updated_at: Date | null;
 }
 
-export async function upsertHolding(symbol: string, name: string, quantity: number): Promise<void> {
+export async function upsertHolding(
+  symbol: string,
+  name: string,
+  quantity: number,
+  entryPrice: number | null = null,
+): Promise<void> {
   await db.delete(holdings).where(eq(holdings.symbol, symbol));
-  await db.insert(holdings).values({ symbol, name, quantity });
+  await db.insert(holdings).values({ symbol, name, quantity, entry_price: entryPrice });
 }
 
 export async function getAllHoldings(): Promise<HoldingRow[]> {

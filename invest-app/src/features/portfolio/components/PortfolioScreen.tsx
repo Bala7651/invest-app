@@ -63,6 +63,12 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
     return String(holding.quantity);
   }
 
+  function getDisplayEntryPrice(symbol: string): string {
+    const holding = holdings[symbol];
+    if (!holding || holding.entry_price == null) return '';
+    return String(holding.entry_price);
+  }
+
   function handleQuantityChange(symbol: string, name: string, text: string) {
     const raw = parseFloat(text);
     if (isNaN(raw) || raw < 0) {
@@ -71,6 +77,17 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
     }
     const shares = isLots ? raw * 1000 : raw;
     useHoldingsStore.getState().setQuantity(symbol, name, shares);
+  }
+
+  function handleEntryPriceChange(symbol: string, name: string, text: string) {
+    if (text.trim() === '') {
+      useHoldingsStore.getState().setEntryPrice(symbol, name, null);
+      return;
+    }
+
+    const raw = parseFloat(text);
+    if (isNaN(raw) || raw <= 0) return;
+    useHoldingsStore.getState().setEntryPrice(symbol, name, raw);
   }
 
   function buildPortfolioEntries(sourceQuotes = quotes) {
@@ -83,6 +100,7 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
         name: item.name,
         quantity: holding?.quantity ?? 0,
         currentPrice: snapshot.price,
+        entryPrice: holding?.entry_price ?? null,
       };
     });
   }
@@ -283,9 +301,18 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
             const holding = holdings[item.symbol];
             const price = snapshot.price;
             const sharesHeld = holding?.quantity ?? 0;
+            const entryPrice = holding?.entry_price ?? null;
             const value =
               price !== null && sharesHeld > 0
                 ? `${(sharesHeld * price).toLocaleString()} 元`
+                : null;
+            const unrealizedPnL =
+              price !== null && entryPrice != null && sharesHeld > 0
+                ? (price - entryPrice) * sharesHeld
+                : null;
+            const unrealizedPct =
+              price !== null && entryPrice != null && entryPrice > 0 && sharesHeld > 0
+                ? ((price - entryPrice) / entryPrice) * 100
                 : null;
 
             return (
@@ -302,6 +329,9 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
                   <Text className="text-text text-xs" style={{ marginTop: 2 }}>
                     {price != null ? `${price.toFixed(2)} 元` : '—'}
                   </Text>
+                  <Text className="text-muted text-xs" style={{ marginTop: 2 }}>
+                    {entryPrice != null ? `買入價 ${entryPrice.toFixed(2)} 元` : '買入價 未設定'}
+                  </Text>
                   {snapshot.sourceMeta ? (
                     <Text className="text-muted text-xs" style={{ marginTop: 2 }}>
                       {snapshot.sourceMeta}
@@ -312,10 +342,65 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
                       {value}
                     </Text>
                   ) : null}
+                  {unrealizedPnL != null ? (
+                    <Text
+                      className={unrealizedPnL >= 0 ? 'text-stock-up' : 'text-stock-down'}
+                      style={{ marginTop: 2, fontSize: 12 }}
+                    >
+                      未實現損益 {unrealizedPnL >= 0 ? '+' : ''}{Math.round(unrealizedPnL).toLocaleString()} 元
+                      {unrealizedPct != null ? `（${unrealizedPct >= 0 ? '+' : ''}${unrealizedPct.toFixed(1)}%）` : ''}
+                    </Text>
+                  ) : null}
                 </View>
 
                 {/* Quantity input */}
-                <View style={{ alignItems: 'flex-end' }}>
+                <View style={{ alignItems: 'flex-end', gap: 8 }}>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <TextInput
+                      value={getDisplayEntryPrice(item.symbol)}
+                      onChangeText={(text) =>
+                        handleEntryPriceChange(item.symbol, item.name, text)
+                      }
+                      keyboardType="numeric"
+                      placeholder="買入價"
+                      placeholderTextColor="#616161"
+                      style={{
+                        color: '#E0E0E0',
+                        backgroundColor: '#0D0D14',
+                        borderColor: '#1E2A4A',
+                        borderWidth: 1,
+                        borderRadius: 6,
+                        paddingHorizontal: 10,
+                        paddingVertical: 4,
+                        width: 108,
+                        textAlign: 'right',
+                        fontSize: 14,
+                      }}
+                    />
+                    <View style={{ marginTop: 4, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text className="text-muted" style={{ fontSize: 10 }}>
+                        買入價
+                      </Text>
+                      {entryPrice != null ? (
+                        <Pressable
+                          onPress={() => useHoldingsStore.getState().setEntryPrice(item.symbol, item.name, null)}
+                          style={{
+                            width: 18,
+                            height: 18,
+                            borderRadius: 9,
+                            borderWidth: 1,
+                            borderColor: '#4D7CFF',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Text style={{ color: '#4D7CFF', fontSize: 11, fontWeight: '700' }}>x</Text>
+                        </Pressable>
+                      ) : null}
+                    </View>
+                  </View>
+
+                  <View style={{ alignItems: 'flex-end' }}>
                   <TextInput
                     value={getDisplayQuantity(item.symbol)}
                     onChangeText={(text) =>
@@ -340,6 +425,7 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
                   <Text className="text-muted" style={{ fontSize: 10, marginTop: 2 }}>
                     {isLots ? '張 (×1000股)' : '股'}
                   </Text>
+                  </View>
                 </View>
               </View>
             );

@@ -29,6 +29,7 @@ const makeHolding = (overrides = {}) => ({
   symbol: '2330',
   name: '台積電',
   quantity: 5000,
+  entry_price: 810,
   created_at: new Date(),
   updated_at: new Date(),
   ...overrides,
@@ -116,7 +117,7 @@ describe('setQuantity', () => {
 
     await useHoldingsStore.getState().setQuantity('2330', '台積電', 8000);
 
-    expect(mockUpsertHolding).toHaveBeenCalledWith('2330', '台積電', 8000);
+    expect(mockUpsertHolding).toHaveBeenCalledWith('2330', '台積電', 8000, null);
     const { holdings } = useHoldingsStore.getState();
     expect(holdings['2330'].quantity).toBe(8000);
   });
@@ -131,6 +132,28 @@ describe('setQuantity', () => {
     expect(mockDeleteHolding).toHaveBeenCalledWith('2330');
     const { holdings } = useHoldingsStore.getState();
     expect(holdings['2330']).toBeUndefined();
+  });
+
+  it('persists entry price and keeps it in store memory until cleared', async () => {
+    useHoldingsStore.setState({
+      holdings: { '2330': makeHolding({ quantity: 5000, entry_price: null }) },
+    });
+
+    await useHoldingsStore.getState().setEntryPrice('2330', '台積電', 1810);
+
+    expect(mockUpsertHolding).toHaveBeenCalledWith('2330', '台積電', 5000, 1810);
+    expect(useHoldingsStore.getState().holdings['2330'].entry_price).toBe(1810);
+  });
+
+  it('clears entry price when requested', async () => {
+    useHoldingsStore.setState({
+      holdings: { '2330': makeHolding({ quantity: 5000, entry_price: 1810 }) },
+    });
+
+    await useHoldingsStore.getState().setEntryPrice('2330', '台積電', null);
+
+    expect(mockUpsertHolding).toHaveBeenCalledWith('2330', '台積電', 5000, null);
+    expect(useHoldingsStore.getState().holdings['2330'].entry_price).toBeNull();
   });
 });
 

@@ -12,13 +12,43 @@ export interface TWSEQuote {
   updatedAt: number;
   bid?: number | null;
   ask?: number | null;
-  source?: 'twse_live' | 'twse_unpriced' | 'yahoo_delayed' | 'alpha_vantage';
+  source?: 'twse_live' | 'twse_unpriced' | 'fugle_live' | 'yahoo_delayed' | 'alpha_vantage';
 }
 
 export interface QuoteFetchOptions {
   forceNetwork?: boolean;
+  forceFugleLookup?: boolean;
+  forceFugleNetwork?: boolean;
   forceAlphaVantageLookup?: boolean;
   forceAlphaVantageNetwork?: boolean;
+}
+
+interface FugleBookLevel {
+  price?: number;
+  size?: number;
+}
+
+interface FugleQuoteResponse {
+  symbol?: string;
+  name?: string;
+  referencePrice?: number;
+  previousClose?: number;
+  openPrice?: number;
+  highPrice?: number;
+  lowPrice?: number;
+  closePrice?: number;
+  lastPrice?: number;
+  change?: number;
+  changePercent?: number;
+  bids?: FugleBookLevel[];
+  asks?: FugleBookLevel[];
+  total?: {
+    tradeVolume?: number;
+  };
+  lastUpdated?: number;
+  closeTime?: number;
+  statusCode?: number;
+  message?: string;
 }
 
 interface YahooChartMeta {
@@ -72,10 +102,19 @@ interface AlphaVantageIntradayResponse {
 }
 
 const YAHOO_CACHE_TTL_MS = 60_000;
+const FUGLE_CACHE_TTL_MS = 15_000;
 const ALPHA_VANTAGE_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const ALPHA_VANTAGE_RATE_LIMIT_TTL_MS = 15 * 60 * 1000;
 const ALPHA_VANTAGE_ERROR_TTL_MS = 15 * 60 * 1000;
 const yahooFallbackCache = new Map<string, { quote: TWSEQuote; fetchedAt: number }>();
+const fugleCache = new Map<
+  string,
+  {
+    quote: TWSEQuote | null;
+    fetchedAt: number;
+    reason: 'success' | 'unauthorized' | 'error';
+  }
+>();
 const alphaVantageCache = new Map<
   string,
   {
@@ -108,6 +147,14 @@ export function parseSentinel(val: string): number | null {
 
 function parseNumber(val: unknown): number | null {
   return typeof val === 'number' && Number.isFinite(val) ? val : null;
+}
+
+function normalizeFugleTimestamp(value: unknown): number | null {
+  const timestamp = parseNumber(value);
+  if (timestamp == null) return null;
+  if (timestamp > 1_000_000_000_000_000) return Math.floor(timestamp / 1000);
+  if (timestamp > 10_000_000_000_000) return Math.floor(timestamp / 1000);
+  return timestamp;
 }
 
 function parseAlphaVantageNumber(value: unknown): number | null {
@@ -145,6 +192,16 @@ function getCachedYahooQuote(symbol: string, now = Date.now()): TWSEQuote | null
   return cached.quote;
 }
 
+function getCachedFugleQuote(symbol: string, now = Date.now()): TWSEQuote | null | undefined {
+  const cached = fugleCache.get(symbol);
+  if (!cached) return undefined;
+  if (now - cached.fetchedAt > FUGLE_CACHE_TTL_MS) {
+    fugleCache.delete(symbol);
+    return undefined;
+  }
+  return cached.quote;
+}
+
 function getAlphaVantageCacheTtl(reason: 'success' | 'unsupported' | 'rate_limit' | 'error'): number {
   if (reason === 'rate_limit') return ALPHA_VANTAGE_RATE_LIMIT_TTL_MS;
   if (reason === 'error') return ALPHA_VANTAGE_ERROR_TTL_MS;
@@ -163,6 +220,106 @@ function getCachedAlphaVantageQuote(symbol: string, now = Date.now()): TWSEQuote
 
 function alphaVantageCandidates(symbol: string): string[] {
   return [`${symbol}.TW`, `${symbol}.TPE`];
+}
+
+function buildFugleQuoteFromResponse(symbol: string, data: FugleQuoteResponse): TWSEQuote | null {
+  const price = parseNumber(data.lastPrice) ?? parseNumber(data.closePrice);
+  const prevClose = parseNumber(data.previousClose) ?? parseNumber(data.referencePrice);
+  if (price == null || prevClose == null) return null;
+
+  return {
+    symbol,
+    name: data.name ?? symbol,
+    price,
+    prevClose,
+    open: parseNumber(data.openPrice),
+    high: parseNumber(data.highPrice),
+    low: parseNumber(data.lowPrice),
+    volume: parseNumber(data.total?.tradeVolume) ?? 0,
+    updatedAt:
+      normalizeFugleTimestamp(data.lastUpdated) ??
+      normalizeFugleTimestamp(data.closeTime) ??
+      Date.now(),
+    bid: parseNumber(data.bids?.[0]?.price),
+    ask: parseNumber(data.asks?.[0]?.price),
+    source: 'fugle_live',
+  };
+}
+
+async function fetchFugleJson<T>(url: string, apiKey: string): Promise<{ status: number; data: T | null }> {
+  const { signal, cleanup } = createTimeoutSignal(10_000);
+  try {
+    const res = await fetch(url, {
+      headers: {
+        'X-API-KEY': apiKey,
+        'User-Agent': 'invest-app/1.0',
+      },
+      signal,
+    });
+
+    if (res.status === 401) {
+      return { status: 401, data: null };
+    }
+
+    if (!res.ok) {
+      throw new Error(`Fugle HTTP ${res.status}`);
+    }
+
+    return {
+      status: res.status,
+      data: await res.json(),
+    };
+  } finally {
+    cleanup();
+  }
+}
+
+async function fetchFugleQuote(
+  symbol: string,
+  options: QuoteFetchOptions = {},
+): Promise<TWSEQuote | null> {
+  const { fugleApiKey, fugleEnabled } = useSettingsStore.getState();
+  if (!fugleApiKey || !fugleEnabled) {
+    return null;
+  }
+
+  const cached = options.forceFugleNetwork ? undefined : getCachedFugleQuote(symbol);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  try {
+    const { status, data } = await fugleQueue.enqueue(() =>
+      fetchFugleJson<FugleQuoteResponse>(
+        `https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote/${encodeURIComponent(symbol)}`,
+        fugleApiKey
+      )
+    );
+
+    if (status === 401) {
+      fugleCache.set(symbol, {
+        quote: null,
+        fetchedAt: Date.now(),
+        reason: 'unauthorized',
+      });
+      return null;
+    }
+
+    const quote = data ? buildFugleQuoteFromResponse(symbol, data) : null;
+    fugleCache.set(symbol, {
+      quote,
+      fetchedAt: Date.now(),
+      reason: quote ? 'success' : 'error',
+    });
+    return quote;
+  } catch {
+    fugleCache.set(symbol, {
+      quote: null,
+      fetchedAt: Date.now(),
+      reason: 'error',
+    });
+    return null;
+  }
 }
 
 function buildAlphaVantageQuoteFromGlobalQuote(
@@ -337,13 +494,11 @@ async function fetchAlphaVantageQuote(
 ): Promise<TWSEQuote | null> {
   await useSettingsStore.getState().ensureAlphaVantageQuotaCurrent();
   const {
-    marketDataProvider,
     alphaVantageApiKey,
     alphaVantageEnabled,
     alphaVantageDailyRemaining,
   } = useSettingsStore.getState();
   if (
-    marketDataProvider !== 'alpha_vantage' ||
     !alphaVantageApiKey ||
     !alphaVantageEnabled ||
     alphaVantageDailyRemaining <= 0
@@ -458,6 +613,57 @@ async function fetchYahooQuote(symbol: string, options: QuoteFetchOptions = {}):
   }
 }
 
+async function applyFugleFallbacks(
+  symbols: string[],
+  quotes: TWSEQuote[],
+  options: QuoteFetchOptions = {}
+): Promise<TWSEQuote[]> {
+  const { fugleApiKey, fugleEnabled } = useSettingsStore.getState();
+  if (!fugleApiKey || !fugleEnabled || options.forceAlphaVantageLookup) {
+    return quotes;
+  }
+
+  const bySymbol = new Map(quotes.map(q => [q.symbol, q] as const));
+  const candidateSymbols = options.forceFugleLookup
+    ? symbols
+    : symbols.filter(symbol => {
+        const q = bySymbol.get(symbol);
+        return !q || q.price === null;
+      });
+
+  for (const symbol of candidateSymbols) {
+    const fugleQuote = await fetchFugleQuote(symbol, options);
+    if (!fugleQuote) continue;
+
+    const existing = bySymbol.get(symbol);
+    if (!existing) {
+      bySymbol.set(symbol, fugleQuote);
+      continue;
+    }
+
+    if (existing.price != null && !options.forceFugleLookup) {
+      continue;
+    }
+
+    bySymbol.set(symbol, {
+      ...existing,
+      name: fugleQuote.name || existing.name,
+      price: fugleQuote.price ?? existing.price,
+      prevClose: fugleQuote.prevClose ?? existing.prevClose,
+      open: fugleQuote.open ?? existing.open,
+      high: fugleQuote.high ?? existing.high,
+      low: fugleQuote.low ?? existing.low,
+      volume: fugleQuote.volume || existing.volume,
+      updatedAt: fugleQuote.updatedAt || existing.updatedAt,
+      bid: fugleQuote.bid ?? existing.bid ?? null,
+      ask: fugleQuote.ask ?? existing.ask ?? null,
+      source: fugleQuote.source ?? existing.source,
+    });
+  }
+
+  return symbols.map(symbol => bySymbol.get(symbol)).filter((quote): quote is TWSEQuote => Boolean(quote));
+}
+
 async function applyYahooFallbacks(
   symbols: string[],
   quotes: TWSEQuote[],
@@ -533,6 +739,7 @@ class RequestQueue {
 }
 
 const _queue = new RequestQueue(2000);
+const fugleQueue = new RequestQueue(1100);
 const alphaVantageQueue = new RequestQueue(1200);
 
 async function withRetry<T>(fn: () => Promise<T>): Promise<T | null> {
@@ -581,7 +788,8 @@ async function _fetchQuotes(symbols: string[], options: QuoteFetchOptions = {}):
       cleanup();
     }
   });
-  const alphaAugmented = await applyAlphaVantageFallbacks(symbols, result ?? [], options);
+  const fugleAugmented = await applyFugleFallbacks(symbols, result ?? [], options);
+  const alphaAugmented = await applyAlphaVantageFallbacks(symbols, fugleAugmented, options);
   return applyYahooFallbacks(symbols, alphaAugmented, options);
 }
 
@@ -596,13 +804,12 @@ async function applyAlphaVantageFallbacks(
 ): Promise<TWSEQuote[]> {
   await useSettingsStore.getState().ensureAlphaVantageQuotaCurrent();
   const {
-    marketDataProvider,
     alphaVantageApiKey,
     alphaVantageEnabled,
     alphaVantageDailyRemaining,
   } = useSettingsStore.getState();
   if (
-    marketDataProvider !== 'alpha_vantage' ||
+    options.forceFugleLookup ||
     !alphaVantageApiKey ||
     !alphaVantageEnabled ||
     alphaVantageDailyRemaining <= 0
@@ -651,4 +858,8 @@ async function applyAlphaVantageFallbacks(
 
 export function resetAlphaVantageCache() {
   alphaVantageCache.clear();
+}
+
+export function resetFugleCache() {
+  fugleCache.clear();
 }

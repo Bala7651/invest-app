@@ -64,6 +64,7 @@ export const holdings = sqliteTable(
     symbol: text('symbol').notNull(),
     name: text('name').notNull(),
     quantity: real('quantity').notNull().default(0),
+    entry_price: real('entry_price'),
     created_at: integer('created_at', { mode: 'timestamp' }).$defaultFn(
       () => new Date()
     ),

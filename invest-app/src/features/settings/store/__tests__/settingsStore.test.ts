@@ -36,6 +36,8 @@ beforeEach(() => {
     alphaVantageEnabled: false,
     alphaVantageDailyRemaining: 25,
     alphaVantageLastResetDate: getLocalDateKey(),
+    fugleApiKey: '',
+    fugleEnabled: false,
     aiNotificationsEnabled: true,
   });
 });
@@ -140,6 +142,21 @@ describe('loadFromSecureStore', () => {
     expect(useSettingsStore.getState().alphaVantageApiKey).toBe('alpha-key');
     expect(useSettingsStore.getState().alphaVantageEnabled).toBe(true);
     expect(useSettingsStore.getState().alphaVantageDailyRemaining).toBe(17);
+  });
+
+  it('loads Fugle settings from SecureStore', async () => {
+    mockGetItemAsync.mockImplementation((key: string) => {
+      if (key === 'market_data_provider') return Promise.resolve('fugle');
+      if (key === 'fugle_api_key') return Promise.resolve('fugle-key');
+      if (key === 'fugle_enabled') return Promise.resolve('true');
+      return Promise.resolve(null);
+    });
+
+    await useSettingsStore.getState().loadFromSecureStore();
+
+    expect(useSettingsStore.getState().marketDataProvider).toBe('fugle');
+    expect(useSettingsStore.getState().fugleApiKey).toBe('fugle-key');
+    expect(useSettingsStore.getState().fugleEnabled).toBe(true);
   });
 
   it('hydrates the OpenAI key into the active apiKey when providerName is OpenAI', async () => {
@@ -261,6 +278,30 @@ describe('saveAlphaVantageApiKey', () => {
   });
 });
 
+describe('saveFugleApiKey', () => {
+  it('persists Fugle api key to SecureStore', async () => {
+    await useSettingsStore.getState().saveFugleApiKey('fugle-key');
+    expect(mockSetItemAsync).toHaveBeenCalledWith('fugle_api_key', 'fugle-key');
+  });
+
+  it('updates state.fugleApiKey after save', async () => {
+    await useSettingsStore.getState().saveFugleApiKey('fugle-key');
+    expect(useSettingsStore.getState().fugleApiKey).toBe('fugle-key');
+  });
+});
+
+describe('saveFugleApiKey', () => {
+  it('persists Fugle api key to SecureStore', async () => {
+    await useSettingsStore.getState().saveFugleApiKey('fugle-key');
+    expect(mockSetItemAsync).toHaveBeenCalledWith('fugle_api_key', 'fugle-key');
+  });
+
+  it('updates state.fugleApiKey after save', async () => {
+    await useSettingsStore.getState().saveFugleApiKey('fugle-key');
+    expect(useSettingsStore.getState().fugleApiKey).toBe('fugle-key');
+  });
+});
+
 describe('setMarketDataProvider', () => {
   it('persists the selected market data provider', async () => {
     await useSettingsStore.getState().setMarketDataProvider('alpha_vantage');
@@ -270,6 +311,12 @@ describe('setMarketDataProvider', () => {
   it('updates state.marketDataProvider', async () => {
     await useSettingsStore.getState().setMarketDataProvider('alpha_vantage');
     expect(useSettingsStore.getState().marketDataProvider).toBe('alpha_vantage');
+  });
+
+  it('supports switching to Fugle', async () => {
+    await useSettingsStore.getState().setMarketDataProvider('fugle');
+    expect(mockSetItemAsync).toHaveBeenCalledWith('market_data_provider', 'fugle');
+    expect(useSettingsStore.getState().marketDataProvider).toBe('fugle');
   });
 });
 
@@ -301,5 +348,21 @@ describe('Alpha Vantage quota helpers', () => {
     await useSettingsStore.getState().ensureAlphaVantageQuotaCurrent();
     expect(useSettingsStore.getState().alphaVantageDailyRemaining).toBe(25);
     expect(useSettingsStore.getState().alphaVantageLastResetDate).toBe(getLocalDateKey());
+  });
+});
+
+describe('Fugle helpers', () => {
+  it('setFugleEnabled persists and updates state', async () => {
+    await useSettingsStore.getState().setFugleEnabled(true);
+    expect(mockSetItemAsync).toHaveBeenCalledWith('fugle_enabled', 'true');
+    expect(useSettingsStore.getState().fugleEnabled).toBe(true);
+  });
+
+  it('deleteFugleApiKey clears the key and disables Fugle', async () => {
+    useSettingsStore.setState({ fugleApiKey: 'fugle-key', fugleEnabled: true });
+    await useSettingsStore.getState().deleteFugleApiKey();
+    expect(mockDeleteItemAsync).toHaveBeenCalledWith('fugle_api_key');
+    expect(useSettingsStore.getState().fugleApiKey).toBe('');
+    expect(useSettingsStore.getState().fugleEnabled).toBe(false);
   });
 });

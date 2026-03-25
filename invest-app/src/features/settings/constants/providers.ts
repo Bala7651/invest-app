@@ -5,7 +5,7 @@ export interface AIProvider {
 }
 
 export interface MarketDataProviderOption {
-  id: 'twse_yahoo' | 'alpha_vantage';
+  id: 'twse_yahoo' | 'alpha_vantage' | 'fugle';
   label: string;
   description: string;
 }
@@ -38,5 +38,10 @@ export const MARKET_DATA_PROVIDERS: MarketDataProviderOption[] = [
     id: 'alpha_vantage',
     label: 'Alpha Vantage',
     description: '以 Alpha Vantage 穩定報價作為額外 fallback',
+  },
+  {
+    id: 'fugle',
+    label: 'Fugle',
+    description: '使用 Fugle 台股行情 API 補足或主動刷新個股報價',
   },
 ];
