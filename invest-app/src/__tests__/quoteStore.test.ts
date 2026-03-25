@@ -101,8 +101,16 @@ beforeEach(() => {
     quotes: {},
     polling: false,
     lastError: null,
-    _intervalId: null,
     tickHistory: {},
+    _pollTimeoutId: null,
+    _pollGeneration: 0,
+    _pollInFlight: false,
+    _pollSymbols: [],
+    _lastRestRefreshAt: 0,
+    _lastFugleBootstrapAt: 0,
+    _lastFugleStaleRefreshAt: 0,
+    _lastFugleTradeAtBySymbol: {},
+    _fugleConnected: false,
   });
 });
 
@@ -131,7 +139,7 @@ describe('quoteStore polling lifecycle', () => {
     useQuoteStore.getState().stopPolling();
 
     expect(useQuoteStore.getState().polling).toBe(false);
-    expect(useQuoteStore.getState()._intervalId).toBeNull();
+    expect(useQuoteStore.getState()._pollTimeoutId).toBeNull();
     expect(mockDisconnectFugleWatchlistStream).toHaveBeenCalled();
   });
 
@@ -141,14 +149,14 @@ describe('quoteStore polling lifecycle', () => {
       await Promise.resolve();
     });
 
-    const firstIntervalId = useQuoteStore.getState()._intervalId;
+    const firstIntervalId = useQuoteStore.getState()._pollTimeoutId;
 
     await act(async () => {
       useQuoteStore.getState().startPolling(SYMBOLS);
       await Promise.resolve();
     });
 
-    const secondIntervalId = useQuoteStore.getState()._intervalId;
+    const secondIntervalId = useQuoteStore.getState()._pollTimeoutId;
 
     // Interval should not have changed — still the same one
     expect(secondIntervalId).toBe(firstIntervalId);
@@ -306,6 +314,8 @@ describe('quoteStore forceRefresh', () => {
           bid: null,
           ask: null,
           source: 'prev_close',
+          sourceUpdatedAt: 1,
+          freshnessState: 'fresh',
         },
       },
     });

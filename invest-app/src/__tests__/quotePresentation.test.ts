@@ -30,6 +30,16 @@ describe('quotePresentation', () => {
     expect(formatQuoteSourceMeta('twse_live', 1820, 1825)).toBe('即時 · TWSE · 買 1820.00 / 賣 1825.00');
   });
 
+  it('adds freshness text for live Fugle quotes', () => {
+    jest.spyOn(Date, 'now').mockReturnValue(200_000);
+    expect(formatQuoteSourceMeta('fugle_live', null, null, 195_000, 'fresh')).toBe('即時 · Fugle · 5秒前');
+    jest.restoreAllMocks();
+  });
+
+  it('marks stale live quotes clearly', () => {
+    expect(formatQuoteSourceMeta('fugle_live', null, null, 1000, 'stale')).toBe('即時 · Fugle · 更新較慢');
+  });
+
   it('builds a full snapshot for delayed quotes', () => {
     const snapshot = buildQuoteSnapshot('台積電', {
       symbol: '2330',
@@ -46,6 +56,8 @@ describe('quotePresentation', () => {
       bid: null,
       ask: null,
       source: 'alpha_vantage',
+      sourceUpdatedAt: 123,
+      freshnessState: 'fresh',
     });
 
     expect(snapshot.sourceLabel).toBe('延遲');

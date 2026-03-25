@@ -4,12 +4,26 @@ import { getQuotes, QuoteFetchOptions } from '../../services/stockService';
 import { isMarketOpen } from './marketHours';
 import { fetchLatestQuoteForSummary, SummaryQuoteData } from '../summary/services/summaryService';
 import { useSettingsStore } from '../settings/store/settingsStore';
-import { QuoteSource } from './quotePresentation';
+import { QuoteFreshnessState, QuoteSource } from './quotePresentation';
 import {
   connectFugleWatchlistStream,
   disconnectFugleWatchlistStream,
   FugleTradeUpdate,
 } from './services/fugleStreamService';
+
+const REST_POLL_INTERVAL_MS = 30_000;
+const POLL_LOOP_INTERVAL_MS = 10_000;
+const FUGLE_STALE_AFTER_MS = 25_000;
+const FUGLE_STALE_REFRESH_INTERVAL_MS = 20_000;
+
+const SOURCE_PRIORITY: Record<QuoteSource, number> = {
+  fugle_live: 0,
+  twse_live: 1,
+  alpha_vantage: 2,
+  yahoo_delayed: 3,
+  twse_close: 4,
+  prev_close: 5,
+};
 
 export interface Quote {
   symbol: string;
@@ -26,6 +40,8 @@ export interface Quote {
   bid: number | null;
   ask: number | null;
   source: QuoteSource;
+  sourceUpdatedAt: number | null;
+  freshnessState: QuoteFreshnessState;
 }
 
 interface QuoteState {
@@ -33,10 +49,87 @@ interface QuoteState {
   tickHistory: Record<string, number[]>;
   polling: boolean;
   lastError: string | null;
-  _intervalId: ReturnType<typeof setInterval> | null;
+  _pollTimeoutId: ReturnType<typeof setTimeout> | null;
+  _pollGeneration: number;
+  _pollInFlight: boolean;
+  _pollSymbols: string[];
+  _lastRestRefreshAt: number;
+  _lastFugleBootstrapAt: number;
+  _lastFugleStaleRefreshAt: number;
+  _lastFugleTradeAtBySymbol: Record<string, number>;
+  _fugleConnected: boolean;
   startPolling: (symbols: string[]) => void;
   stopPolling: () => void;
   forceRefresh: (symbols: string[], options?: QuoteFetchOptions) => Promise<void>;
+}
+
+function getSourceTimestamp(quote: Pick<Quote, 'sourceUpdatedAt' | 'fetchedAt'>): number {
+  return quote.sourceUpdatedAt ?? quote.fetchedAt;
+}
+
+function isIncomingPreferred(existing: Quote, incoming: Quote): boolean {
+  const existingTs = getSourceTimestamp(existing);
+  const incomingTs = getSourceTimestamp(incoming);
+  if (incomingTs !== existingTs) {
+    return incomingTs > existingTs;
+  }
+  if (incoming.fetchedAt !== existing.fetchedAt) {
+    if (SOURCE_PRIORITY[incoming.source] !== SOURCE_PRIORITY[existing.source]) {
+      return SOURCE_PRIORITY[incoming.source] < SOURCE_PRIORITY[existing.source];
+    }
+    return incoming.fetchedAt > existing.fetchedAt;
+  }
+  if (incoming.source === existing.source) {
+    return true;
+  }
+  return SOURCE_PRIORITY[incoming.source] < SOURCE_PRIORITY[existing.source];
+}
+
+function mergeQuotes(existing: Quote | undefined, incoming: Quote): Quote {
+  if (!existing) return incoming;
+
+  if (isIncomingPreferred(existing, incoming)) {
+    return {
+      ...existing,
+      ...incoming,
+      open: incoming.open ?? existing.open,
+      high: incoming.high ?? existing.high,
+      low: incoming.low ?? existing.low,
+      bid: incoming.bid ?? existing.bid ?? null,
+      ask: incoming.ask ?? existing.ask ?? null,
+      volume: incoming.volume || existing.volume,
+      sourceUpdatedAt: incoming.sourceUpdatedAt ?? existing.sourceUpdatedAt,
+      freshnessState: incoming.freshnessState ?? existing.freshnessState,
+    };
+  }
+
+  return {
+    ...existing,
+    name: incoming.name || existing.name,
+    prevClose: incoming.prevClose || existing.prevClose,
+    open: existing.open ?? incoming.open,
+    high: existing.high ?? incoming.high,
+    low: existing.low ?? incoming.low,
+    bid: existing.bid ?? incoming.bid ?? null,
+    ask: existing.ask ?? incoming.ask ?? null,
+    volume: Math.max(existing.volume, incoming.volume),
+    fetchedAt: Math.max(existing.fetchedAt, incoming.fetchedAt),
+  };
+}
+
+function withFreshness(quote: Quote, freshnessState: QuoteFreshnessState): Quote {
+  return { ...quote, freshnessState };
+}
+
+function appendTickHistory(
+  tickHistory: Record<string, number[]>,
+  symbol: string,
+  price: number,
+): Record<string, number[]> {
+  return {
+    ...tickHistory,
+    [symbol]: [...(tickHistory[symbol] ?? []), price].slice(-120),
+  };
 }
 
 function buildResolvedQuote(q: {
@@ -50,6 +143,7 @@ function buildResolvedQuote(q: {
   volume: number;
   bid?: number | null;
   ask?: number | null;
+  updatedAt?: number;
   source?: 'twse_live' | 'fugle_live' | 'alpha_vantage' | 'yahoo_delayed' | 'twse_unpriced';
 }, fetchedAt: number): Quote {
   const change = q.price - q.prevClose;
@@ -74,8 +168,10 @@ function buildResolvedQuote(q: {
         : q.source === 'alpha_vantage'
         ? 'alpha_vantage'
         : q.source === 'yahoo_delayed'
-          ? 'yahoo_delayed'
-          : 'twse_live',
+        ? 'yahoo_delayed'
+        : 'twse_live',
+    sourceUpdatedAt: q.updatedAt ?? fetchedAt,
+    freshnessState: 'fresh',
   };
 }
 
@@ -102,6 +198,8 @@ function buildQuoteFromDaily(
     bid,
     ask,
     source: 'twse_close',
+    sourceUpdatedAt: fetchedAt,
+    freshnessState: 'fresh',
   };
 }
 
@@ -128,6 +226,30 @@ function buildPrevCloseFallback(q: {
     bid: q.bid ?? null,
     ask: q.ask ?? null,
     source: 'prev_close',
+    sourceUpdatedAt: fetchedAt,
+    freshnessState: 'fresh',
+  };
+}
+
+function buildCarryForwardQuote(
+  previous: Quote,
+  q: {
+    symbol: string;
+    name: string;
+    prevClose: number;
+    bid?: number | null;
+    ask?: number | null;
+  },
+  fetchedAt: number,
+): Quote {
+  return {
+    ...previous,
+    symbol: q.symbol,
+    name: q.name,
+    prevClose: q.prevClose,
+    bid: q.bid ?? previous.bid,
+    ask: q.ask ?? previous.ask,
+    fetchedAt,
   };
 }
 
@@ -144,244 +266,425 @@ async function loadDailyFallbacks(
   return Object.fromEntries(results);
 }
 
-export const useQuoteStore = create<QuoteState>((set, get) => ({
-  quotes: {},
-  tickHistory: {},
-  polling: false,
-  lastError: null,
-  _intervalId: null,
+function buildNoQuotesError(): Error {
+  const {
+    marketDataProvider,
+    alphaVantageApiKey,
+    alphaVantageEnabled,
+    fugleApiKey,
+    fugleEnabled,
+  } = useSettingsStore.getState();
+  if (marketDataProvider === 'fugle' && fugleApiKey && fugleEnabled) {
+    return new Error('Fugle、TWSE 與 Yahoo 都沒有返回任何報價資料');
+  }
+  if (marketDataProvider === 'alpha_vantage' && alphaVantageApiKey && alphaVantageEnabled) {
+    return new Error('Alpha Vantage、TWSE 與 Yahoo 都沒有返回任何報價資料');
+  }
+  return new Error('TWSE 與 Yahoo 都沒有返回任何報價資料');
+}
 
-  startPolling(symbols: string[]) {
-    if (get().polling) return;
-    if (!isMarketOpen()) {
-      set({ polling: false });
-      return;
+export const useQuoteStore = create<QuoteState>((set, get) => {
+  const clearPollTimer = () => {
+    const timeoutId = get()._pollTimeoutId;
+    if (timeoutId !== null) {
+      clearTimeout(timeoutId);
+    }
+    set({ _pollTimeoutId: null });
+  };
+
+  const markSymbolsStale = (symbols: string[], fetchedAt = Date.now()) => {
+    if (symbols.length === 0) return;
+    const nextQuotes = { ...get().quotes };
+    let changed = false;
+    for (const symbol of symbols) {
+      const existing = nextQuotes[symbol];
+      if (!existing || existing.source !== 'fugle_live' || existing.freshnessState === 'stale') {
+        continue;
+      }
+      nextQuotes[symbol] = withFreshness(
+        {
+          ...existing,
+          fetchedAt,
+        },
+        'stale',
+      );
+      changed = true;
+    }
+    if (changed) {
+      set({ quotes: nextQuotes });
+    }
+  };
+
+  const applyRawQuotes = async (
+    symbols: string[],
+    raw: Array<{
+      symbol: string;
+      name: string;
+      price: number | null;
+      prevClose: number;
+      open: number | null;
+      high: number | null;
+      low: number | null;
+      volume: number;
+      updatedAt: number;
+      bid?: number | null;
+      ask?: number | null;
+      source?: 'twse_live' | 'fugle_live' | 'alpha_vantage' | 'yahoo_delayed' | 'twse_unpriced';
+    }>,
+    fetchedAt: number,
+    options: {
+      preserveMarketOpenCarryForward: boolean;
+      fugleRefreshSymbols?: string[];
+      updateRestTimestamp?: boolean;
+      updateFugleBootstrapAt?: boolean;
+      updateFugleStaleRefreshAt?: boolean;
+    },
+  ) => {
+    const marketOpen = isMarketOpen();
+    const dailyFallbacks = await loadDailyFallbacks(raw);
+    const nextQuotes = { ...get().quotes };
+    let tickHistory = { ...get().tickHistory };
+    const alertQuotes: Record<string, Quote> = {};
+    const fugleRefreshed = new Set<string>();
+
+    for (const q of raw) {
+      const previous = nextQuotes[q.symbol];
+      let nextQuote: Quote;
+
+      if (q.price !== null) {
+        nextQuote = buildResolvedQuote(q as typeof q & { price: number }, fetchedAt);
+      } else if (options.preserveMarketOpenCarryForward && marketOpen && previous?.price != null) {
+        nextQuote = buildCarryForwardQuote(previous, q, fetchedAt);
+      } else {
+        const daily = dailyFallbacks[q.symbol];
+        if (daily?.price != null) {
+          nextQuote = buildQuoteFromDaily(q.symbol, q.name, daily, fetchedAt, q.bid ?? null, q.ask ?? null);
+        } else if (previous?.price != null) {
+          nextQuote = buildCarryForwardQuote(previous, q, fetchedAt);
+        } else {
+          nextQuote = buildPrevCloseFallback(q, fetchedAt);
+        }
+      }
+
+      const merged = mergeQuotes(previous, nextQuote);
+      nextQuotes[q.symbol] = merged;
+      if (
+        merged.price != null &&
+        (q.price !== null || nextQuote.source === 'fugle_live' || nextQuote.source === 'twse_live')
+      ) {
+        tickHistory = appendTickHistory(tickHistory, q.symbol, merged.price);
+      }
+      if (nextQuote.price != null) {
+        alertQuotes[q.symbol] = merged;
+      }
+      if (nextQuote.source === 'fugle_live') {
+        fugleRefreshed.add(q.symbol);
+      }
     }
 
-    const tick = async () => {
-      if (!isMarketOpen()) {
-        // Final fetch before stopping
-        try {
-          const raw = await getQuotes(symbols);
-          const fetchedAt = Date.now();
-          const dailyFallbacks = await loadDailyFallbacks(raw);
-          const quotes: Record<string, Quote> = {};
-          for (const q of raw) {
-            const previous = get().quotes[q.symbol];
-            if (q.price !== null) {
-              quotes[q.symbol] = buildResolvedQuote(q as typeof q & { price: number }, fetchedAt);
-              continue;
-            }
-
-            const daily = dailyFallbacks[q.symbol];
-            if (daily?.price != null) {
-              quotes[q.symbol] = buildQuoteFromDaily(q.symbol, q.name, daily, fetchedAt, q.bid ?? null, q.ask ?? null);
-            } else if (previous?.price != null) {
-              quotes[q.symbol] = {
-                ...previous,
-                symbol: q.symbol,
-                name: q.name,
-                prevClose: q.prevClose,
-                bid: q.bid ?? previous.bid,
-                ask: q.ask ?? previous.ask,
-                fetchedAt,
-              };
-            } else {
-              quotes[q.symbol] = buildPrevCloseFallback(q, fetchedAt);
-            }
-          }
-          const tickHistory = { ...get().tickHistory };
-          for (const q of raw) {
-            if (q.price !== null) {
-              const prev = tickHistory[q.symbol] ?? [];
-              tickHistory[q.symbol] = [...prev, q.price];
-            }
-          }
-          set({ quotes: { ...get().quotes, ...quotes }, tickHistory, lastError: null });
-        } catch (e) {
-          set({ lastError: String(e) });
-        }
-        get().stopPolling();
-        return;
-      }
-
-      try {
-        const raw = await getQuotes(symbols);
-        const fetchedAt = Date.now();
-        const dailyFallbacks = await loadDailyFallbacks(raw);
-        const quotes: Record<string, Quote> = {};
-        const alertQuotes: Record<string, Quote> = {};
-        for (const q of raw) {
-          const previous = get().quotes[q.symbol];
-          if (q.price !== null) {
-            const liveQuote = buildResolvedQuote(q as typeof q & { price: number }, fetchedAt);
-            quotes[q.symbol] = liveQuote;
-            alertQuotes[q.symbol] = liveQuote;
-            continue;
-          }
-
-          if (previous?.price != null) {
-            quotes[q.symbol] = {
-              ...previous,
-              symbol: q.symbol,
-              name: q.name,
-              prevClose: q.prevClose,
-              bid: q.bid ?? previous.bid,
-              ask: q.ask ?? previous.ask,
+    if (options.fugleRefreshSymbols?.length) {
+      for (const symbol of options.fugleRefreshSymbols) {
+        if (fugleRefreshed.has(symbol)) continue;
+        const existing = nextQuotes[symbol];
+        if (existing?.source === 'fugle_live') {
+          nextQuotes[symbol] = withFreshness(
+            {
+              ...existing,
               fetchedAt,
-            };
-            continue;
-          }
-
-          const daily = dailyFallbacks[q.symbol];
-          if (daily?.price != null) {
-            quotes[q.symbol] = buildQuoteFromDaily(q.symbol, q.name, daily, fetchedAt, q.bid ?? null, q.ask ?? null);
-          } else {
-            quotes[q.symbol] = buildPrevCloseFallback(q, fetchedAt);
-          }
+            },
+            'stale',
+          );
         }
-        const tickHistory = { ...get().tickHistory };
-        for (const q of raw) {
-          if (q.price !== null) {
-            const prev = tickHistory[q.symbol] ?? [];
-            tickHistory[q.symbol] = [...prev, q.price];
-          }
-        }
-        set({ quotes: { ...get().quotes, ...quotes }, tickHistory, lastError: null });
-        checkAlerts(alertQuotes).catch(() => {});
-      } catch (e) {
-        set({ lastError: String(e) });
       }
-    };
+    }
 
-    tick();
+    set((state) => ({
+      quotes: nextQuotes,
+      tickHistory,
+      lastError: null,
+      _lastRestRefreshAt: options.updateRestTimestamp ? fetchedAt : state._lastRestRefreshAt,
+      _lastFugleBootstrapAt: options.updateFugleBootstrapAt ? fetchedAt : state._lastFugleBootstrapAt,
+      _lastFugleStaleRefreshAt: options.updateFugleStaleRefreshAt ? fetchedAt : state._lastFugleStaleRefreshAt,
+    }));
 
+    if (Object.keys(alertQuotes).length > 0) {
+      checkAlerts(alertQuotes).catch(() => {});
+    }
+  };
+
+  const refreshQuotes = async (
+    symbols: string[],
+    options: QuoteFetchOptions = {},
+    meta: {
+      preserveMarketOpenCarryForward?: boolean;
+      updateRestTimestamp?: boolean;
+      updateFugleBootstrapAt?: boolean;
+      updateFugleStaleRefreshAt?: boolean;
+      treatEmptyAsError?: boolean;
+      fugleRefreshSymbols?: string[];
+    } = {},
+  ) => {
+    const raw = await getQuotes(symbols, options);
+    if (symbols.length > 0 && raw.length === 0 && meta.treatEmptyAsError) {
+      throw buildNoQuotesError();
+    }
+    const fetchedAt = Date.now();
+    await applyRawQuotes(symbols, raw, fetchedAt, {
+      preserveMarketOpenCarryForward: meta.preserveMarketOpenCarryForward ?? true,
+      fugleRefreshSymbols: meta.fugleRefreshSymbols,
+      updateRestTimestamp: meta.updateRestTimestamp ?? false,
+      updateFugleBootstrapAt: meta.updateFugleBootstrapAt ?? false,
+      updateFugleStaleRefreshAt: meta.updateFugleStaleRefreshAt ?? false,
+    });
+    return fetchedAt;
+  };
+
+  const connectFugleIfNeeded = (symbols: string[]) => {
     const {
       fugleApiKey,
       fugleEnabled,
     } = useSettingsStore.getState();
-    if (fugleApiKey && fugleEnabled && symbols.length > 0) {
-      connectFugleWatchlistStream(fugleApiKey, symbols, {
-        onTrade: (update: FugleTradeUpdate) => {
-          const previous = get().quotes[update.symbol];
-          const prevClose = previous?.prevClose ?? update.price;
-          const nextQuote: Quote = {
-            symbol: update.symbol,
-            name: previous?.name ?? update.symbol,
-            price: update.price,
-            prevClose,
-            open: previous?.open ?? null,
-            high: previous ? Math.max(previous.high ?? update.price, update.price) : update.price,
-            low: previous ? Math.min(previous.low ?? update.price, update.price) : update.price,
-            volume: update.volume || previous?.volume || 0,
-            change: update.price - prevClose,
-            changePct: prevClose === 0 ? 0 : ((update.price - prevClose) / prevClose) * 100,
-            fetchedAt: update.updatedAt,
-            bid: update.bid ?? previous?.bid ?? null,
-            ask: update.ask ?? previous?.ask ?? null,
-            source: 'fugle_live',
-          };
 
-          const tickHistory = { ...get().tickHistory };
-          tickHistory[update.symbol] = [...(tickHistory[update.symbol] ?? []), update.price];
-          set({
-            quotes: {
-              ...get().quotes,
-              [update.symbol]: nextQuote,
-            },
-            tickHistory,
-            lastError: null,
-          });
-          checkAlerts({ [update.symbol]: nextQuote }).catch(() => {});
-        },
-        onStatus: (message) => {
-          if (message) {
-            set({ lastError: message });
-          }
-        },
-      });
-    } else {
+    if (!fugleApiKey || !fugleEnabled || symbols.length === 0) {
       disconnectFugleWatchlistStream();
+      set({ _fugleConnected: false });
+      return;
     }
 
-    const id = setInterval(tick, 30_000);
-    set({ polling: true, _intervalId: id });
-  },
+    connectFugleWatchlistStream(fugleApiKey, symbols, {
+      onTrade: (update: FugleTradeUpdate) => {
+        const previous = get().quotes[update.symbol];
+        const prevClose = previous?.prevClose ?? update.price;
+        const incoming: Quote = {
+          symbol: update.symbol,
+          name: previous?.name ?? update.symbol,
+          price: update.price,
+          prevClose,
+          open: previous?.open ?? null,
+          high: previous ? Math.max(previous.high ?? update.price, update.price) : update.price,
+          low: previous ? Math.min(previous.low ?? update.price, update.price) : update.price,
+          volume: update.volume || previous?.volume || 0,
+          change: update.price - prevClose,
+          changePct: prevClose === 0 ? 0 : ((update.price - prevClose) / prevClose) * 100,
+          fetchedAt: update.updatedAt,
+          bid: update.bid ?? previous?.bid ?? null,
+          ask: update.ask ?? previous?.ask ?? null,
+          source: 'fugle_live',
+          sourceUpdatedAt: update.updatedAt,
+          freshnessState: 'fresh',
+        };
 
-  stopPolling() {
-    disconnectFugleWatchlistStream();
-    const { _intervalId } = get();
-    if (_intervalId !== null) {
-      clearInterval(_intervalId);
+        const merged = mergeQuotes(previous, incoming);
+        set((state) => ({
+          quotes: {
+            ...state.quotes,
+            [update.symbol]: merged,
+          },
+          tickHistory: appendTickHistory(state.tickHistory, update.symbol, update.price),
+          lastError: null,
+          _lastFugleTradeAtBySymbol: {
+            ...state._lastFugleTradeAtBySymbol,
+            [update.symbol]: update.updatedAt,
+          },
+          _fugleConnected: true,
+        }));
+        checkAlerts({ [update.symbol]: merged }).catch(() => {});
+      },
+      onAuthenticated: () => {
+        set({ _fugleConnected: true, lastError: null });
+      },
+      onDisconnected: () => {
+        set({ _fugleConnected: false });
+      },
+      onUnauthorized: () => {
+        set({ _fugleConnected: false, lastError: 'Fugle 驗證失敗，請檢查 API 金鑰。' });
+      },
+      onStatus: (message) => {
+        if (message) {
+          set({ lastError: message });
+        }
+      },
+    });
+  };
+
+  const findStaleFugleSymbols = (symbols: string[], now = Date.now()): string[] => {
+    const state = get();
+    const {
+      fugleEnabled,
+      fugleApiKey,
+    } = useSettingsStore.getState();
+
+    if (!fugleEnabled || !fugleApiKey || !state._fugleConnected) {
+      return [];
     }
-    set({ polling: false, _intervalId: null, tickHistory: {} });
-  },
 
-  async forceRefresh(symbols: string[], options: QuoteFetchOptions = {}) {
+    return symbols.filter(symbol => {
+      const quote = state.quotes[symbol];
+      if (!quote || quote.source !== 'fugle_live') {
+        return false;
+      }
+      const lastTradeAt =
+        state._lastFugleTradeAtBySymbol[symbol] ??
+        quote.sourceUpdatedAt ??
+        quote.fetchedAt;
+      return now - lastTradeAt >= FUGLE_STALE_AFTER_MS;
+    });
+  };
+
+  const scheduleNextPoll = (generation: number) => {
+    if (!get().polling || get()._pollGeneration !== generation) return;
+    clearPollTimer();
+    const timeoutId = setTimeout(() => {
+      void runPollLoop(generation);
+    }, POLL_LOOP_INTERVAL_MS);
+    set({ _pollTimeoutId: timeoutId });
+  };
+
+  const runPollLoop = async (generation: number) => {
+    if (!get().polling || get()._pollGeneration !== generation) return;
+    if (get()._pollInFlight) {
+      scheduleNextPoll(generation);
+      return;
+    }
+
+    const symbols = get()._pollSymbols;
+    set({ _pollInFlight: true });
+
     try {
-      const raw = await getQuotes(symbols, options);
-      if (symbols.length > 0 && raw.length === 0) {
-        const {
-          marketDataProvider,
-          alphaVantageApiKey,
-          alphaVantageEnabled,
-          fugleApiKey,
-          fugleEnabled,
-        } = useSettingsStore.getState();
-        if (marketDataProvider === 'fugle' && fugleApiKey && fugleEnabled) {
-          throw new Error('Fugle、TWSE 與 Yahoo 都沒有返回任何報價資料');
-        }
-        if (marketDataProvider === 'alpha_vantage' && alphaVantageApiKey && alphaVantageEnabled) {
-          throw new Error('Alpha Vantage、TWSE 與 Yahoo 都沒有返回任何報價資料');
-        }
-        throw new Error('TWSE 與 Yahoo 都沒有返回任何報價資料');
+      if (!isMarketOpen()) {
+        await refreshQuotes(symbols, {}, {
+          preserveMarketOpenCarryForward: false,
+          updateRestTimestamp: true,
+        });
+        get().stopPolling();
+        return;
       }
-      const fetchedAt = Date.now();
-      const marketOpen = isMarketOpen();
-      const dailyFallbacks = await loadDailyFallbacks(raw);
-      const quotesUpdate: Record<string, Quote> = {};
-      const tickHistory = { ...get().tickHistory };
-      for (const q of raw) {
-        const previous = get().quotes[q.symbol];
-        if (q.price !== null) {
-          quotesUpdate[q.symbol] = buildResolvedQuote(q as typeof q & { price: number }, fetchedAt);
-          tickHistory[q.symbol] = [...(tickHistory[q.symbol] ?? []), q.price];
-          continue;
+
+      connectFugleIfNeeded(symbols);
+
+      const {
+        fugleEnabled,
+        fugleApiKey,
+      } = useSettingsStore.getState();
+      const fugleActive = Boolean(fugleEnabled && fugleApiKey);
+      const now = Date.now();
+
+      if (get()._lastRestRefreshAt === 0) {
+        await refreshQuotes(symbols, {
+          forceNetwork: true,
+          forceFugleLookup: fugleActive,
+          forceFugleNetwork: fugleActive,
+        }, {
+          preserveMarketOpenCarryForward: false,
+          updateRestTimestamp: true,
+          updateFugleBootstrapAt: fugleActive,
+          treatEmptyAsError: false,
+        });
+      } else {
+        const staleSymbols = findStaleFugleSymbols(symbols, now);
+        if (
+          staleSymbols.length > 0 &&
+          now - get()._lastFugleStaleRefreshAt >= FUGLE_STALE_REFRESH_INTERVAL_MS
+        ) {
+          await refreshQuotes(staleSymbols, {
+            forceFugleLookup: true,
+            forceFugleNetwork: true,
+          }, {
+            preserveMarketOpenCarryForward: true,
+            updateFugleStaleRefreshAt: true,
+            fugleRefreshSymbols: staleSymbols,
+          });
         }
 
-        if (marketOpen && previous?.price != null) {
-          quotesUpdate[q.symbol] = {
-            ...previous,
-            symbol: q.symbol,
-            name: q.name,
-            prevClose: q.prevClose,
-            bid: q.bid ?? previous.bid,
-            ask: q.ask ?? previous.ask,
-            fetchedAt,
-          };
-          continue;
-        }
-
-        const daily = dailyFallbacks[q.symbol];
-        if (daily?.price != null) {
-          quotesUpdate[q.symbol] = buildQuoteFromDaily(q.symbol, q.name, daily, fetchedAt, q.bid ?? null, q.ask ?? null);
-        } else if (previous?.price != null) {
-          quotesUpdate[q.symbol] = {
-            ...previous,
-            symbol: q.symbol,
-            name: q.name,
-            prevClose: q.prevClose,
-            bid: q.bid ?? previous.bid,
-            ask: q.ask ?? previous.ask,
-            fetchedAt,
-          };
-        } else {
-          quotesUpdate[q.symbol] = buildPrevCloseFallback(q, fetchedAt);
+        if (now - get()._lastRestRefreshAt >= REST_POLL_INTERVAL_MS) {
+          await refreshQuotes(symbols, {}, {
+            preserveMarketOpenCarryForward: true,
+            updateRestTimestamp: true,
+          });
         }
       }
-      set({ quotes: { ...get().quotes, ...quotesUpdate }, tickHistory, lastError: null });
     } catch (e) {
       set({ lastError: String(e) });
+      markSymbolsStale(findStaleFugleSymbols(get()._pollSymbols));
+    } finally {
+      const stillCurrent = get()._pollGeneration === generation;
+      set({ _pollInFlight: false });
+      if (stillCurrent) {
+        scheduleNextPoll(generation);
+      }
     }
-  },
-}));
+  };
+
+  return {
+    quotes: {},
+    tickHistory: {},
+    polling: false,
+    lastError: null,
+    _pollTimeoutId: null,
+    _pollGeneration: 0,
+    _pollInFlight: false,
+    _pollSymbols: [],
+    _lastRestRefreshAt: 0,
+    _lastFugleBootstrapAt: 0,
+    _lastFugleStaleRefreshAt: 0,
+    _lastFugleTradeAtBySymbol: {},
+    _fugleConnected: false,
+
+    startPolling(symbols: string[]) {
+      if (get().polling) return;
+      if (!isMarketOpen()) {
+        set({ polling: false });
+        return;
+      }
+
+      const nextGeneration = get()._pollGeneration + 1;
+      set({
+        polling: true,
+        _pollGeneration: nextGeneration,
+        _pollSymbols: Array.from(new Set(symbols)),
+        _lastRestRefreshAt: 0,
+        _lastFugleBootstrapAt: 0,
+        _lastFugleStaleRefreshAt: 0,
+        _lastFugleTradeAtBySymbol: {},
+      });
+
+      void runPollLoop(nextGeneration);
+    },
+
+    stopPolling() {
+      disconnectFugleWatchlistStream();
+      clearPollTimer();
+      set((state) => ({
+        polling: false,
+        _pollGeneration: state._pollGeneration + 1,
+        _pollInFlight: false,
+        _pollSymbols: [],
+        _lastRestRefreshAt: 0,
+        _lastFugleBootstrapAt: 0,
+        _lastFugleStaleRefreshAt: 0,
+        _lastFugleTradeAtBySymbol: {},
+        _fugleConnected: false,
+        tickHistory: {},
+      }));
+    },
+
+    async forceRefresh(symbols: string[], options: QuoteFetchOptions = {}) {
+      try {
+        if (get()._pollInFlight) {
+          await new Promise(resolve => setTimeout(resolve, 250));
+        }
+
+        await refreshQuotes(symbols, options, {
+          preserveMarketOpenCarryForward: true,
+          updateRestTimestamp: true,
+          treatEmptyAsError: true,
+          updateFugleBootstrapAt: Boolean(options.forceFugleLookup),
+          updateFugleStaleRefreshAt: Boolean(options.forceFugleLookup),
+          fugleRefreshSymbols: options.forceFugleLookup ? symbols : undefined,
+        });
+      } catch (e) {
+        set({ lastError: String(e) });
+      }
+    },
+  };
+});

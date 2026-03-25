@@ -10,6 +10,10 @@ export interface FugleTradeUpdate {
 interface FugleStreamHandlers {
   onTrade: (update: FugleTradeUpdate) => void;
   onStatus?: (message: string | null) => void;
+  onAuthenticated?: () => void;
+  onSubscribed?: () => void;
+  onDisconnected?: () => void;
+  onUnauthorized?: () => void;
 }
 
 interface FugleStreamMessage {
@@ -27,6 +31,12 @@ let desiredSymbols: string[] = [];
 let apiKey = '';
 let handlers: FugleStreamHandlers | null = null;
 let intentionalClose = false;
+let authFailed = false;
+
+function sameSymbols(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((symbol, index) => symbol === b[index]);
+}
 
 function parseNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
@@ -42,6 +52,12 @@ function normalizeTimestamp(value: unknown): number {
 
 function emitStatus(message: string | null) {
   handlers?.onStatus?.(message);
+}
+
+function isAuthFailure(message: string | null | undefined): boolean {
+  if (!message) return false;
+  const normalized = message.toLowerCase();
+  return normalized.includes('unauthorized') || normalized.includes('auth') || normalized.includes('apikey');
 }
 
 function parseTradeUpdate(message: FugleStreamMessage): FugleTradeUpdate | null {
@@ -127,11 +143,10 @@ function subscribeSymbols() {
 function openSocket() {
   closeSocket();
   intentionalClose = false;
+  authFailed = false;
   socket = new WebSocket(STREAM_URL);
 
   socket.onopen = () => {
-    reconnectAttempts = 0;
-    emitStatus(null);
     socket?.send(JSON.stringify({
       event: 'auth',
       data: { apikey: apiKey },
@@ -144,12 +159,28 @@ function openSocket() {
       const message = JSON.parse(raw) as FugleStreamMessage;
 
       if (message.event === 'authenticated') {
+        reconnectAttempts = 0;
+        emitStatus(null);
+        handlers?.onAuthenticated?.();
         subscribeSymbols();
         return;
       }
 
+      if (message.event === 'subscribed') {
+        handlers?.onSubscribed?.();
+        return;
+      }
+
       if (message.event === 'error') {
-        emitStatus(typeof message.data?.message === 'string' ? message.data.message : 'Fugle 連線失敗');
+        const errorMessage =
+          typeof message.data?.message === 'string' ? message.data.message : 'Fugle 連線失敗';
+        emitStatus(errorMessage);
+        if (isAuthFailure(errorMessage)) {
+          authFailed = true;
+          handlers?.onUnauthorized?.();
+          intentionalClose = true;
+          closeSocket();
+        }
         return;
       }
 
@@ -168,7 +199,9 @@ function openSocket() {
 
   socket.onclose = () => {
     socket = null;
+    handlers?.onDisconnected?.();
     if (intentionalClose) return;
+    if (authFailed) return;
     reconnectAttempts += 1;
     emitStatus('Fugle WebSocket 已斷線，嘗試重連');
     scheduleReconnect();
@@ -180,9 +213,23 @@ export function connectFugleWatchlistStream(
   symbols: string[],
   nextHandlers: FugleStreamHandlers,
 ) {
-  apiKey = nextApiKey.trim();
-  desiredSymbols = Array.from(new Set(symbols.filter(Boolean)));
+  const normalizedApiKey = nextApiKey.trim();
+  const normalizedSymbols = Array.from(new Set(symbols.filter(Boolean)));
+
+  if (
+    socket &&
+    apiKey === normalizedApiKey &&
+    sameSymbols(desiredSymbols, normalizedSymbols) &&
+    (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)
+  ) {
+    handlers = nextHandlers;
+    return;
+  }
+
+  apiKey = normalizedApiKey;
+  desiredSymbols = normalizedSymbols;
   handlers = nextHandlers;
+  authFailed = false;
 
   if (!apiKey || desiredSymbols.length === 0) {
     disconnectFugleWatchlistStream();
@@ -195,6 +242,7 @@ export function connectFugleWatchlistStream(
 
 export function disconnectFugleWatchlistStream() {
   intentionalClose = true;
+  authFailed = false;
   clearReconnectTimer();
   desiredSymbols = [];
   apiKey = '';
