@@ -21,6 +21,7 @@ const ALPHA_VANTAGE_DAILY_REMAINING_STORE_KEY = 'alpha_vantage_daily_remaining';
 const ALPHA_VANTAGE_LAST_RESET_STORE_KEY = 'alpha_vantage_last_reset';
 const FUGLE_API_KEY_STORE_KEY = 'fugle_api_key';
 const FUGLE_ENABLED_STORE_KEY = 'fugle_enabled';
+const MARKET_DATA_RECOMMENDATION_SEEN_STORE_KEY = 'market_data_recommendation_seen';
 
 function getLocalDateKey(now = new Date()): string {
   const year = now.getFullYear();
@@ -105,6 +106,7 @@ interface SettingsState {
   alphaVantageLastResetDate: string;
   fugleApiKey: string;
   fugleEnabled: boolean;
+  marketDataRecommendationSeen: boolean;
   setGlowLevel: (level: GlowLevel) => void;
   saveApiKey: (key: string) => Promise<void>;
   getApiKeyForProvider: (providerName: AIProviderName) => string;
@@ -123,6 +125,7 @@ interface SettingsState {
   setMarketDataProvider: (provider: MarketDataProvider) => Promise<void>;
   setAlphaVantageEnabled: (enabled: boolean) => Promise<void>;
   setFugleEnabled: (enabled: boolean) => Promise<void>;
+  markMarketDataRecommendationSeen: () => Promise<void>;
   ensureAlphaVantageQuotaCurrent: () => Promise<void>;
   resetAlphaVantageQuota: () => Promise<void>;
   recordAlphaVantageRequest: () => Promise<number>;
@@ -146,6 +149,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   alphaVantageLastResetDate: getLocalDateKey(),
   fugleApiKey: '',
   fugleEnabled: false,
+  marketDataRecommendationSeen: false,
 
   setGlowLevel: (level) => set({ glowLevel: level }),
 
@@ -205,6 +209,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       alphaVantageLastResetDate,
       fugleApiKey,
       fugleEnabled,
+      marketDataRecommendationSeen,
     ] = await Promise.all([
       getItemAsync(MINIMAX_API_KEY_STORE_KEY),
       getItemAsync(OPENAI_API_KEY_STORE_KEY),
@@ -220,6 +225,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       getItemAsync(ALPHA_VANTAGE_LAST_RESET_STORE_KEY),
       getItemAsync(FUGLE_API_KEY_STORE_KEY),
       getItemAsync(FUGLE_ENABLED_STORE_KEY),
+      getItemAsync(MARKET_DATA_RECOMMENDATION_SEEN_STORE_KEY),
     ]);
     const provider = resolveProvider(providerName ?? undefined);
     const resolvedProviderName = provider.name as AIProviderName;
@@ -297,6 +303,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       alphaVantageLastResetDate: resolvedResetDate,
       fugleApiKey: fugleApiKey ?? '',
       fugleEnabled: fugleEnabled === 'true',
+      marketDataRecommendationSeen: marketDataRecommendationSeen === 'true',
     });
   },
 
@@ -375,6 +382,11 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   setFugleEnabled: async (enabled) => {
     await setItemAsync(FUGLE_ENABLED_STORE_KEY, String(enabled));
     set({ fugleEnabled: enabled });
+  },
+
+  markMarketDataRecommendationSeen: async () => {
+    await setItemAsync(MARKET_DATA_RECOMMENDATION_SEEN_STORE_KEY, 'true');
+    set({ marketDataRecommendationSeen: true });
   },
 
   ensureAlphaVantageQuotaCurrent: async () => {

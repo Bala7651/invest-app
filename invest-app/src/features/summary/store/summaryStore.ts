@@ -4,7 +4,6 @@ import { useQuoteStore } from '../../market/quoteStore';
 import {
   getTodayISO,
   fetchTWIX,
-  fetchLatestQuoteForSummary,
   mergeQuoteData,
   buildSummaryPrompt,
   buildIndexSummaryPrompt,
@@ -49,11 +48,6 @@ export const useSummaryStore = create<SummaryState>((set, get) => ({
 
     const date = getTodayISO();
     const watchlistItems = useWatchlistStore.getState().items;
-    const symbols = watchlistItems.map(item => item.symbol);
-    if (symbols.length > 0) {
-      await useQuoteStore.getState().forceRefresh(symbols);
-    }
-    const quotes = useQuoteStore.getState().quotes;
     const total = watchlistItems.length + 1; // +1 for TAIEX index
     const marketOpen = isMarketOpen();
 
@@ -80,13 +74,11 @@ export const useSummaryStore = create<SummaryState>((set, get) => ({
     // Step 2: Per-stock loop (sequential)
     for (const item of watchlistItems) {
       try {
-        // Always try fresh TWSE data first; fall back to in-memory quote
-        const q = quotes[item.symbol];
-        const freshQuote = await fetchLatestQuoteForSummary(item.symbol);
-        const quoteData = mergeQuoteData(q, freshQuote, marketOpen);
+        const q = useQuoteStore.getState().quotes[item.symbol];
+        const quoteData = mergeQuoteData(q, null, marketOpen);
         if (!quoteData || quoteData.price == null) {
-          await upsertSummary(item.symbol, date, `${ERROR_PREFIX}無法取得股價資料，請於收盤後重試`);
-          set(s => ({ errors: { ...s.errors, [item.symbol]: '無法取得股價資料' } }));
+          await upsertSummary(item.symbol, date, `${ERROR_PREFIX}請先回自選清單更新行情後再試`);
+          set(s => ({ errors: { ...s.errors, [item.symbol]: '請先回自選清單更新行情後再試' } }));
         } else {
           const userPrompt = buildSummaryPrompt(item.symbol, item.name, quoteData);
           const content = await generateSummaryContent(item.symbol, userPrompt, credentials);

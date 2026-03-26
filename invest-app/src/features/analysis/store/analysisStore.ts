@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { callMiniMax, QuoteData } from '../services/minimaxApi';
-import { fetchLatestQuoteForSummary, mergeQuoteData } from '../../summary/services/summaryService';
+import { mergeQuoteData } from '../../summary/services/summaryService';
 import { AnalysisResult } from '../types';
 import { useQuoteStore } from '../../market/quoteStore';
 import { isMarketOpen } from '../../market/marketHours';
@@ -71,10 +71,8 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
     }));
 
     try {
-      await useQuoteStore.getState().forceRefresh([symbol]);
       const liveQuote = useQuoteStore.getState().quotes[symbol];
-      const fresh = await fetchLatestQuoteForSummary(symbol);
-      const merged = mergeQuoteData(liveQuote ?? quote, fresh, isMarketOpen());
+      const merged = mergeQuoteData(liveQuote ?? null, null, isMarketOpen());
 
       const effectiveQuote: QuoteData = merged
         ? {
@@ -96,7 +94,7 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
       if (effectiveQuote.price == null) {
         set(s => ({
           loading: { ...s.loading, [symbol]: false },
-          errors: { ...s.errors, [symbol]: '等待行情資料，請稍後重試' },
+          errors: { ...s.errors, [symbol]: '請先回自選清單更新行情後再試' },
         }));
         return;
       }

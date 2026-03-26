@@ -4,7 +4,7 @@ import * as Notifications from 'expo-notifications';
 import { AndroidImportance } from 'expo-notifications';
 import { Stack } from 'expo-router';
 import { useEffect } from 'react';
-import { StatusBar, View, Text, AppState } from 'react-native';
+import { StatusBar, View, Text, AppState, Alert, Linking } from 'react-native';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator';
 import { db } from '../db/client';
@@ -26,6 +26,8 @@ Notifications.setNotificationHandler({
   }),
 });
 
+const FUGLE_API_DOCS_URL = 'https://developer.fugle.tw/docs/key/';
+
 export default function RootLayout() {
   const { success, error } = useMigrations(db, migrations);
 
@@ -34,6 +36,22 @@ export default function RootLayout() {
     if (!success) return;
     (async () => {
       await useSettingsStore.getState().loadFromSecureStore();
+      if (!useSettingsStore.getState().marketDataRecommendationSeen) {
+        await useSettingsStore.getState().markMarketDataRecommendationSeen();
+        Alert.alert(
+          '建議設定行情 API',
+          '建議設定 Fugle 或其他行情 API，這樣自選清單會更容易取得穩定的即時價格。現在要前往申請 Fugle API 嗎？',
+          [
+            { text: '稍後再說', style: 'cancel' },
+            {
+              text: '前往申請',
+              onPress: () => {
+                void Linking.openURL(FUGLE_API_DOCS_URL);
+              },
+            },
+          ]
+        );
+      }
       await useAlertStore.getState().loadFromDb();
 
       Notifications.setNotificationChannelAsync('price-alerts', {
@@ -50,6 +68,7 @@ export default function RootLayout() {
       await useWatchlistStore.getState().loadFromDb();
       const symbols = useWatchlistStore.getState().items.map(i => i.symbol);
       if (symbols.length > 0) {
+        await useQuoteStore.getState().loadPersistedQuotes(symbols);
         useQuoteStore.getState().forceRefresh(symbols);
         if (isMarketOpen()) {
           useQuoteStore.getState().startPolling(symbols);

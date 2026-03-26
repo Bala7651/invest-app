@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import * as watchlistService from '../../../services/watchlistService';
 import { useQuoteStore } from '../../market/quoteStore';
 import { isMarketOpen } from '../../market/marketHours';
+import { deletePersistedQuote } from '../../market/services/quoteCacheService';
 
 export interface WatchlistItem {
   id: number;
@@ -38,11 +39,15 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
   },
 
   async removeItem(id: number) {
+    const removed = get().items.find(i => i.id === id);
     await watchlistService.deleteItem(id);
     const updated = get().items
       .filter(i => i.id !== id)
       .map((item, index) => ({ ...item, sort_order: index }));
     set({ items: updated });
+    if (removed) {
+      void deletePersistedQuote(removed.symbol);
+    }
     const symbols = updated.map(i => i.symbol);
     useQuoteStore.getState().stopPolling();
     if (symbols.length > 0 && isMarketOpen()) {

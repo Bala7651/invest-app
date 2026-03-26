@@ -57,6 +57,36 @@ export const analysis_cache = sqliteTable(
   (t) => [uniqueIndex('analysis_cache_symbol_unique').on(t.symbol)]
 );
 
+export const quote_cache = sqliteTable(
+  'quote_cache',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    symbol: text('symbol').notNull(),
+    name: text('name').notNull(),
+    price: real('price'),
+    prev_close: real('prev_close').notNull(),
+    open: real('open'),
+    high: real('high'),
+    low: real('low'),
+    volume: real('volume').notNull().default(0),
+    change: real('change').notNull().default(0),
+    change_pct: real('change_pct').notNull().default(0),
+    fetched_at: integer('fetched_at', { mode: 'timestamp' }),
+    bid: real('bid'),
+    ask: real('ask'),
+    source: text('source').notNull().default('prev_close'),
+    source_updated_at: integer('source_updated_at', { mode: 'timestamp' }),
+    freshness_state: text('freshness_state').notNull().default('fresh'),
+    created_at: integer('created_at', { mode: 'timestamp' }).$defaultFn(
+      () => new Date()
+    ),
+    updated_at: integer('updated_at', { mode: 'timestamp' }).$defaultFn(
+      () => new Date()
+    ),
+  },
+  (t) => [uniqueIndex('quote_cache_symbol_unique').on(t.symbol)]
+);
+
 export const holdings = sqliteTable(
   'holdings',
   {

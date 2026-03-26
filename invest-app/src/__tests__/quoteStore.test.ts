@@ -36,10 +36,19 @@ jest.mock('../features/summary/services/summaryService', () => ({
   }),
 }));
 
+jest.mock('../features/market/services/quoteCacheService', () => ({
+  loadPersistedQuotes: jest.fn().mockResolvedValue([]),
+  upsertPersistedQuotes: jest.fn().mockResolvedValue(undefined),
+}));
+
 import { getQuotes } from '../services/stockService';
 import { isMarketOpen } from '../features/market/marketHours';
 import { fetchLatestQuoteForSummary } from '../features/summary/services/summaryService';
 import { useSettingsStore } from '../features/settings/store/settingsStore';
+import {
+  loadPersistedQuotes,
+  upsertPersistedQuotes,
+} from '../features/market/services/quoteCacheService';
 import {
   connectFugleWatchlistStream,
   disconnectFugleWatchlistStream,
@@ -48,6 +57,8 @@ import {
 const mockGetQuotes = getQuotes as jest.MockedFunction<typeof getQuotes>;
 const mockIsMarketOpen = isMarketOpen as jest.MockedFunction<typeof isMarketOpen>;
 const mockFetchLatestQuoteForSummary = fetchLatestQuoteForSummary as jest.MockedFunction<typeof fetchLatestQuoteForSummary>;
+const mockLoadPersistedQuotes = loadPersistedQuotes as jest.MockedFunction<typeof loadPersistedQuotes>;
+const mockUpsertPersistedQuotes = upsertPersistedQuotes as jest.MockedFunction<typeof upsertPersistedQuotes>;
 const mockConnectFugleWatchlistStream = connectFugleWatchlistStream as jest.MockedFunction<typeof connectFugleWatchlistStream>;
 const mockDisconnectFugleWatchlistStream = disconnectFugleWatchlistStream as jest.MockedFunction<typeof disconnectFugleWatchlistStream>;
 
@@ -96,6 +107,8 @@ beforeEach(() => {
     avgVolume20: 1000,
     volumeRatio: 1.2,
   });
+  mockLoadPersistedQuotes.mockResolvedValue([]);
+  mockUpsertPersistedQuotes.mockResolvedValue(undefined);
   // Reset store state before each test
   useQuoteStore.setState({
     quotes: {},
@@ -294,6 +307,12 @@ describe('quoteStore forceRefresh', () => {
     expect(quotes['2317'].change).toBe(5);
     expect(quotes['2317'].changePct).toBeCloseTo(2.56, 5);
     expect(mockGetQuotes).toHaveBeenCalledWith(SYMBOLS, {});
+    expect(mockUpsertPersistedQuotes).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ symbol: '2330', price: 1000 }),
+        expect.objectContaining({ symbol: '2317', price: 200 }),
+      ]),
+    );
   });
 
   test('forceRefresh heals an existing null quote using fallback data', async () => {
@@ -408,6 +427,41 @@ describe('quoteStore forceRefresh', () => {
     });
 
     expect(useQuoteStore.getState().lastError).toBe('Error: Network error');
+  });
+});
+
+describe('quoteStore persisted hydration', () => {
+  test('loadPersistedQuotes hydrates cached quotes into store', async () => {
+    mockLoadPersistedQuotes.mockResolvedValueOnce([
+      {
+        symbol: '2330',
+        name: 'Taiwan Semiconductor',
+        price: 995,
+        prevClose: 990,
+        open: 992,
+        high: 1000,
+        low: 988,
+        volume: 43210,
+        change: 5,
+        changePct: 0.51,
+        fetchedAt: 1700000000000,
+        bid: 994,
+        ask: 996,
+        source: 'fugle_live',
+        sourceUpdatedAt: 1700000000000,
+        freshnessState: 'fresh',
+      },
+    ]);
+
+    await act(async () => {
+      await useQuoteStore.getState().loadPersistedQuotes(['2330']);
+    });
+
+    const quote = useQuoteStore.getState().quotes['2330'];
+    expect(quote).toBeDefined();
+    expect(quote.price).toBe(995);
+    expect(quote.source).toBe('fugle_live');
+    expect(quote.freshnessState).toBe('stale');
   });
 });
 

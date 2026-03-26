@@ -6,7 +6,6 @@ import * as analysisCacheService from '../features/analysis/services/analysisCac
 
 jest.mock('../features/analysis/services/minimaxApi');
 jest.mock('../features/summary/services/summaryService', () => ({
-  fetchLatestQuoteForSummary: jest.fn().mockResolvedValue(null),
   mergeQuoteData: jest.fn((liveQuote, dailyQuote) => dailyQuote ?? liveQuote ?? null),
 }));
 jest.mock('../features/analysis/services/analysisCacheService', () => ({
@@ -45,6 +44,25 @@ const mockCredentials = {
   baseUrl: 'https://api.minimax.io/v1',
 };
 
+const makeLiveQuote = (symbol: string) => ({
+  symbol,
+  name: mockQuote.name,
+  price: mockQuote.price,
+  prevClose: mockQuote.prevClose,
+  open: null,
+  high: null,
+  low: null,
+  volume: mockQuote.volume,
+  change: mockQuote.change,
+  changePct: mockQuote.changePct,
+  fetchedAt: 1700000000000,
+  bid: null,
+  ask: null,
+  source: 'fugle_live' as const,
+  sourceUpdatedAt: 1700000000000,
+  freshnessState: 'fresh' as const,
+});
+
 const mockResult: AnalysisResult = {
   technicalScore: 72,
   technicalSummary: '今日形成長紅K棒，收盤價站上MA5，量能溫和配合。',
@@ -62,8 +80,10 @@ beforeEach(() => {
   mockLoadPersistedAnalyses.mockResolvedValue([]);
   mockUpsertPersistedAnalysis.mockResolvedValue(undefined);
   (useQuoteStore.getState as jest.Mock).mockReturnValue({
-    forceRefresh: jest.fn().mockResolvedValue(undefined),
-    quotes: {},
+    quotes: {
+      '2330': makeLiveQuote('2330'),
+      '2454': makeLiveQuote('2454'),
+    },
   });
 });
 
@@ -161,6 +181,22 @@ describe('fetchAnalysis', () => {
     await expect(
       useAnalysisStore.getState().fetchAnalysis('2330', mockQuote, mockCredentials)
     ).resolves.not.toThrow();
+  });
+
+  it('asks the user to refresh the watchlist first when no cached quote price is available', async () => {
+    (useQuoteStore.getState as jest.Mock).mockReturnValueOnce({
+      quotes: {},
+    });
+
+    await useAnalysisStore.getState().fetchAnalysis(
+      '2330',
+      { ...mockQuote, price: null, prevClose: 0 },
+      mockCredentials,
+      { force: true },
+    );
+
+    expect(useAnalysisStore.getState().errors['2330']).toBe('請先回自選清單更新行情後再試');
+    expect(mockCallMiniMax).not.toHaveBeenCalled();
   });
 
   it('tracks loading per symbol independently', async () => {

@@ -6,6 +6,11 @@ import { fetchLatestQuoteForSummary, SummaryQuoteData } from '../summary/service
 import { useSettingsStore } from '../settings/store/settingsStore';
 import { QuoteFreshnessState, QuoteSource } from './quotePresentation';
 import {
+  loadPersistedQuotes as loadPersistedQuotesFromDb,
+  upsertPersistedQuotes,
+  PersistedQuoteEntry,
+} from './services/quoteCacheService';
+import {
   connectFugleWatchlistStream,
   disconnectFugleWatchlistStream,
   FugleTradeUpdate,
@@ -58,6 +63,8 @@ interface QuoteState {
   _lastFugleStaleRefreshAt: number;
   _lastFugleTradeAtBySymbol: Record<string, number>;
   _fugleConnected: boolean;
+  loadPersistedQuotes: (symbols: string[]) => Promise<void>;
+  persistQuotes: (symbols?: string[]) => Promise<void>;
   startPolling: (symbols: string[]) => void;
   stopPolling: () => void;
   forceRefresh: (symbols: string[], options?: QuoteFetchOptions) => Promise<void>;
@@ -119,6 +126,10 @@ function mergeQuotes(existing: Quote | undefined, incoming: Quote): Quote {
 
 function withFreshness(quote: Quote, freshnessState: QuoteFreshnessState): Quote {
   return { ...quote, freshnessState };
+}
+
+function isLiveSource(source: QuoteSource): boolean {
+  return source === 'fugle_live' || source === 'twse_live';
 }
 
 function appendTickHistory(
@@ -305,6 +316,36 @@ export const useQuoteStore = create<QuoteState>((set, get) => {
     }
   };
 
+  const persistQuotesNow = async (symbols: string[]) => {
+    if (symbols.length === 0) return;
+
+    const uniqueSymbols = Array.from(new Set(symbols));
+    const entries: PersistedQuoteEntry[] = uniqueSymbols
+      .map((symbol) => get().quotes[symbol])
+      .filter((quote): quote is Quote => Boolean(quote))
+      .map((quote) => ({
+        symbol: quote.symbol,
+        name: quote.name,
+        price: quote.price,
+        prevClose: quote.prevClose,
+        open: quote.open,
+        high: quote.high,
+        low: quote.low,
+        volume: quote.volume,
+        change: quote.change,
+        changePct: quote.changePct,
+        fetchedAt: quote.fetchedAt,
+        bid: quote.bid,
+        ask: quote.ask,
+        source: quote.source,
+        sourceUpdatedAt: quote.sourceUpdatedAt,
+        freshnessState: quote.freshnessState,
+      }));
+
+    if (entries.length === 0) return;
+    await upsertPersistedQuotes(entries);
+  };
+
   const markSymbolsStale = (symbols: string[], fetchedAt = Date.now()) => {
     if (symbols.length === 0) return;
     const nextQuotes = { ...get().quotes };
@@ -423,6 +464,8 @@ export const useQuoteStore = create<QuoteState>((set, get) => {
     if (Object.keys(alertQuotes).length > 0) {
       checkAlerts(alertQuotes).catch(() => {});
     }
+
+    void persistQuotesNow(symbols);
   };
 
   const refreshQuotes = async (
@@ -652,6 +695,41 @@ export const useQuoteStore = create<QuoteState>((set, get) => {
     _lastFugleTradeAtBySymbol: {},
     _fugleConnected: false,
 
+    async loadPersistedQuotes(symbols: string[]) {
+      const rows = await loadPersistedQuotesFromDb(symbols);
+      if (rows.length === 0) return;
+
+      set((state) => {
+        const nextQuotes = { ...state.quotes };
+        for (const row of rows) {
+          const hydrated: Quote = {
+            symbol: row.symbol,
+            name: row.name,
+            price: row.price,
+            prevClose: row.prevClose,
+            open: row.open,
+            high: row.high,
+            low: row.low,
+            volume: row.volume,
+            change: row.change,
+            changePct: row.changePct,
+            fetchedAt: row.fetchedAt,
+            bid: row.bid,
+            ask: row.ask,
+            source: row.source,
+            sourceUpdatedAt: row.sourceUpdatedAt,
+            freshnessState: isLiveSource(row.source) ? 'stale' : row.freshnessState,
+          };
+          nextQuotes[row.symbol] = mergeQuotes(nextQuotes[row.symbol], hydrated);
+        }
+        return { quotes: nextQuotes };
+      });
+    },
+
+    async persistQuotes(symbols: string[] = Object.keys(get().quotes)) {
+      await persistQuotesNow(symbols);
+    },
+
     startPolling(symbols: string[]) {
       if (get().polling) return;
       if (!isMarketOpen()) {
@@ -674,6 +752,10 @@ export const useQuoteStore = create<QuoteState>((set, get) => {
     },
 
     stopPolling() {
+      const symbolsToPersist = get()._pollSymbols.length > 0
+        ? get()._pollSymbols
+        : Object.keys(get().quotes);
+      void persistQuotesNow(symbolsToPersist);
       disconnectFugleWatchlistStream();
       clearPollTimer();
       set((state) => ({

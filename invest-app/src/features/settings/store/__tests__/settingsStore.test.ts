@@ -38,6 +38,7 @@ beforeEach(() => {
     alphaVantageLastResetDate: getLocalDateKey(),
     fugleApiKey: '',
     fugleEnabled: false,
+    marketDataRecommendationSeen: false,
     aiNotificationsEnabled: true,
   });
 });
@@ -157,6 +158,25 @@ describe('loadFromSecureStore', () => {
     expect(useSettingsStore.getState().marketDataProvider).toBe('fugle');
     expect(useSettingsStore.getState().fugleApiKey).toBe('fugle-key');
     expect(useSettingsStore.getState().fugleEnabled).toBe(true);
+  });
+
+  it('defaults marketDataRecommendationSeen to false when SecureStore is empty', async () => {
+    mockGetItemAsync.mockResolvedValue(null);
+
+    await useSettingsStore.getState().loadFromSecureStore();
+
+    expect(useSettingsStore.getState().marketDataRecommendationSeen).toBe(false);
+  });
+
+  it('loads marketDataRecommendationSeen from SecureStore', async () => {
+    mockGetItemAsync.mockImplementation((key: string) => {
+      if (key === 'market_data_recommendation_seen') return Promise.resolve('true');
+      return Promise.resolve(null);
+    });
+
+    await useSettingsStore.getState().loadFromSecureStore();
+
+    expect(useSettingsStore.getState().marketDataRecommendationSeen).toBe(true);
   });
 
   it('hydrates the OpenAI key into the active apiKey when providerName is OpenAI', async () => {
@@ -364,5 +384,12 @@ describe('Fugle helpers', () => {
     expect(mockDeleteItemAsync).toHaveBeenCalledWith('fugle_api_key');
     expect(useSettingsStore.getState().fugleApiKey).toBe('');
     expect(useSettingsStore.getState().fugleEnabled).toBe(false);
+  });
+
+  it('markMarketDataRecommendationSeen persists and updates state', async () => {
+    await useSettingsStore.getState().markMarketDataRecommendationSeen();
+
+    expect(mockSetItemAsync).toHaveBeenCalledWith('market_data_recommendation_seen', 'true');
+    expect(useSettingsStore.getState().marketDataRecommendationSeen).toBe(true);
   });
 });

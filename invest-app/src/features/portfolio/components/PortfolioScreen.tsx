@@ -154,10 +154,15 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
     setFollowUpError(null);
 
     try {
-      const symbols = items.map(item => item.symbol);
-      await useQuoteStore.getState().forceRefresh(symbols);
-      const latestQuotes = useQuoteStore.getState().quotes;
-      const entries = buildPortfolioEntries(latestQuotes);
+      const entries = buildPortfolioEntries(useQuoteStore.getState().quotes);
+      const missingSymbols = entries
+        .filter(entry => entry.quantity > 0 && entry.currentPrice == null)
+        .map(entry => entry.symbol);
+
+      if (missingSymbols.length > 0) {
+        setAnalysisError(`請先回自選清單更新行情後再試：${missingSymbols.join('、')}`);
+        return;
+      }
 
       const result = await callPortfolioMiniMax(entries, { apiKey, modelName, baseUrl });
       if (!result) {

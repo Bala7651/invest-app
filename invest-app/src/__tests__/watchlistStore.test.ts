@@ -21,8 +21,13 @@ jest.mock('../features/market/marketHours', () => ({
   isMarketOpen: jest.fn(() => false),
 }));
 
+jest.mock('../features/market/services/quoteCacheService', () => ({
+  deletePersistedQuote: jest.fn().mockResolvedValue(undefined),
+}));
+
 import * as watchlistService from '../services/watchlistService';
 import { useQuoteStore } from '../features/market/quoteStore';
+import { deletePersistedQuote } from '../features/market/services/quoteCacheService';
 
 const mockGetAll = watchlistService.getAll as jest.MockedFunction<typeof watchlistService.getAll>;
 const mockInsertItem = watchlistService.insertItem as jest.MockedFunction<typeof watchlistService.insertItem>;
@@ -33,6 +38,7 @@ const mockQuoteStore = {
   stopPolling: jest.fn(),
   forceRefresh: jest.fn(),
 };
+const mockDeletePersistedQuote = deletePersistedQuote as jest.MockedFunction<typeof deletePersistedQuote>;
 
 beforeEach(() => {
   useWatchlistStore.setState({ items: [] });
@@ -43,6 +49,7 @@ beforeEach(() => {
   mockQuoteStore.stopPolling.mockReset();
   mockQuoteStore.forceRefresh.mockReset();
   mockQuoteStore.forceRefresh.mockResolvedValue(undefined);
+  mockDeletePersistedQuote.mockClear();
   (useQuoteStore.getState as jest.Mock).mockReturnValue(mockQuoteStore);
 });
 
@@ -120,6 +127,7 @@ describe('watchlistStore', () => {
       await useWatchlistStore.getState().removeItem(1);
 
       expect(mockDeleteItem).toHaveBeenCalledWith(1);
+      expect(mockDeletePersistedQuote).toHaveBeenCalledWith('2330');
       const items = useWatchlistStore.getState().items;
       expect(items).toHaveLength(1);
       expect(items[0].symbol).toBe('2317');

@@ -92,3 +92,17 @@ describe('AI Notifications toggle', () => {
     expect(useSettingsStore.getState().aiNotificationsEnabled).toBe(true);
   });
 });
+
+describe('First-launch market data recommendation', () => {
+  it('RootLayout includes the Fugle API recommendation alert and link', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const layoutPath = path.resolve(__dirname, '../app/_layout.tsx');
+    const source = fs.readFileSync(layoutPath, 'utf-8');
+
+    expect(source).toContain('建議設定行情 API');
+    expect(source).toContain('https://developer.fugle.tw/docs/key/');
+    expect(source).toContain('markMarketDataRecommendationSeen');
+    expect(source).toContain('Linking.openURL');
+  });
+});
