@@ -3,8 +3,18 @@ apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
 def projectRoot = rootDir.getAbsoluteFile().getParentFile().getAbsolutePath()
+def releaseKeyProperties = new Properties()
+def releaseKeyPropertiesFile = rootProject.file("key.properties")
 
-def getOptionalSecret = { String key ->
+if (releaseKeyPropertiesFile.exists()) {
+    releaseKeyProperties.load(new FileInputStream(releaseKeyPropertiesFile))
+}
+
+def getOptionalSecret = { String key, String localKey = key ->
+    def localValue = releaseKeyProperties.getProperty(localKey)
+    if (localValue != null && localValue.toString().trim()) {
+        return localValue.toString().trim()
+    }
     def propertyValue = findProperty(key)
     if (propertyValue != null && propertyValue.toString().trim()) {
         return propertyValue.toString().trim()
@@ -16,10 +26,10 @@ def getOptionalSecret = { String key ->
     return null
 }
 
-def releaseStoreFilePath = getOptionalSecret('INVEST_RELEASE_STORE_FILE')
-def releaseStorePassword = getOptionalSecret('INVEST_RELEASE_STORE_PASSWORD')
-def releaseKeyAlias = getOptionalSecret('INVEST_RELEASE_KEY_ALIAS')
-def releaseKeyPassword = getOptionalSecret('INVEST_RELEASE_KEY_PASSWORD')
+def releaseStoreFilePath = getOptionalSecret('INVEST_RELEASE_STORE_FILE', 'storeFile')
+def releaseStorePassword = getOptionalSecret('INVEST_RELEASE_STORE_PASSWORD', 'storePassword')
+def releaseKeyAlias = getOptionalSecret('INVEST_RELEASE_KEY_ALIAS', 'keyAlias')
+def releaseKeyPassword = getOptionalSecret('INVEST_RELEASE_KEY_PASSWORD', 'keyPassword')
 def hasReleaseSigning =
     releaseStoreFilePath &&
     releaseStorePassword &&
@@ -114,8 +124,8 @@ android {
         applicationId 'com.hopyky.invest'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 20
-        versionName "2.4.0"
+        versionCode 21
+        versionName "2.4.1"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }
