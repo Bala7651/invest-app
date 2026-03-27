@@ -1,4 +1,5 @@
 import { OHLCVPoint, Timeframe } from '../types';
+import { useSettingsStore } from '../../settings/store/settingsStore';
 
 function timeoutSignal(ms: number): AbortSignal {
   const controller = new AbortController();
@@ -16,6 +17,51 @@ export function twseDateToTimestamp(twseDate: string): number {
 
 function parseCommaNumber(s: string): number {
   return parseFloat(s.replace(/,/g, ''));
+}
+
+interface FugleIntradayCandlesResponse {
+  data?: Array<{
+    date?: string;
+    open?: number;
+    high?: number;
+    low?: number;
+    close?: number;
+    volume?: number;
+  }>;
+}
+
+async function fetchFugleIntradayCandles(symbol: string): Promise<OHLCVPoint[]> {
+  const { fugleApiKey, fugleEnabled } = useSettingsStore.getState();
+  if (!fugleEnabled || !fugleApiKey) return [];
+
+  const url = `https://api.fugle.tw/marketdata/v1.0/stock/intraday/candles/${encodeURIComponent(symbol)}?timeframe=1&sort=asc`;
+  const res = await fetch(url, {
+    headers: {
+      'X-API-KEY': fugleApiKey,
+      'User-Agent': 'invest-app/1.0',
+    },
+    signal: timeoutSignal(6_000),
+  });
+  if (!res.ok) throw new Error(`Fugle HTTP ${res.status}`);
+  const data = await res.json() as FugleIntradayCandlesResponse;
+  if (!Array.isArray(data.data)) return [];
+
+  return data.data
+    .filter((row) =>
+      typeof row.date === 'string' &&
+      typeof row.open === 'number' &&
+      typeof row.high === 'number' &&
+      typeof row.low === 'number' &&
+      typeof row.close === 'number'
+    )
+    .map((row): OHLCVPoint => ({
+      timestamp: new Date(row.date as string).getTime(),
+      open: row.open as number,
+      high: row.high as number,
+      low: row.low as number,
+      close: row.close as number,
+      volume: typeof row.volume === 'number' ? row.volume : 0,
+    }));
 }
 
 async function fetchFinMindDaily(stockId: string, startDate: string): Promise<OHLCVPoint[]> {
@@ -109,6 +155,18 @@ async function fetchTWSERange(stockId: string, startDate: string): Promise<OHLCV
 export async function fetchCandles(symbol: string, timeframe: Timeframe): Promise<OHLCVPoint[]> {
   const startDate = getDateRange(timeframe);
   let points: OHLCVPoint[] = [];
+
+  if (timeframe === '1D') {
+    try {
+      points = await fetchFugleIntradayCandles(symbol);
+    } catch {
+      points = [];
+    }
+
+    if (points.length >= 2) {
+      return points.sort((a, b) => a.timestamp - b.timestamp);
+    }
+  }
 
   if (timeframe === '1M' || timeframe === '6M' || timeframe === '1Y') {
     // Try FinMind first (single fast request), fall back to parallel TWSE

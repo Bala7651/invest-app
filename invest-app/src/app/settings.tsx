@@ -1,7 +1,7 @@
 import { startActivityAsync, ActivityAction } from 'expo-intent-launcher';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, KeyboardAvoidingView, PanResponder, Platform, Pressable, ScrollView, Switch, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ApiKeyInput } from '../features/settings/components/ApiKeyInput';
 import { AlphaVantageApiKeyInput } from '../features/settings/components/AlphaVantageApiKeyInput';
 import { FugleApiKeyInput } from '../features/settings/components/FugleApiKeyInput';
@@ -70,6 +70,7 @@ function DropdownSelect({
 }
 
 export default function SettingsScreen() {
+  const { focusMarketData } = useLocalSearchParams<{ focusMarketData?: string }>();
   const router = useRouter();
   const { t, language } = useI18n();
   const providerName = useSettingsStore(s => s.providerName);
@@ -88,6 +89,9 @@ export default function SettingsScreen() {
   const fugleEnabled = useSettingsStore(s => s.fugleEnabled);
   const setFugleEnabled = useSettingsStore(s => s.setFugleEnabled);
   const setLanguage = useSettingsStore(s => s.setLanguage);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const fugleSectionYRef = useRef<number | null>(null);
+  const handledFugleFocusRef = useRef(false);
 
   const currentProvider = AI_PROVIDERS.find(p => p.name === providerName) ?? AI_PROVIDERS[0];
   const currentMarketDataProvider =
@@ -175,6 +179,25 @@ export default function SettingsScreen() {
     router.back();
   }
 
+  function scrollToFugleSection() {
+    if (fugleSectionYRef.current == null) return;
+    scrollViewRef.current?.scrollTo({
+      y: Math.max(fugleSectionYRef.current - 24, 0),
+      animated: true,
+    });
+  }
+
+  useEffect(() => {
+    if (focusMarketData !== 'fugle' || handledFugleFocusRef.current) return;
+    handledFugleFocusRef.current = true;
+    void (async () => {
+      await setMarketDataProvider('fugle');
+      setTimeout(() => {
+        scrollToFugleSection();
+      }, 250);
+    })();
+  }, [focusMarketData, setMarketDataProvider]);
+
   const swipeBackResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
@@ -195,7 +218,11 @@ export default function SettingsScreen() {
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView className="flex-1 bg-bg" contentContainerStyle={{ padding: 16, paddingTop: 52, paddingBottom: 24 }}>
+        <ScrollView
+          ref={scrollViewRef}
+          className="flex-1 bg-bg"
+          contentContainerStyle={{ padding: 16, paddingTop: 52, paddingBottom: 24 }}
+        >
           <View className="flex-row items-center mb-6">
             <Pressable onPress={handleBack} className="mr-4">
               <Text className="text-primary text-base">{t('common.back')}</Text>
@@ -276,7 +303,17 @@ export default function SettingsScreen() {
             ) : null}
 
             {marketDataProvider === 'fugle' ? (
-              <View className="mt-4">
+              <View
+                className="mt-4"
+                onLayout={(event) => {
+                  fugleSectionYRef.current = event.nativeEvent.layout.y;
+                  if (focusMarketData === 'fugle') {
+                    setTimeout(() => {
+                      scrollToFugleSection();
+                    }, 0);
+                  }
+                }}
+              >
                 <Text className="text-muted text-xs mb-1">Fugle API Key</Text>
                 <FugleApiKeyInput />
                 <View className="mt-4 flex-row items-center justify-between">

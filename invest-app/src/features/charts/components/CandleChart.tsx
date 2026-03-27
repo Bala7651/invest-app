@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Pressable, Text, View, useWindowDimensions } from 'react-native';
+import Svg, { Polyline } from 'react-native-svg';
 import { OHLCVPoint } from '../types';
 
 interface CandleChartProps {
@@ -15,6 +16,20 @@ const GRID_LEVELS = 4;
 function formatDate(ts: number): string {
   const d = new Date(ts);
   return `${d.getMonth() + 1}/${d.getDate()}`;
+}
+
+function buildMovingAverage(data: OHLCVPoint[], period: number): Array<number | null> {
+  let rollingSum = 0;
+  return data.map((point, index) => {
+    rollingSum += point.close;
+    if (index >= period) {
+      rollingSum -= data[index - period].close;
+    }
+    if (index + 1 < period) {
+      return null;
+    }
+    return rollingSum / period;
+  });
 }
 
 export function CandleChart({ data, height, onCandleChange }: CandleChartProps) {
@@ -36,6 +51,8 @@ export function CandleChart({ data, height, onCandleChange }: CandleChartProps) 
   const candleWidth = plotWidth / data.length;
   const bodyWidth = Math.max(candleWidth * 0.6, 2);
   const wickWidth = Math.max(1.5, bodyWidth * 0.18);
+  const ma5 = buildMovingAverage(data, 5);
+  const ma20 = buildMovingAverage(data, 20);
 
   function priceToY(price: number): number {
     return ((maxPrice - price) / priceRange) * (plotHeight - 10) + 5;
@@ -59,6 +76,22 @@ export function CandleChart({ data, height, onCandleChange }: CandleChartProps) 
     onCandleChange?.(data[idx]);
   }
 
+  function buildPolylinePoints(series: Array<number | null>): string | null {
+    const points = series
+      .map((value, index) => {
+        if (value == null) return null;
+        const x = index * candleWidth + candleWidth / 2;
+        const y = priceToY(value);
+        return `${x},${y}`;
+      })
+      .filter((value): value is string => value !== null);
+
+    return points.length >= 2 ? points.join(' ') : null;
+  }
+
+  const ma5Points = buildPolylinePoints(ma5);
+  const ma20Points = buildPolylinePoints(ma20);
+
   return (
     <View style={{ width: chartWidth, height }}>
       {/* Plot area */}
@@ -66,6 +99,34 @@ export function CandleChart({ data, height, onCandleChange }: CandleChartProps) 
         onPress={handlePress}
         style={{ position: 'absolute', left: 0, top: 0, width: plotWidth, height: plotHeight }}
       >
+        <Svg
+          width={plotWidth}
+          height={plotHeight}
+          style={{ position: 'absolute', left: 0, top: 0 }}
+          pointerEvents="none"
+        >
+          {ma5Points ? (
+            <Polyline
+              points={ma5Points}
+              fill="none"
+              stroke="#4D7CFF"
+              strokeWidth="1.5"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+          ) : null}
+          {ma20Points ? (
+            <Polyline
+              points={ma20Points}
+              fill="none"
+              stroke="#F5B800"
+              strokeWidth="1.5"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+          ) : null}
+        </Svg>
+
         {/* Horizontal grid lines */}
         {gridPrices.map((price, i) => {
           const y = priceToY(price);
@@ -135,6 +196,25 @@ export function CandleChart({ data, height, onCandleChange }: CandleChartProps) 
           );
         })}
       </Pressable>
+
+      {(ma5Points || ma20Points) ? (
+        <View
+          style={{
+            position: 'absolute',
+            left: 8,
+            top: 8,
+            flexDirection: 'row',
+            gap: 12,
+            backgroundColor: 'rgba(5,5,8,0.72)',
+            paddingHorizontal: 8,
+            paddingVertical: 4,
+            borderRadius: 999,
+          }}
+        >
+          {ma5Points ? <Text style={{ color: '#4D7CFF', fontSize: 10, fontWeight: '700' }}>MA5</Text> : null}
+          {ma20Points ? <Text style={{ color: '#F5B800', fontSize: 10, fontWeight: '700' }}>MA20</Text> : null}
+        </View>
+      ) : null}
 
       {/* Y-axis labels (right side) */}
       <View

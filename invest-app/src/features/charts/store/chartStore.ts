@@ -18,7 +18,7 @@ export const useChartStore = create<ChartState>((set, get) => ({
 
   async fetchCandles(symbol: string, timeframe: Timeframe) {
     const key = `${symbol}:${timeframe}`;
-    if (get().cache[key] !== undefined) return;
+    if (timeframe !== '1D' && get().cache[key] !== undefined) return;
 
     set(state => ({ loading: { ...state.loading, [key]: true } }));
     try {

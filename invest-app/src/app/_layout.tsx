@@ -1,10 +1,11 @@
 import '../global.css';
 import '../features/alerts/services/alertTask';
 import * as Notifications from 'expo-notifications';
+import * as WebBrowser from 'expo-web-browser';
 import { AndroidImportance } from 'expo-notifications';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { useEffect } from 'react';
-import { StatusBar, View, Text, AppState, Alert, Linking } from 'react-native';
+import { StatusBar, View, Text, AppState, Alert } from 'react-native';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator';
 import { db } from '../db/client';
@@ -30,6 +31,7 @@ Notifications.setNotificationHandler({
 const FUGLE_API_DOCS_URL = 'https://developer.fugle.tw/docs/key/';
 
 export default function RootLayout() {
+  const router = useRouter();
   const { success, error } = useMigrations(db, migrations);
   const settingsLoaded = useSettingsStore(state => state.isLoaded);
 
@@ -48,7 +50,16 @@ export default function RootLayout() {
             {
               text: tFromStore('startup.marketDataPromptOpen'),
               onPress: () => {
-                void Linking.openURL(FUGLE_API_DOCS_URL);
+                void (async () => {
+                  try {
+                    await WebBrowser.openBrowserAsync(FUGLE_API_DOCS_URL);
+                  } finally {
+                    router.push({
+                      pathname: '/settings',
+                      params: { focusMarketData: 'fugle' },
+                    });
+                  }
+                })();
               },
             },
           ]

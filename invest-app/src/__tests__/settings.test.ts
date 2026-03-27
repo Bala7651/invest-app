@@ -109,6 +109,7 @@ describe('First-launch market data recommendation', () => {
     expect(translations).toContain("'startup.marketDataPromptTitle': '建議設定行情 API'");
     expect(source).toContain('https://developer.fugle.tw/docs/key/');
     expect(source).toContain('markMarketDataRecommendationSeen');
-    expect(source).toContain('Linking.openURL');
+    expect(source).toContain('WebBrowser.openBrowserAsync');
+    expect(source).toContain("focusMarketData: 'fugle'");
   });
 });

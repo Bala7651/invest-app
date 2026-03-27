@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { ReactNode, useEffect, useRef } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -19,7 +19,7 @@ interface StockCardProps {
   quote: Quote | undefined;
   tickHistory?: number[];
   onPress: () => void;
-  onLongPress?: () => void;
+  dragHandle?: ReactNode;
 }
 
 export function formatChange(change: number, changePct: number): string {
@@ -27,7 +27,7 @@ export function formatChange(change: number, changePct: number): string {
   return `${sign}${change.toFixed(2)} (${sign}${changePct.toFixed(2)}%)`;
 }
 
-export function StockCard({ item, quote, tickHistory, onPress, onLongPress }: StockCardProps) {
+export function StockCard({ item, quote, tickHistory, onPress, dragHandle }: StockCardProps) {
   const { language, t } = useI18n();
   const snapshot = buildQuoteSnapshot(item.name, quote, language);
   const priceDisplay = snapshot.price != null ? snapshot.price.toFixed(2) : '—';
@@ -67,22 +67,30 @@ export function StockCard({ item, quote, tickHistory, onPress, onLongPress }: St
   return (
     <Pressable
       onPress={onPress}
-      onLongPress={onLongPress}
       className="bg-surface border border-border rounded-lg px-4 py-3 mb-2 flex-row items-center justify-between"
     >
-      <View className="flex-1">
-        <Text className="text-primary font-semibold text-base">{item.symbol}</Text>
+      <View className="flex-1" style={{ minWidth: 80, paddingRight: 8 }}>
+        <Text className="text-primary font-semibold text-base" numberOfLines={1}>
+          {item.symbol}
+        </Text>
         <Text className="text-muted text-sm mt-0.5" numberOfLines={1} ellipsizeMode="tail">{item.name}</Text>
       </View>
-      <View style={{ width: 60, height: 28, marginHorizontal: 8 }}>
-        <SparklineChart data={tickHistory ?? []} width={60} height={28} color={sparklineColor} />
-      </View>
-      <View className="items-end">
-        <Animated.Text style={[{ fontWeight: '600', fontSize: 16 }, priceStyle]}>{priceDisplay}</Animated.Text>
-        <Text className={`${changeColorClass} text-sm mt-0.5`}>{changeDisplay}</Text>
-        {detailMeta ? (
-          <Text className="text-muted text-xs mt-0.5">{detailMeta}</Text>
-        ) : null}
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        {dragHandle ? <View style={{ marginRight: 8 }}>{dragHandle}</View> : null}
+        <View style={{ width: 60, height: 28, marginHorizontal: 8 }}>
+          <SparklineChart data={tickHistory ?? []} width={60} height={28} color={sparklineColor} />
+        </View>
+        <View className="items-end" style={{ minWidth: 84 }}>
+          <Animated.Text style={[{ fontWeight: '600', fontSize: 16 }, priceStyle]}>{priceDisplay}</Animated.Text>
+          <Text className={`${changeColorClass} text-sm mt-0.5`} numberOfLines={1}>
+            {changeDisplay}
+          </Text>
+          {detailMeta ? (
+            <Text className="text-muted text-xs mt-0.5" numberOfLines={1}>
+              {detailMeta}
+            </Text>
+          ) : null}
+        </View>
       </View>
     </Pressable>
   );

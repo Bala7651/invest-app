@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { OHLCVPoint } from '../../features/charts/types';
@@ -12,9 +12,52 @@ import { TimeframeSelector } from '../../features/charts/components/TimeframeSel
 import { VolumeBar } from '../../features/charts/components/VolumeBar';
 import { useChartStore } from '../../features/charts/store/chartStore';
 import { Timeframe } from '../../features/charts/types';
-import { useQuoteStore } from '../../features/market/quoteStore';
+import { Quote, useQuoteStore } from '../../features/market/quoteStore';
 import { formatChange } from '../../features/watchlist/components/StockCard';
 import { useI18n } from '../../features/i18n/useI18n';
+import { useSettingsStore } from '../../features/settings/store/settingsStore';
+
+function mergeLiveQuoteIntoCandles(
+  candles: OHLCVPoint[] | undefined,
+  quote: Quote | undefined,
+  timeframe: Timeframe,
+): OHLCVPoint[] | undefined {
+  if (!candles || candles.length === 0 || timeframe !== '1D') return candles;
+  if (!quote || quote.price == null || quote.source !== 'fugle_live') return candles;
+  if (candles.length < 10) return candles;
+
+  const timestamp = quote.sourceUpdatedAt ?? quote.fetchedAt;
+  if (!timestamp) return candles;
+
+  const bucketDate = new Date(timestamp);
+  bucketDate.setSeconds(0, 0);
+  const bucketTs = bucketDate.getTime();
+  const next = [...candles];
+  const last = next[next.length - 1];
+
+  if (Math.abs(last.timestamp - bucketTs) <= 60_000) {
+    next[next.length - 1] = {
+      ...last,
+      close: quote.price,
+      high: Math.max(last.high, quote.price),
+      low: Math.min(last.low, quote.price),
+    };
+    return next;
+  }
+
+  if (bucketTs > last.timestamp) {
+    next.push({
+      timestamp: bucketTs,
+      open: last.close,
+      high: Math.max(last.close, quote.price),
+      low: Math.min(last.close, quote.price),
+      close: quote.price,
+      volume: 0,
+    });
+  }
+
+  return next;
+}
 
 export default function DetailScreen() {
   const { symbol } = useLocalSearchParams<{ symbol: string }>();
@@ -24,6 +67,7 @@ export default function DetailScreen() {
   const insets = useSafeAreaInsets();
 
   const quote = useQuoteStore(s => s.quotes[symbol]);
+  const fugleEnabled = useSettingsStore(s => s.fugleEnabled);
   const { fetchCandles, getCandles, loading, errors } = useChartStore();
 
   const [timeframe, setTimeframe] = useState<Timeframe>('1D');
@@ -32,18 +76,26 @@ export default function DetailScreen() {
 
   const key = `${symbol}:${timeframe}`;
   const candles = getCandles(symbol, timeframe);
+  const displayCandles = useMemo(
+    () => mergeLiveQuoteIntoCandles(candles, quote, timeframe),
+    [candles, quote, timeframe],
+  );
   const isLoading = loading[key] ?? false;
   const error = errors[key] ?? null;
+  const chartSourceLabel =
+    timeframe === '1D' && fugleEnabled && (displayCandles?.length ?? 0) >= 10
+      ? t('market.source.fugle')
+      : 'TWSE';
 
   useEffect(() => {
     fetchCandles(symbol, timeframe);
   }, [symbol, timeframe]);
 
   useEffect(() => {
-    if (candles && candles.length > 0) {
-      setSelectedCandle(candles[candles.length - 1]);
+    if (displayCandles && displayCandles.length > 0) {
+      setSelectedCandle(displayCandles[displayCandles.length - 1]);
     }
-  }, [candles]);
+  }, [displayCandles]);
 
   const displayPrice =
     quote?.price != null
@@ -104,9 +156,9 @@ export default function DetailScreen() {
 
       {/* Chart area */}
       <View className="flex-1 px-4">
-        {isLoading && !candles ? (
+        {isLoading && !displayCandles ? (
           <ChartSkeleton height={chartHeight + volumeHeight + 16} />
-        ) : error && !candles ? (
+        ) : error && !displayCandles ? (
           <View
             style={{ height: chartHeight + volumeHeight + 16 }}
             className="items-center justify-center"
@@ -129,14 +181,14 @@ export default function DetailScreen() {
               <Text className="text-primary text-sm">{t('common.retry')}</Text>
             </Pressable>
           </View>
-        ) : candles && candles.length > 0 ? (
+        ) : displayCandles && displayCandles.length > 0 ? (
           <View>
             {/* OHLC info card */}
             {selectedCandle ? (() => {
               const isUp = selectedCandle.close >= selectedCandle.open;
               const closeColor = isUp ? '#00ff88' : '#ff3366';
-              const periodFirst = candles[0];
-              const periodLast = candles[candles.length - 1];
+              const periodFirst = displayCandles[0];
+              const periodLast = displayCandles[displayCandles.length - 1];
               const periodPct = ((periodLast.close - periodFirst.open) / periodFirst.open) * 100;
               const periodColor = periodPct >= 0 ? '#00ff88' : '#ff3366';
               const periodSign = periodPct >= 0 ? '+' : '';
@@ -157,6 +209,9 @@ export default function DetailScreen() {
                       </Text>
                     </View>
                   </View>
+                  <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginBottom: 8 }}>
+                    {t('detail.chartSource', { source: chartSourceLabel })}
+                  </Text>
                   {/* OHLC row */}
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                     <View style={{ alignItems: 'center' }}>
@@ -189,7 +244,7 @@ export default function DetailScreen() {
             {/* Candlestick chart */}
             <View className="border border-border rounded-lg overflow-hidden mb-1">
               <CandleChart
-                data={candles}
+                data={displayCandles}
                 height={chartHeight}
                 onCandleChange={c => setSelectedCandle(c)}
               />
@@ -198,7 +253,7 @@ export default function DetailScreen() {
             <View style={{ marginBottom: 12 }}>
               <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2, paddingLeft: 2 }}>{t('detail.volume')}</Text>
               <View className="border-t border-border" style={{ height: volumeHeight }}>
-                <VolumeBar data={candles} height={volumeHeight} width={chartWidth} />
+                <VolumeBar data={displayCandles} height={volumeHeight} width={chartWidth} />
               </View>
             </View>
           </View>
@@ -211,7 +266,7 @@ export default function DetailScreen() {
           keyboardShouldPersistTaps="handled"
         >
           {/* Pattern card — shown below volume bars when a pattern is detected */}
-          <PatternCard candles={candles} />
+          <PatternCard candles={displayCandles} />
 
           {/* Timeframe selector */}
           <View style={{ marginTop: 8 }}>

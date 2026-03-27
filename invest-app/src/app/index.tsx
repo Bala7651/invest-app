@@ -31,6 +31,13 @@ function SwipeableCard({ item }: { item: WatchlistItem }) {
   const tickHistory = useQuoteStore(s => s.tickHistory);
   const drag = useReorderableDrag();
 
+  function handleDragStart() {
+    try {
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } catch (_) {}
+    drag();
+  }
+
   function renderRightActions() {
     return (
       <View className="bg-stock-down justify-center items-center w-20 rounded-r-lg mb-2">
@@ -55,12 +62,16 @@ function SwipeableCard({ item }: { item: WatchlistItem }) {
         quote={quotes[item.symbol]}
         tickHistory={tickHistory[item.symbol]}
         onPress={() => router.push(`/detail/${item.symbol}`)}
-        onLongPress={async () => {
-          try {
-            await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          } catch (_) {}
-          drag();
-        }}
+        dragHandle={(
+          <Pressable
+            onLongPress={handleDragStart}
+            delayLongPress={180}
+            hitSlop={10}
+            className="px-1 py-2"
+          >
+            <Text className="text-muted text-lg">≡</Text>
+          </Pressable>
+        )}
       />
     </ReanimatedSwipeable>
   );
