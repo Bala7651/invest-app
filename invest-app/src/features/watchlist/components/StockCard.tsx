@@ -20,6 +20,7 @@ interface StockCardProps {
   tickHistory?: number[];
   onPress: () => void;
   dragHandle?: ReactNode;
+  disabled?: boolean;
 }
 
 export function formatChange(change: number, changePct: number): string {
@@ -27,7 +28,7 @@ export function formatChange(change: number, changePct: number): string {
   return `${sign}${change.toFixed(2)} (${sign}${changePct.toFixed(2)}%)`;
 }
 
-export function StockCard({ item, quote, tickHistory, onPress, dragHandle }: StockCardProps) {
+export function StockCard({ item, quote, tickHistory, onPress, dragHandle, disabled = false }: StockCardProps) {
   const { language, t } = useI18n();
   const snapshot = buildQuoteSnapshot(item.name, quote, language);
   const priceDisplay = snapshot.price != null ? snapshot.price.toFixed(2) : '—';
@@ -67,31 +68,34 @@ export function StockCard({ item, quote, tickHistory, onPress, dragHandle }: Sto
   return (
     <Pressable
       onPress={onPress}
-      className="bg-surface border border-border rounded-lg px-4 py-3 mb-2 flex-row items-center justify-between"
+      disabled={disabled}
+      className="bg-surface border border-border rounded-lg px-4 py-3 mb-2"
     >
-      <View className="flex-1" style={{ minWidth: 80, paddingRight: 8 }}>
-        <Text className="text-primary font-semibold text-base" numberOfLines={1}>
-          {item.symbol}
-        </Text>
-        <Text className="text-muted text-sm mt-0.5" numberOfLines={1} ellipsizeMode="tail">{item.name}</Text>
-      </View>
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        {dragHandle ? <View style={{ marginRight: 8 }}>{dragHandle}</View> : null}
-        <View style={{ width: 60, height: 28, marginHorizontal: 8 }}>
-          <SparklineChart data={tickHistory ?? []} width={60} height={28} color={sparklineColor} />
+        <View className="flex-1" style={{ minWidth: 0, paddingRight: 12 }}>
+          <Text className="text-primary font-semibold text-base" numberOfLines={1}>
+            {item.symbol}
+          </Text>
+          <Text className="text-muted text-sm mt-0.5" numberOfLines={1} ellipsizeMode="tail">
+            {item.name}
+          </Text>
         </View>
-        <View className="items-end" style={{ minWidth: 84 }}>
+        {dragHandle ? <View style={{ marginRight: 8, flexShrink: 0 }}>{dragHandle}</View> : null}
+        <View style={{ width: 52, height: 28, marginRight: 8, flexShrink: 0 }}>
+          <SparklineChart data={tickHistory ?? []} width={52} height={28} color={sparklineColor} />
+        </View>
+        <View className="items-end" style={{ width: 112, flexShrink: 0 }}>
           <Animated.Text style={[{ fontWeight: '600', fontSize: 16 }, priceStyle]}>{priceDisplay}</Animated.Text>
           <Text className={`${changeColorClass} text-sm mt-0.5`} numberOfLines={1}>
             {changeDisplay}
           </Text>
-          {detailMeta ? (
-            <Text className="text-muted text-xs mt-0.5" numberOfLines={1}>
-              {detailMeta}
-            </Text>
-          ) : null}
         </View>
       </View>
+      {detailMeta ? (
+        <Text className="text-muted text-xs mt-2" numberOfLines={1} ellipsizeMode="tail">
+          {detailMeta}
+        </Text>
+      ) : null}
     </Pressable>
   );
 }

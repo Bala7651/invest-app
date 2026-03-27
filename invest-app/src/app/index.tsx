@@ -1,7 +1,8 @@
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { useRef, useState } from 'react';
-import { Alert, Pressable, RefreshControl, Text, View, useWindowDimensions } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { Alert, Platform, Pressable, RefreshControl, Text, View, useWindowDimensions } from 'react-native';
+import { runOnJS } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import ReorderableList, {
@@ -24,7 +25,19 @@ import { StockCard } from '../features/watchlist/components/StockCard';
 import { WatchlistItem, useWatchlistStore } from '../features/watchlist/store/watchlistStore';
 import { useI18n } from '../features/i18n/useI18n';
 
-function SwipeableCard({ item }: { item: WatchlistItem }) {
+function SwipeableCard({
+  item,
+  swipeEnabled,
+  interactionLocked,
+  onDragHandlePressIn,
+  onDragHandlePressOut,
+}: {
+  item: WatchlistItem;
+  swipeEnabled: boolean;
+  interactionLocked: boolean;
+  onDragHandlePressIn: () => void;
+  onDragHandlePressOut: () => void;
+}) {
   const router = useRouter();
   const { t } = useI18n();
   const quotes = useQuoteStore(s => s.quotes);
@@ -52,6 +65,7 @@ function SwipeableCard({ item }: { item: WatchlistItem }) {
 
   return (
     <ReanimatedSwipeable
+      enabled={swipeEnabled}
       renderRightActions={renderRightActions}
       onSwipeableOpen={handleSwipeableOpen}
       rightThreshold={40}
@@ -62,8 +76,11 @@ function SwipeableCard({ item }: { item: WatchlistItem }) {
         quote={quotes[item.symbol]}
         tickHistory={tickHistory[item.symbol]}
         onPress={() => router.push(`/detail/${item.symbol}`)}
+        disabled={interactionLocked}
         dragHandle={(
           <Pressable
+            onPressIn={onDragHandlePressIn}
+            onPressOut={onDragHandlePressOut}
             onLongPress={handleDragStart}
             delayLongPress={180}
             hitSlop={10}
@@ -85,10 +102,43 @@ function WatchlistPage() {
   const [alertsListVisible, setAlertsListVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshEnabled, setRefreshEnabled] = useState(true);
+  const [dragArming, setDragArming] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const alertCount = useAlertStore(s => s.activeCount());
   const router = useRouter();
   const { width } = useWindowDimensions();
   const isTablet = width >= 600;
+  const rowInteractionLocked = dragArming || dragging;
+
+  const handleDragHandlePressIn = useCallback(() => {
+    setDragArming(true);
+  }, []);
+
+  const handleDragHandlePressOut = useCallback(() => {
+    if (!dragging) {
+      setDragArming(false);
+    }
+  }, [dragging]);
+
+  const handleListDragStart = useCallback(() => {
+    'worklet';
+
+    runOnJS(setDragArming)(false);
+    runOnJS(setDragging)(true);
+    if (Platform.OS === 'android' && !refreshing) {
+      runOnJS(setRefreshEnabled)(false);
+    }
+  }, [refreshing]);
+
+  const handleListDragEnd = useCallback(() => {
+    'worklet';
+
+    runOnJS(setDragArming)(false);
+    runOnJS(setDragging)(false);
+    if (Platform.OS === 'android') {
+      runOnJS(setRefreshEnabled)(true);
+    }
+  }, []);
 
   function getSourceLabel(source: string | undefined): string {
     if (source === 'twse_live') return 'TWSE';
@@ -195,7 +245,15 @@ function WatchlistPage() {
   }
 
   function renderItem({ item }: { item: WatchlistItem }) {
-    return <SwipeableCard item={item} />;
+    return (
+      <SwipeableCard
+        item={item}
+        swipeEnabled={!rowInteractionLocked}
+        interactionLocked={rowInteractionLocked}
+        onDragHandlePressIn={handleDragHandlePressIn}
+        onDragHandlePressOut={handleDragHandlePressOut}
+      />
+    );
   }
 
   const content = (
@@ -247,8 +305,9 @@ function WatchlistPage() {
           keyExtractor={item => item.symbol}
           renderItem={renderItem}
           onReorder={handleReorder}
-          onDragStart={() => setRefreshEnabled(false)}
-          onDragEnd={() => setRefreshEnabled(true)}
+          panActivateAfterLongPress={220}
+          onDragStart={handleListDragStart}
+          onDragEnd={handleListDragEnd}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
