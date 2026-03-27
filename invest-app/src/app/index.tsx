@@ -22,9 +22,11 @@ import { EmptyWatchlist } from '../features/watchlist/components/EmptyWatchlist'
 import { SearchModal } from '../features/watchlist/components/SearchModal';
 import { StockCard } from '../features/watchlist/components/StockCard';
 import { WatchlistItem, useWatchlistStore } from '../features/watchlist/store/watchlistStore';
+import { useI18n } from '../features/i18n/useI18n';
 
 function SwipeableCard({ item }: { item: WatchlistItem }) {
   const router = useRouter();
+  const { t } = useI18n();
   const quotes = useQuoteStore(s => s.quotes);
   const tickHistory = useQuoteStore(s => s.tickHistory);
   const drag = useReorderableDrag();
@@ -32,7 +34,7 @@ function SwipeableCard({ item }: { item: WatchlistItem }) {
   function renderRightActions() {
     return (
       <View className="bg-stock-down justify-center items-center w-20 rounded-r-lg mb-2">
-        <Text className="text-bg font-semibold text-base">刪除</Text>
+        <Text className="text-bg font-semibold text-base">{t('watchlist.remove')}</Text>
       </View>
     );
   }
@@ -65,6 +67,7 @@ function SwipeableCard({ item }: { item: WatchlistItem }) {
 }
 
 function WatchlistPage() {
+  const { t } = useI18n();
   const insets = useSafeAreaInsets();
   const items = useWatchlistStore(s => s.items);
   const [searchVisible, setSearchVisible] = useState(false);
@@ -81,8 +84,8 @@ function WatchlistPage() {
     if (source === 'fugle_live') return 'Fugle';
     if (source === 'yahoo_delayed') return 'Yahoo';
     if (source === 'alpha_vantage') return 'Alpha Vantage';
-    if (source === 'twse_close' || source === 'prev_close') return '昨收';
-    return '其他資料源';
+    if (source === 'twse_close' || source === 'prev_close') return t('market.source.twseClose');
+    return t('market.source.other');
   }
 
   function handleReorder({ from, to }: ReorderableListReorderEvent) {
@@ -127,19 +130,19 @@ function WatchlistPage() {
         if (lastError) {
           if (fugleActive) {
             Alert.alert(
-              '重新整理失敗',
-              `Fugle、TWSE 與 Yahoo 都沒有成功更新報價：\n${lastError}`
+              t('watchlist.refreshFailed'),
+              t('watchlist.refreshFailedFugle', { error: lastError })
             );
             return;
           }
           if (alphaQuotaExhausted || quotaWasExhausted) {
             Alert.alert(
-              '重新整理失敗',
-              `Alpha Vantage 今日額度已用完，已改用 ${fallbackLabelText} 嘗試更新，但仍失敗：\n${lastError}`
+              t('watchlist.refreshFailed'),
+              t('watchlist.refreshFailedAlphaQuota', { source: fallbackLabelText, error: lastError })
             );
             return;
           }
-          Alert.alert('重新整理失敗', lastError);
+          Alert.alert(t('watchlist.refreshFailed'), lastError);
           return;
         }
 
@@ -150,8 +153,8 @@ function WatchlistPage() {
         if (fugleActive) {
           if (missing.length > 0) {
             Alert.alert(
-              '價格仍未取得',
-              `以下股票重新整理後仍沒有價格：\n${missing.join('\n')}\n\n本次已先嘗試 Fugle，再回退到 TWSE / Yahoo。`
+              t('watchlist.priceStillUnavailable'),
+              t('watchlist.refreshMissingAfterFugle', { list: missing.join('\n') })
             );
           }
           return;
@@ -159,19 +162,19 @@ function WatchlistPage() {
 
         if (alphaQuotaExhausted || quotaWasExhausted) {
           const messageLines = [
-            `Alpha Vantage 今日額度已用完，本次改用 ${fallbackLabelText} 更新價格。`,
+            t('watchlist.refreshCompletedAlphaQuota', { source: fallbackLabelText }),
           ];
           if (missing.length > 0) {
-            messageLines.push('', '以下股票重新整理後仍沒有價格：', ...missing);
+            messageLines.push('', t('watchlist.refreshMissingHeader'), ...missing);
           }
-          Alert.alert('重新整理完成', messageLines.join('\n'));
+          Alert.alert(t('watchlist.refreshDone'), messageLines.join('\n'));
           return;
         }
 
         if (missing.length > 0) {
           Alert.alert(
-            '價格仍未取得',
-            `以下股票重新整理後仍沒有價格：\n${missing.join('\n')}\n\n可能原因：TWSE 沒有回傳成交價，而且 Yahoo 補價也沒有成功。`
+            t('watchlist.priceStillUnavailable'),
+            t('watchlist.refreshMissingAfterFallback', { list: missing.join('\n') })
           );
         }
       }
@@ -196,7 +199,7 @@ function WatchlistPage() {
                 <View style={{ width: 20, height: 2, backgroundColor: '#e0e0e0' }} />
               </View>
             </Pressable>
-            <Text className="text-text text-2xl font-bold">自選清單</Text>
+            <Text className="text-text text-2xl font-bold">{t('watchlist.title')}</Text>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <Pressable onPress={() => setAlertsListVisible(true)} style={{ position: 'relative' }}>
@@ -208,7 +211,7 @@ function WatchlistPage() {
               ) : null}
             </Pressable>
             <Pressable onPress={() => setSearchVisible(true)}>
-              <Text className="text-primary text-base">+ 新增</Text>
+              <Text className="text-primary text-base">{t('watchlist.add')}</Text>
             </Pressable>
           </View>
         </View>
@@ -222,7 +225,7 @@ function WatchlistPage() {
         onPress={() => setSearchVisible(true)}
         className="bg-surface border border-border rounded-lg px-4 py-3 mb-4 flex-row items-center"
       >
-        <Text className="text-muted text-base flex-1">搜尋股票...</Text>
+        <Text className="text-muted text-base flex-1">{t('watchlist.searchPlaceholder')}</Text>
       </Pressable>
 
       {items.length === 0 ? (
@@ -265,13 +268,18 @@ function WatchlistPage() {
   return content;
 }
 
-const PAGE_LABELS = ['自選', 'AI分析', '摘要', '組合'];
-
 export default function HomeScreen() {
   const router = useRouter();
   const pagerRef = useRef<PagerView>(null);
   const [activePage, setActivePage] = useState(1);
   const { bottom } = useSafeAreaInsets();
+  const { t } = useI18n();
+  const pageLabels = [
+    t('home.page.watchlist'),
+    t('home.page.analysis'),
+    t('home.page.summary'),
+    t('home.page.portfolio'),
+  ];
 
   function handlePageSelected(e: { nativeEvent: { position: number } }) {
     const page = e.nativeEvent.position;
@@ -332,7 +340,7 @@ export default function HomeScreen() {
             />
             {activePage === page ? (
               <Text style={{ color: '#4D7CFF', fontSize: 9, fontWeight: '600' }}>
-                {PAGE_LABELS[i]}
+                {pageLabels[i]}
               </Text>
             ) : null}
           </View>

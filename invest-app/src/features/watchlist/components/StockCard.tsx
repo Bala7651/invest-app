@@ -12,6 +12,7 @@ import { WatchlistItem } from '../store/watchlistStore';
 import { SparklineChart } from './SparklineChart';
 import { Quote } from '../../market/quoteStore';
 import { buildQuoteSnapshot } from '../../market/quotePresentation';
+import { useI18n } from '../../i18n/useI18n';
 
 interface StockCardProps {
   item: WatchlistItem;
@@ -27,12 +28,13 @@ export function formatChange(change: number, changePct: number): string {
 }
 
 export function StockCard({ item, quote, tickHistory, onPress, onLongPress }: StockCardProps) {
-  const snapshot = buildQuoteSnapshot(item.name, quote);
+  const { language, t } = useI18n();
+  const snapshot = buildQuoteSnapshot(item.name, quote, language);
   const priceDisplay = snapshot.price != null ? snapshot.price.toFixed(2) : '—';
   const changeDisplay =
     snapshot.price != null
       ? formatChange(snapshot.change, snapshot.changePct)
-      : '等待開盤';
+      : t('watchlist.waitingForOpen');
   const changeColorClass =
     snapshot.price != null
       ? snapshot.change >= 0

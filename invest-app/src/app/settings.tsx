@@ -11,6 +11,8 @@ import { AI_PROVIDERS, MARKET_DATA_PROVIDERS } from '../features/settings/consta
 import { useWatchlistStore } from '../features/watchlist/store/watchlistStore';
 import { useQuoteStore } from '../features/market/quoteStore';
 import { isMarketOpen } from '../features/market/marketHours';
+import { useI18n } from '../features/i18n/useI18n';
+import type { AppLanguage } from '../features/i18n/types';
 
 function DropdownSelect({
   label,
@@ -69,6 +71,7 @@ function DropdownSelect({
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const { t, language } = useI18n();
   const providerName = useSettingsStore(s => s.providerName);
   const modelName = useSettingsStore(s => s.modelName);
   const glowLevel = useSettingsStore(s => s.glowLevel);
@@ -84,11 +87,20 @@ export default function SettingsScreen() {
   const setAlphaVantageEnabled = useSettingsStore(s => s.setAlphaVantageEnabled);
   const fugleEnabled = useSettingsStore(s => s.fugleEnabled);
   const setFugleEnabled = useSettingsStore(s => s.setFugleEnabled);
+  const setLanguage = useSettingsStore(s => s.setLanguage);
 
   const currentProvider = AI_PROVIDERS.find(p => p.name === providerName) ?? AI_PROVIDERS[0];
   const currentMarketDataProvider =
     MARKET_DATA_PROVIDERS.find(p => p.id === marketDataProvider) ?? MARKET_DATA_PROVIDERS[0];
   const activeConfigLabel = `${providerName} / ${modelName}`;
+
+  function getMarketDataProviderLabel(id: typeof currentMarketDataProvider.id) {
+    return t(`settings.providerLabel.${id}`);
+  }
+
+  function getMarketDataProviderDescription(id: typeof currentMarketDataProvider.id) {
+    return t(`settings.providerDescription.${id}`);
+  }
 
   function handleProviderSelect(name: string) {
     const provider = AI_PROVIDERS.find(p => p.name === name);
@@ -102,10 +114,16 @@ export default function SettingsScreen() {
   }
 
   function handleMarketDataProviderSelect(label: string) {
-    const provider = MARKET_DATA_PROVIDERS.find(p => p.label === label);
+    const provider = MARKET_DATA_PROVIDERS.find(p => getMarketDataProviderLabel(p.id) === label);
     if (provider) {
       setMarketDataProvider(provider.id);
     }
+  }
+
+  function handleLanguageSelect(nextLanguageLabel: string) {
+    const nextLanguage: AppLanguage =
+      nextLanguageLabel === t('language.name.en') ? 'en' : 'zh-TW';
+    void setLanguage(nextLanguage);
   }
 
   async function restartQuotePipeline() {
@@ -122,8 +140,8 @@ export default function SettingsScreen() {
   async function handleAlphaVantageToggle(value: boolean) {
     if (value) {
       Alert.alert(
-        'Alpha Vantage 已啟用',
-        '下拉刷新將只使用 Alpha Vantage，Fugle 不會在下拉刷新時使用，但如果 Fugle 已啟用，仍可持續提供即時推送。'
+        t('settings.alphaToggleTitle'),
+        t('settings.alphaToggleBody')
       );
       await setAlphaVantageEnabled(true);
       await setMarketDataProvider('alpha_vantage');
@@ -139,8 +157,8 @@ export default function SettingsScreen() {
   async function handleFugleToggle(value: boolean) {
     if (value) {
       Alert.alert(
-        'Fugle 已啟用',
-        '下拉刷新將只使用 Fugle，Alpha Vantage 不會在下拉刷新時使用。Fugle 啟用後，自選清單也會嘗試維持即時推送。'
+        t('settings.fugleToggleTitle'),
+        t('settings.fugleToggleBody')
       );
       await setFugleEnabled(true);
       await setMarketDataProvider('fugle');
@@ -180,61 +198,60 @@ export default function SettingsScreen() {
         <ScrollView className="flex-1 bg-bg" contentContainerStyle={{ padding: 16, paddingTop: 52, paddingBottom: 24 }}>
           <View className="flex-row items-center mb-6">
             <Pressable onPress={handleBack} className="mr-4">
-              <Text className="text-primary text-base">返回</Text>
+              <Text className="text-primary text-base">{t('common.back')}</Text>
             </Pressable>
-            <Text className="text-text text-2xl font-bold">設定</Text>
+            <Text className="text-text text-2xl font-bold">{t('settings.title')}</Text>
           </View>
 
-          {/* API 設定 */}
-          <Text className="text-muted text-xs uppercase tracking-widest mb-3">API 設定</Text>
+          <Text className="text-muted text-xs uppercase tracking-widest mb-3">{t('settings.section.api')}</Text>
           <View className="bg-surface border border-border rounded-lg p-4 mb-4">
             <View className="bg-bg border border-border rounded-lg px-3 py-3 mb-4">
-              <Text className="text-muted text-xs">目前實際使用</Text>
+              <Text className="text-muted text-xs">{t('settings.activeConfig')}</Text>
               <Text className="text-text text-base mt-1">{activeConfigLabel}</Text>
               <Text className="text-muted text-xs mt-1">
-                每個 AI 供應商各自保存 API 金鑰，切換供應商時會自動帶入對應金鑰。
+                {t('settings.activeConfigHint')}
               </Text>
             </View>
 
-            <Text className="text-muted text-xs mb-1">{providerName} API 金鑰</Text>
+            <Text className="text-muted text-xs mb-1">{providerName} API Key</Text>
             <ApiKeyInput />
 
             <DropdownSelect
-              label="AI 供應商"
+              label={t('settings.aiProvider')}
               value={providerName}
               options={AI_PROVIDERS.map(p => p.name)}
               onSelect={handleProviderSelect}
             />
 
             <DropdownSelect
-              label="AI 模型"
+              label={t('settings.aiModel')}
               value={modelName}
               options={currentProvider.models}
               onSelect={handleModelSelect}
             />
           </View>
 
-          <Text className="text-muted text-xs uppercase tracking-widest mb-3">行情資料</Text>
+          <Text className="text-muted text-xs uppercase tracking-widest mb-3">{t('settings.section.marketData')}</Text>
           <View className="bg-surface border border-border rounded-lg p-4 mb-4">
             <DropdownSelect
-              label="市場資料供應商"
-              value={currentMarketDataProvider.label}
-              options={MARKET_DATA_PROVIDERS.map(p => p.label)}
+              label={t('settings.marketDataProvider')}
+              value={getMarketDataProviderLabel(currentMarketDataProvider.id)}
+              options={MARKET_DATA_PROVIDERS.map(p => getMarketDataProviderLabel(p.id))}
               onSelect={handleMarketDataProviderSelect}
             />
 
             <Text className="text-muted text-xs mt-3">
-              {currentMarketDataProvider.description}
+              {getMarketDataProviderDescription(currentMarketDataProvider.id)}
             </Text>
 
             {marketDataProvider === 'alpha_vantage' ? (
               <View className="mt-4">
-                <Text className="text-muted text-xs mb-1">Alpha Vantage API 金鑰</Text>
+                <Text className="text-muted text-xs mb-1">Alpha Vantage API Key</Text>
                 <AlphaVantageApiKeyInput />
                 <View className="mt-4 flex-row items-center justify-between">
                   <View style={{ flex: 1, paddingRight: 12 }}>
-                    <Text className="text-text text-base">啟用 Alpha Vantage</Text>
-                    <Text className="text-muted text-xs mt-1">開啟後會在需要時使用 Alpha Vantage 補報價，手動下拉刷新也會主動檢查一次。</Text>
+                    <Text className="text-text text-base">{t('settings.alphaEnabledTitle')}</Text>
+                    <Text className="text-muted text-xs mt-1">{t('settings.alphaEnabledDescription')}</Text>
                   </View>
                   <Switch
                     value={alphaVantageEnabled}
@@ -244,28 +261,28 @@ export default function SettingsScreen() {
                   />
                 </View>
                 <View className="mt-3 bg-bg border border-border rounded-lg px-3 py-3">
-                  <Text className="text-text text-sm">今日 Alpha Vantage 額度</Text>
+                  <Text className="text-text text-sm">{t('settings.alphaQuotaTitle')}</Text>
                   <Text className="text-primary text-lg font-semibold mt-1">
                     {alphaVantageDailyRemaining}/{ALPHA_VANTAGE_DAILY_QUOTA}
                   </Text>
                   <Text className="text-muted text-xs mt-1">
-                    以實際 Alpha Vantage HTTP 請求數計算，每日重置；更換 API 金鑰也會重置。
+                    {t('settings.alphaQuotaDescription')}
                   </Text>
                 </View>
                 <Text className="text-muted text-xs mt-2">
-                  只作為穩定報價 fallback，若 Alpha Vantage 沒有台股資料仍會回退到 TWSE / Yahoo。
+                  {t('settings.alphaFallbackNote')}
                 </Text>
               </View>
             ) : null}
 
             {marketDataProvider === 'fugle' ? (
               <View className="mt-4">
-                <Text className="text-muted text-xs mb-1">Fugle API 金鑰</Text>
+                <Text className="text-muted text-xs mb-1">Fugle API Key</Text>
                 <FugleApiKeyInput />
                 <View className="mt-4 flex-row items-center justify-between">
                   <View style={{ flex: 1, paddingRight: 12 }}>
-                    <Text className="text-text text-base">啟用 Fugle</Text>
-                    <Text className="text-muted text-xs mt-1">開啟後會在 TWSE 回價不穩時優先補值，手動下拉刷新也會主動查詢 Fugle。</Text>
+                    <Text className="text-text text-base">{t('settings.fugleEnabledTitle')}</Text>
+                    <Text className="text-muted text-xs mt-1">{t('settings.fugleEnabledDescription')}</Text>
                   </View>
                   <Switch
                     value={fugleEnabled}
@@ -275,30 +292,38 @@ export default function SettingsScreen() {
                   />
                 </View>
                 <Text className="text-muted text-xs mt-2">
-                  Fugle 比較適合做台股主力補值來源；若 Fugle 失敗，仍會回退到 TWSE / Yahoo。
+                  {t('settings.fugleFallbackNote')}
                 </Text>
               </View>
             ) : null}
           </View>
 
-          {/* Display section */}
-          <Text className="text-muted text-xs uppercase tracking-widest mb-3">顯示</Text>
+          <Text className="text-muted text-xs uppercase tracking-widest mb-3">{t('settings.section.language')}</Text>
           <View className="bg-surface border border-border rounded-lg p-4 mb-4">
-            <Text className="text-muted text-xs mb-3">光暈強度</Text>
+            <DropdownSelect
+              label={t('settings.language')}
+              value={t(`language.name.${language}`)}
+              options={[t('language.name.zh-TW'), t('language.name.en')]}
+              onSelect={handleLanguageSelect}
+            />
+            <Text className="text-muted text-xs mt-3">{t('settings.languageHint')}</Text>
+          </View>
+
+          <Text className="text-muted text-xs uppercase tracking-widest mb-3">{t('settings.section.display')}</Text>
+          <View className="bg-surface border border-border rounded-lg p-4 mb-4">
+            <Text className="text-muted text-xs mb-3">{t('settings.displayGlow')}</Text>
             <GlowPillSelector
               active={glowLevel}
               onSelect={setGlowLevel}
             />
           </View>
 
-          {/* Alerts section */}
-          <Text className="text-muted text-xs uppercase tracking-widest mb-3">提醒</Text>
+          <Text className="text-muted text-xs uppercase tracking-widest mb-3">{t('settings.section.alerts')}</Text>
           <View className="bg-surface border border-border rounded-lg mb-4">
-            {/* AI notifications toggle — renders on all platforms */}
             <View testID="ai-notifications-toggle" className="p-4 flex-row items-center justify-between">
               <View style={{ flex: 1 }}>
-                <Text className="text-text text-base">AI 通知內容</Text>
-                <Text className="text-muted text-xs mt-1">價格提醒觸發時附加 AI 市場背景說明</Text>
+                <Text className="text-text text-base">{t('settings.aiNotificationsTitle')}</Text>
+                <Text className="text-muted text-xs mt-1">{t('settings.aiNotificationsDescription')}</Text>
               </View>
               <Switch
                 value={aiNotificationsEnabled}
@@ -319,10 +344,10 @@ export default function SettingsScreen() {
                 >
                   <View className="flex-row items-center justify-between">
                     <View style={{ flex: 1 }}>
-                      <Text className="text-text text-base">電池最佳化</Text>
-                      <Text className="text-muted text-xs mt-1">關閉以確保背景價格提醒正常運作</Text>
+                      <Text className="text-text text-base">{t('settings.batteryOptimizationTitle')}</Text>
+                      <Text className="text-muted text-xs mt-1">{t('settings.batteryOptimizationDescription')}</Text>
                     </View>
-                    <Text className="text-primary text-sm">開啟設定</Text>
+                    <Text className="text-primary text-sm">{t('settings.openSettings')}</Text>
                   </View>
                 </Pressable>
               </>

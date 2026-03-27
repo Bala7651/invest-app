@@ -64,6 +64,13 @@ describe('buildPortfolioPrompt', () => {
 
     expect(prompt).toContain('股票14');
   });
+
+  it('builds an English portfolio prompt when language is set to en', () => {
+    const prompt = buildPortfolioPrompt([makeEntry({ name: 'TSMC' })], 'en');
+    expect(prompt).toContain('Client portfolio data');
+    expect(prompt).toContain('Total market value');
+    expect(prompt).toContain('TSMC');
+  });
 });
 
 describe('extractHealthScore', () => {

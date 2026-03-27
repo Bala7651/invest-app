@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { setItemAsync, getItemAsync, deleteItemAsync } from 'expo-secure-store';
 import { AI_PROVIDERS } from '../constants/providers';
+import type { AppLanguage } from '../../i18n/types';
 
 export type GlowLevel = 'subtle' | 'medium' | 'heavy';
 export type MarketDataProvider = 'twse_yahoo' | 'alpha_vantage' | 'fugle';
@@ -22,6 +23,7 @@ const ALPHA_VANTAGE_LAST_RESET_STORE_KEY = 'alpha_vantage_last_reset';
 const FUGLE_API_KEY_STORE_KEY = 'fugle_api_key';
 const FUGLE_ENABLED_STORE_KEY = 'fugle_enabled';
 const MARKET_DATA_RECOMMENDATION_SEEN_STORE_KEY = 'market_data_recommendation_seen';
+const APP_LANGUAGE_STORE_KEY = 'app_language';
 
 function getLocalDateKey(now = new Date()): string {
   const year = now.getFullYear();
@@ -107,6 +109,8 @@ interface SettingsState {
   fugleApiKey: string;
   fugleEnabled: boolean;
   marketDataRecommendationSeen: boolean;
+  language: AppLanguage;
+  isLoaded: boolean;
   setGlowLevel: (level: GlowLevel) => void;
   saveApiKey: (key: string) => Promise<void>;
   getApiKeyForProvider: (providerName: AIProviderName) => string;
@@ -122,6 +126,7 @@ interface SettingsState {
   setBaseUrl: (url: string) => Promise<void>;
   setProvider: (name: string, baseUrl: string, defaultModel: string) => Promise<void>;
   setAiNotificationsEnabled: (enabled: boolean) => Promise<void>;
+  setLanguage: (language: AppLanguage) => Promise<void>;
   setMarketDataProvider: (provider: MarketDataProvider) => Promise<void>;
   setAlphaVantageEnabled: (enabled: boolean) => Promise<void>;
   setFugleEnabled: (enabled: boolean) => Promise<void>;
@@ -150,6 +155,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   fugleApiKey: '',
   fugleEnabled: false,
   marketDataRecommendationSeen: false,
+  language: 'zh-TW',
+  isLoaded: false,
 
   setGlowLevel: (level) => set({ glowLevel: level }),
 
@@ -210,6 +217,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       fugleApiKey,
       fugleEnabled,
       marketDataRecommendationSeen,
+      language,
     ] = await Promise.all([
       getItemAsync(MINIMAX_API_KEY_STORE_KEY),
       getItemAsync(OPENAI_API_KEY_STORE_KEY),
@@ -226,6 +234,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       getItemAsync(FUGLE_API_KEY_STORE_KEY),
       getItemAsync(FUGLE_ENABLED_STORE_KEY),
       getItemAsync(MARKET_DATA_RECOMMENDATION_SEEN_STORE_KEY),
+      getItemAsync(APP_LANGUAGE_STORE_KEY),
     ]);
     const provider = resolveProvider(providerName ?? undefined);
     const resolvedProviderName = provider.name as AIProviderName;
@@ -304,6 +313,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       fugleApiKey: fugleApiKey ?? '',
       fugleEnabled: fugleEnabled === 'true',
       marketDataRecommendationSeen: marketDataRecommendationSeen === 'true',
+      language: language === 'en' ? 'en' : 'zh-TW',
+      isLoaded: true,
     });
   },
 
@@ -367,6 +378,11 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   setAiNotificationsEnabled: async (enabled) => {
     await setItemAsync(AI_NOTIFICATIONS_STORE_KEY, String(enabled));
     set({ aiNotificationsEnabled: enabled });
+  },
+
+  setLanguage: async (language) => {
+    await setItemAsync(APP_LANGUAGE_STORE_KEY, language);
+    set({ language });
   },
 
   setMarketDataProvider: async (provider) => {

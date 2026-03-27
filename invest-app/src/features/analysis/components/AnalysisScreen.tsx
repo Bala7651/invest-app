@@ -8,6 +8,7 @@ import { buildQuoteSnapshot } from '../../market/quotePresentation';
 import { useAnalysisStore } from '../store/analysisStore';
 import { AnalysisCard } from './AnalysisCard';
 import { NoApiKeyPrompt } from './NoApiKeyPrompt';
+import { useI18n } from '../../i18n/useI18n';
 
 interface AnalysisScreenProps {
   isActive: boolean;
@@ -15,13 +16,14 @@ interface AnalysisScreenProps {
 
 export function AnalysisScreen({ isActive }: AnalysisScreenProps) {
   const insets = useSafeAreaInsets();
+  const { t, language } = useI18n();
   const hasActiveAiKey = useSettingsStore(s => s.hasActiveAiKey);
   const items = useWatchlistStore(s => s.items);
   const quotes = useQuoteStore(s => s.quotes);
   const { cache, loading, errors, fetchAnalysis, loadPersistedAnalysis } = useAnalysisStore();
 
   function buildAnalysisQuoteData(fallbackName: string, quote?: typeof quotes[string]) {
-    const snapshot = buildQuoteSnapshot(fallbackName, quote);
+    const snapshot = buildQuoteSnapshot(fallbackName, quote, language);
     return {
       name: snapshot.name,
       price: snapshot.price,
@@ -76,11 +78,11 @@ export function AnalysisScreen({ isActive }: AnalysisScreenProps) {
   return (
     <View className="flex-1" style={{ paddingTop: insets.top + 24, paddingBottom: Math.max(insets.bottom, 8) + 54 }}>
       <ScrollView className="flex-1 px-4 pt-4" contentContainerStyle={{ paddingBottom: 16 }}>
-        <Text className="text-primary text-2xl font-bold mb-4">AI 分析</Text>
+        <Text className="text-primary text-2xl font-bold mb-4">{t('analysis.title')}</Text>
 
         {items.length === 0 ? (
           <Text className="text-muted text-center mt-8">
-            請先將股票加入自選清單
+            {t('analysis.addFirst')}
           </Text>
         ) : (
           items.map(item => {
@@ -121,7 +123,7 @@ export function AnalysisScreen({ isActive }: AnalysisScreenProps) {
       </ScrollView>
 
       <View className="bg-bg border-t border-border py-2">
-        <Text className="text-muted text-xs text-center">本內容不構成投資建議</Text>
+        <Text className="text-muted text-xs text-center">{t('analysis.disclaimer')}</Text>
       </View>
     </View>
   );

@@ -40,6 +40,8 @@ beforeEach(() => {
     fugleEnabled: false,
     marketDataRecommendationSeen: false,
     aiNotificationsEnabled: true,
+    language: 'zh-TW',
+    isLoaded: false,
   });
 });
 
@@ -58,6 +60,10 @@ describe('settingsStore initial state', () => {
 
   it('has twse_yahoo as default marketDataProvider', () => {
     expect(useSettingsStore.getState().marketDataProvider).toBe('twse_yahoo');
+  });
+
+  it('has zh-TW as default language', () => {
+    expect(useSettingsStore.getState().language).toBe('zh-TW');
   });
 });
 
@@ -179,6 +185,18 @@ describe('loadFromSecureStore', () => {
     expect(useSettingsStore.getState().marketDataRecommendationSeen).toBe(true);
   });
 
+  it('loads the saved app language from SecureStore', async () => {
+    mockGetItemAsync.mockImplementation((key: string) => {
+      if (key === 'app_language') return Promise.resolve('en');
+      return Promise.resolve(null);
+    });
+
+    await useSettingsStore.getState().loadFromSecureStore();
+
+    expect(useSettingsStore.getState().language).toBe('en');
+    expect(useSettingsStore.getState().isLoaded).toBe(true);
+  });
+
   it('hydrates the OpenAI key into the active apiKey when providerName is OpenAI', async () => {
     mockGetItemAsync.mockImplementation((key: string) => {
       if (key === 'ai_provider_name') return Promise.resolve('OpenAI');
@@ -244,6 +262,18 @@ describe('setBaseUrl', () => {
   it('persists baseUrl to SecureStore', async () => {
     await useSettingsStore.getState().setBaseUrl('https://custom.url/v1');
     expect(mockSetItemAsync).toHaveBeenCalledWith('minimax_base_url', 'https://custom.url/v1');
+  });
+});
+
+describe('setLanguage', () => {
+  it('updates state.language', async () => {
+    await useSettingsStore.getState().setLanguage('en');
+    expect(useSettingsStore.getState().language).toBe('en');
+  });
+
+  it('persists language to SecureStore', async () => {
+    await useSettingsStore.getState().setLanguage('en');
+    expect(mockSetItemAsync).toHaveBeenCalledWith('app_language', 'en');
   });
 });
 

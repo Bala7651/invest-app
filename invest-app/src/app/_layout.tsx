@@ -16,6 +16,7 @@ import { useWatchlistStore } from '../features/watchlist/store/watchlistStore';
 import { useSettingsStore } from '../features/settings/store/settingsStore';
 import { isCatchUpNeeded, getTodayISO, hasSummaryForDate } from '../features/summary/services/summaryService';
 import { useSummaryStore } from '../features/summary/store/summaryStore';
+import { tFromStore } from '../features/i18n/useI18n';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -30,6 +31,7 @@ const FUGLE_API_DOCS_URL = 'https://developer.fugle.tw/docs/key/';
 
 export default function RootLayout() {
   const { success, error } = useMigrations(db, migrations);
+  const settingsLoaded = useSettingsStore(state => state.isLoaded);
 
   // Hydrate watchlist from SQLite after migration succeeds, then start polling
   useEffect(() => {
@@ -39,12 +41,12 @@ export default function RootLayout() {
       if (!useSettingsStore.getState().marketDataRecommendationSeen) {
         await useSettingsStore.getState().markMarketDataRecommendationSeen();
         Alert.alert(
-          '建議設定行情 API',
-          '建議設定 Fugle 或其他行情 API，這樣自選清單會更容易取得穩定的即時價格。現在要前往申請 Fugle API 嗎？',
+          tFromStore('startup.marketDataPromptTitle'),
+          tFromStore('startup.marketDataPromptBody'),
           [
-            { text: '稍後再說', style: 'cancel' },
+            { text: tFromStore('startup.marketDataPromptLater'), style: 'cancel' },
             {
-              text: '前往申請',
+              text: tFromStore('startup.marketDataPromptOpen'),
               onPress: () => {
                 void Linking.openURL(FUGLE_API_DOCS_URL);
               },
@@ -55,13 +57,13 @@ export default function RootLayout() {
       await useAlertStore.getState().loadFromDb();
 
       Notifications.setNotificationChannelAsync('price-alerts', {
-        name: '價格提醒',
+        name: tFromStore('startup.notificationChannelAlerts'),
         importance: AndroidImportance.HIGH,
         vibrationPattern: [0, 250, 250, 250],
         sound: 'default',
       });
       Notifications.setNotificationChannelAsync('monitoring-status', {
-        name: '監控狀態',
+        name: tFromStore('startup.notificationChannelMonitoring'),
         importance: AndroidImportance.LOW,
       });
 
@@ -119,7 +121,7 @@ export default function RootLayout() {
     );
   }
 
-  if (!success) {
+  if (!success || !settingsLoaded) {
     return (
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
         <View className="flex-1 bg-bg" />

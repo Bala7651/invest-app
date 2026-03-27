@@ -31,6 +31,7 @@ function makeSettingsState(overrides: Record<string, unknown> = {}) {
     apiKey: '',
     modelName: 'MiniMax-M2.5',
     baseUrl: 'https://api.minimax.io/v1',
+    language: 'zh-TW',
   };
   const nextState = { ...baseState, ...overrides };
   return {
@@ -69,7 +70,7 @@ describe('checkAlerts', () => {
     expect(mockSchedule).toHaveBeenCalledTimes(1);
     const call = mockSchedule.mock.calls[0][0];
     expect(call.content.title).toContain('台積電');
-    expect(call.content.body).toContain('above');
+    expect(call.content.body).toContain('向上突破');
     expect(call.content.body).toContain('980');
     expect(call.content.body).toContain('985.00');
   });
@@ -88,7 +89,7 @@ describe('checkAlerts', () => {
     expect(mockMarkTriggered).toHaveBeenCalledWith('2330', 'lower');
     expect(mockSchedule).toHaveBeenCalledTimes(1);
     const call = mockSchedule.mock.calls[0][0];
-    expect(call.content.body).toContain('below');
+    expect(call.content.body).toContain('向下跌破');
     expect(call.content.body).toContain('900');
   });
 
@@ -248,7 +249,7 @@ describe('checkAlerts', () => {
       expect(call.content.body).toContain('| 市場情緒謹慎，成交量放大。');
     });
 
-    it('body format is "{name} crossed {direction} {price} - current: {current} | {AI_SENTENCE}"', async () => {
+    it('body format follows the active zh-TW locale by default', async () => {
       mockGetState.mockReturnValue({
         ...makeSettingsState({
           aiNotificationsEnabled: true,
@@ -273,7 +274,37 @@ describe('checkAlerts', () => {
       await checkAlerts({ '2330': { symbol: '2330', name: '台積電', price: 985 } });
 
       const call = mockSchedule.mock.calls[0][0];
-      expect(call.content.body).toBe('台積電 crossed above 980 - current: 985.00 | AI說明文字。');
+      expect(call.content.body).toBe('台積電 已向上突破 980.00，目前價格 985.00 | AI說明文字。');
+    });
+
+    it('uses English notification text when the app language is English', async () => {
+      mockGetState.mockReturnValue({
+        ...makeSettingsState({
+          aiNotificationsEnabled: true,
+          apiKey: 'test-key',
+          language: 'en',
+        }),
+      });
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [{ message: { content: 'AI sentence.' } }],
+        }),
+      });
+
+      mockGetAll.mockResolvedValue([
+        {
+          id: 1, symbol: '2330', name: 'TSMC',
+          upper_price: 980, lower_price: null,
+          upper_status: 'active', lower_status: 'active',
+        },
+      ]);
+
+      await checkAlerts({ '2330': { symbol: '2330', name: 'TSMC', price: 985 } });
+
+      const call = mockSchedule.mock.calls[0][0];
+      expect(call.content.title).toBe('TSMC price alert');
+      expect(call.content.body).toBe('TSMC moved above 980.00. Current price: 985.00 | AI sentence.');
     });
 
     it('when AI fetch times out (AbortError), plain notification fires anyway', async () => {

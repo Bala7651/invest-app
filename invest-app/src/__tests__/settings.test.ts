@@ -46,10 +46,13 @@ describe('ALRT-03: Battery Optimization setting', () => {
     const fs = require('fs');
     const path = require('path');
     const settingsPath = path.resolve(__dirname, '../app/settings.tsx');
+    const translationsPath = path.resolve(__dirname, '../features/i18n/translations.ts');
     const source = fs.readFileSync(settingsPath, 'utf-8');
+    const translations = fs.readFileSync(translationsPath, 'utf-8');
     expect(source).toContain('testID="battery-optimization-row"');
     expect(source).toContain("Platform.OS === 'android'");
-    expect(source).toContain('電池最佳化');
+    expect(source).toContain("t('settings.batteryOptimizationTitle')");
+    expect(translations).toContain("'settings.batteryOptimizationTitle': '電池最佳化'");
     expect(source).toContain('IGNORE_BATTERY_OPTIMIZATION_SETTINGS');
   });
 });
@@ -98,9 +101,12 @@ describe('First-launch market data recommendation', () => {
     const fs = require('fs');
     const path = require('path');
     const layoutPath = path.resolve(__dirname, '../app/_layout.tsx');
+    const translationsPath = path.resolve(__dirname, '../features/i18n/translations.ts');
     const source = fs.readFileSync(layoutPath, 'utf-8');
+    const translations = fs.readFileSync(translationsPath, 'utf-8');
 
-    expect(source).toContain('建議設定行情 API');
+    expect(source).toContain("tFromStore('startup.marketDataPromptTitle')");
+    expect(translations).toContain("'startup.marketDataPromptTitle': '建議設定行情 API'");
     expect(source).toContain('https://developer.fugle.tw/docs/key/');
     expect(source).toContain('markMarketDataRecommendationSeen');
     expect(source).toContain('Linking.openURL');

@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { Alert, Animated, Pressable, Text, TextInput, View } from 'react-native';
 import { useSettingsStore } from '../store/settingsStore';
 import { resetAlphaVantageCache } from '../../../services/stockService';
+import { useI18n } from '../../i18n/useI18n';
 
 function maskKey(key: string): string {
   if (!key) return '';
@@ -16,6 +17,7 @@ function isAlphaVantageRateLimitMessage(value: unknown): boolean {
 }
 
 export function AlphaVantageApiKeyInput() {
+  const { t } = useI18n();
   const apiKey = useSettingsStore(s => s.alphaVantageApiKey);
   const saveApiKey = useSettingsStore(s => s.saveAlphaVantageApiKey);
   const deleteApiKey = useSettingsStore(s => s.deleteAlphaVantageApiKey);
@@ -70,12 +72,12 @@ export function AlphaVantageApiKeyInput() {
 
   function handleClear() {
     Alert.alert(
-      '清除 Alpha Vantage 金鑰',
-      '確定要刪除 Alpha Vantage API 金鑰嗎？',
+      t('api.alphaPromptTitle'),
+      t('api.alphaPromptBody'),
       [
-        { text: '取消', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: '刪除',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             await deleteApiKey();
@@ -96,7 +98,7 @@ export function AlphaVantageApiKeyInput() {
         style={{ position: 'absolute', top: -28, left: 0, right: 0, opacity: toastOpacity, zIndex: 10 }}
         pointerEvents="none"
       >
-        <Text className="text-primary text-xs text-center">已儲存</Text>
+        <Text className="text-primary text-xs text-center">{t('common.saved')}</Text>
       </Animated.View>
 
       <View
@@ -112,13 +114,13 @@ export function AlphaVantageApiKeyInput() {
           }}
           onBlur={handleBlur}
           secureTextEntry={!isRevealed}
-          placeholder="輸入 Alpha Vantage API 金鑰"
+          placeholder={t('api.alphaPlaceholder')}
           placeholderTextColor="#666"
           autoCapitalize="none"
           autoCorrect={false}
         />
         <Pressable onPress={() => setIsRevealed(r => !r)} className="ml-2 px-1">
-          <Text className="text-muted text-sm">{isRevealed ? '隱藏' : '顯示'}</Text>
+          <Text className="text-muted text-sm">{isRevealed ? t('common.hide') : t('common.show')}</Text>
         </Pressable>
       </View>
 
@@ -129,14 +131,14 @@ export function AlphaVantageApiKeyInput() {
           className="flex-1 bg-surface border border-border rounded-lg py-2 items-center"
         >
           <Text className="text-primary text-sm">
-            {isTesting ? '測試中...' : testResult === 'success' ? '已連線' : testResult === 'error' ? '失敗' : '測試'}
+            {isTesting ? t('common.testing') : testResult === 'success' ? t('common.connected') : testResult === 'error' ? t('common.failed') : t('common.test')}
           </Text>
         </Pressable>
         <Pressable
           onPress={handleClear}
           className="flex-1 bg-surface border border-border rounded-lg py-2 items-center"
         >
-          <Text className="text-stock-down text-sm">清除</Text>
+          <Text className="text-stock-down text-sm">{t('common.clear')}</Text>
         </Pressable>
       </View>
     </View>

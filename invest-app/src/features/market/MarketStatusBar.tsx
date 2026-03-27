@@ -7,21 +7,24 @@ import Animated, {
   useAnimatedStyle,
 } from 'react-native-reanimated';
 import { computeStatus } from './marketHours';
+import { useI18n } from '../i18n/useI18n';
 
 export function MarketStatusBar() {
-  const [status, setStatus] = useState(() => computeStatus());
+  const { language } = useI18n();
+  const [status, setStatus] = useState(() => computeStatus(new Date(), language));
   const opacity = useSharedValue(1);
 
   useEffect(() => {
+    setStatus(computeStatus(new Date(), language));
     if (status.open) {
       opacity.value = withRepeat(withTiming(0.3, { duration: 800 }), -1, true);
     } else {
       opacity.value = 1;
     }
 
-    const interval = setInterval(() => setStatus(computeStatus()), 60_000);
+    const interval = setInterval(() => setStatus(computeStatus(new Date(), language)), 60_000);
     return () => clearInterval(interval);
-  }, [status.open]);
+  }, [language, status.open]);
 
   const dotStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
 

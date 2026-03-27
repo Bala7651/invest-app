@@ -1,5 +1,8 @@
+import { translate } from '../i18n/translations';
+import type { AppLanguage } from '../i18n/types';
+
 export type QuoteSource = 'twse_live' | 'fugle_live' | 'alpha_vantage' | 'yahoo_delayed' | 'twse_close' | 'prev_close';
-export type QuoteSourceLabel = '即時' | '延遲' | '收盤';
+export type QuoteSourceLabel = string;
 export type QuoteFreshnessState = 'fresh' | 'stale';
 
 export interface QuotePresentationInput {
@@ -43,10 +46,10 @@ export interface QuoteSnapshot {
   freshnessState: QuoteFreshnessState | null;
 }
 
-export function getQuoteSourceLabel(source: QuoteSource): QuoteSourceLabel {
-  if (source === 'twse_live' || source === 'fugle_live') return '即時';
-  if (source === 'alpha_vantage' || source === 'yahoo_delayed') return '延遲';
-  return '收盤';
+export function getQuoteSourceLabel(source: QuoteSource, language: AppLanguage = 'zh-TW'): QuoteSourceLabel {
+  if (source === 'twse_live' || source === 'fugle_live') return translate(language, 'market.source.live');
+  if (source === 'alpha_vantage' || source === 'yahoo_delayed') return translate(language, 'market.source.delayed');
+  return translate(language, 'market.source.close');
 }
 
 export function getQuoteSourceDetail(source: QuoteSource): string {
@@ -63,22 +66,23 @@ export function formatQuoteSourceMeta(
   ask: number | null = null,
   sourceUpdatedAt: number | null = null,
   freshnessState: QuoteFreshnessState = 'fresh',
+  language: AppLanguage = 'zh-TW',
 ): string {
-  const parts = [getQuoteSourceLabel(source), getQuoteSourceDetail(source)];
+  const parts = [getQuoteSourceLabel(source, language), getQuoteSourceDetail(source)];
   if (source === 'twse_live' || source === 'fugle_live') {
     if (freshnessState === 'stale') {
-      parts.push('更新較慢');
+      parts.push(translate(language, 'market.source.stale'));
     } else if (sourceUpdatedAt != null) {
       const ageMs = Math.max(0, Date.now() - sourceUpdatedAt);
       if (ageMs < 60_000) {
-        parts.push(`${Math.max(1, Math.floor(ageMs / 1000))}秒前`);
+        parts.push(translate(language, 'market.source.secondsAgo', { count: Math.max(1, Math.floor(ageMs / 1000)) }));
       } else {
-        parts.push(`${Math.max(1, Math.floor(ageMs / 60_000))}分前`);
+        parts.push(translate(language, 'market.source.minutesAgo', { count: Math.max(1, Math.floor(ageMs / 60_000)) }));
       }
     }
   }
   if (bid != null && ask != null) {
-    parts.push(`買 ${bid.toFixed(2)} / 賣 ${ask.toFixed(2)}`);
+    parts.push(translate(language, 'market.source.buySell', { bid: bid.toFixed(2), ask: ask.toFixed(2) }));
   }
   return parts.join(' · ');
 }
@@ -86,6 +90,7 @@ export function formatQuoteSourceMeta(
 export function buildQuoteSnapshot(
   name: string,
   quote?: Partial<QuotePresentationInput> | null,
+  language: AppLanguage = 'zh-TW',
 ): QuoteSnapshot {
   if (!quote) {
     return {
@@ -127,7 +132,7 @@ export function buildQuoteSnapshot(
     bid: quote.bid ?? null,
     ask: quote.ask ?? null,
     source,
-    sourceLabel: source ? getQuoteSourceLabel(source) : null,
+    sourceLabel: source ? getQuoteSourceLabel(source, language) : null,
     sourceDetail: source ? getQuoteSourceDetail(source) : null,
     sourceMeta: source
       ? formatQuoteSourceMeta(
@@ -136,6 +141,7 @@ export function buildQuoteSnapshot(
           quote.ask ?? null,
           quote.sourceUpdatedAt ?? null,
           quote.freshnessState ?? 'fresh',
+          language,
         )
       : null,
     sourceUpdatedAt: quote.sourceUpdatedAt ?? null,

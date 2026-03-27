@@ -57,6 +57,13 @@ describe('buildPrompt', () => {
     const prompt = buildPrompt('2330', quoteWithNullPrice);
     expect(prompt).toContain('無資料');
   });
+
+  it('builds an English prompt when language is set to en', () => {
+    const prompt = buildPrompt('2330', mockQuote, 'en');
+    expect(prompt).toContain('Analyze Taiwan stock');
+    expect(prompt).toContain('Previous close');
+    expect(prompt).toContain('TWD');
+  });
 });
 
 describe('parseAnalysisResponse', () => {

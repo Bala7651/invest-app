@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Modal, Pressable, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAlertStore } from '../store/alertStore';
+import { useI18n } from '../../i18n/useI18n';
 
 interface AlertModalProps {
   visible: boolean;
@@ -13,6 +14,7 @@ interface AlertModalProps {
 }
 
 export function AlertModal({ visible, onClose, symbol, name, currentPrice }: AlertModalProps) {
+  const { t } = useI18n();
   const insets = useSafeAreaInsets();
   const getBySymbol = useAlertStore(s => s.getBySymbol);
   const upsertAlert = useAlertStore(s => s.upsertAlert);
@@ -87,18 +89,18 @@ export function AlertModal({ visible, onClose, symbol, name, currentPrice }: Ale
       >
         <Pressable onPress={() => {}} style={{ backgroundColor: '#0d0d14', borderTopWidth: 1, borderTopColor: '#2a2a3a', borderRadius: 16, padding: 24, paddingBottom: 24 + insets.bottom }}>
           <Text style={{ color: '#e0e0e0', fontSize: 18, fontWeight: 'bold', marginBottom: 20 }}>
-            價格提醒 — {symbol}
+            {t('alerts.title')} — {symbol}
           </Text>
 
           {permissionWarning ? (
             <Text style={{ color: '#ff4444', fontSize: 12, marginBottom: 12 }}>
-              需要通知權限才能使用提醒功能
+              {t('alerts.permissionNeeded')}
             </Text>
           ) : null}
 
           {/* Upper target */}
           <View style={{ marginBottom: 16 }}>
-            <Text style={{ color: '#888', fontSize: 12, marginBottom: 6 }}>上限目標價</Text>
+            <Text style={{ color: '#888', fontSize: 12, marginBottom: 6 }}>{t('alerts.upperTarget')}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <TextInput
                 style={{
@@ -124,14 +126,14 @@ export function AlertModal({ visible, onClose, symbol, name, currentPrice }: Ale
             </View>
             {upperInvalid ? (
               <Text style={{ color: '#ff4444', fontSize: 11, marginTop: 4 }}>
-                必須高於目前價格
+                {t('alerts.mustBeHigher')}
               </Text>
             ) : null}
           </View>
 
           {/* Lower target */}
           <View style={{ marginBottom: 24 }}>
-            <Text style={{ color: '#888', fontSize: 12, marginBottom: 6 }}>下限目標價</Text>
+            <Text style={{ color: '#888', fontSize: 12, marginBottom: 6 }}>{t('alerts.lowerTarget')}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <TextInput
                 style={{
@@ -157,7 +159,7 @@ export function AlertModal({ visible, onClose, symbol, name, currentPrice }: Ale
             </View>
             {lowerInvalid ? (
               <Text style={{ color: '#ff4444', fontSize: 11, marginTop: 4 }}>
-                必須低於目前價格
+                {t('alerts.mustBeLower')}
               </Text>
             ) : null}
           </View>
@@ -167,13 +169,13 @@ export function AlertModal({ visible, onClose, symbol, name, currentPrice }: Ale
               onPress={onClose}
               style={{ flex: 1, borderWidth: 1, borderColor: '#2a2a3a', borderRadius: 8, paddingVertical: 12, alignItems: 'center' }}
             >
-              <Text style={{ color: '#888', fontSize: 15 }}>取消</Text>
+              <Text style={{ color: '#888', fontSize: 15 }}>{t('common.cancel')}</Text>
             </Pressable>
             <Pressable
               onPress={handleSave}
               style={{ flex: 1, backgroundColor: upperInvalid || lowerInvalid ? '#333' : '#00e5ff', borderRadius: 8, paddingVertical: 12, alignItems: 'center' }}
             >
-              <Text style={{ color: upperInvalid || lowerInvalid ? '#555' : '#050508', fontSize: 15, fontWeight: 'bold' }}>儲存</Text>
+              <Text style={{ color: upperInvalid || lowerInvalid ? '#555' : '#050508', fontSize: 15, fontWeight: 'bold' }}>{t('common.save')}</Text>
             </Pressable>
           </View>
         </Pressable>

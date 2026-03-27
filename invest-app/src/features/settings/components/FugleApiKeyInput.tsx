@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { Alert, Animated, Pressable, Text, TextInput, View } from 'react-native';
 import { useSettingsStore } from '../store/settingsStore';
 import { resetFugleCache } from '../../../services/stockService';
+import { useI18n } from '../../i18n/useI18n';
 
 function maskKey(key: string): string {
   if (!key) return '';
@@ -10,6 +11,7 @@ function maskKey(key: string): string {
 }
 
 export function FugleApiKeyInput() {
+  const { t } = useI18n();
   const apiKey = useSettingsStore(s => s.fugleApiKey);
   const saveApiKey = useSettingsStore(s => s.saveFugleApiKey);
   const deleteApiKey = useSettingsStore(s => s.deleteFugleApiKey);
@@ -64,12 +66,12 @@ export function FugleApiKeyInput() {
 
   function handleClear() {
     Alert.alert(
-      '清除 Fugle 金鑰',
-      '確定要刪除 Fugle API 金鑰嗎？',
+      t('api.fuglePromptTitle'),
+      t('api.fuglePromptBody'),
       [
-        { text: '取消', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: '刪除',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             await deleteApiKey();
@@ -90,7 +92,7 @@ export function FugleApiKeyInput() {
         style={{ position: 'absolute', top: -28, left: 0, right: 0, opacity: toastOpacity, zIndex: 10 }}
         pointerEvents="none"
       >
-        <Text className="text-primary text-xs text-center">已儲存</Text>
+        <Text className="text-primary text-xs text-center">{t('common.saved')}</Text>
       </Animated.View>
 
       <View
@@ -106,13 +108,13 @@ export function FugleApiKeyInput() {
           }}
           onBlur={handleBlur}
           secureTextEntry={!isRevealed}
-          placeholder="輸入 Fugle API 金鑰"
+          placeholder={t('api.fuglePlaceholder')}
           placeholderTextColor="#666"
           autoCapitalize="none"
           autoCorrect={false}
         />
         <Pressable onPress={() => setIsRevealed(r => !r)} className="ml-2 px-1">
-          <Text className="text-muted text-sm">{isRevealed ? '隱藏' : '顯示'}</Text>
+          <Text className="text-muted text-sm">{isRevealed ? t('common.hide') : t('common.show')}</Text>
         </Pressable>
       </View>
 
@@ -123,14 +125,14 @@ export function FugleApiKeyInput() {
           className="flex-1 bg-surface border border-border rounded-lg py-2 items-center"
         >
           <Text className="text-primary text-sm">
-            {isTesting ? '測試中...' : testResult === 'success' ? '已連線' : testResult === 'error' ? '失敗' : '測試'}
+            {isTesting ? t('common.testing') : testResult === 'success' ? t('common.connected') : testResult === 'error' ? t('common.failed') : t('common.test')}
           </Text>
         </Pressable>
         <Pressable
           onPress={handleClear}
           className="flex-1 bg-surface border border-border rounded-lg py-2 items-center"
         >
-          <Text className="text-stock-down text-sm">清除</Text>
+          <Text className="text-stock-down text-sm">{t('common.clear')}</Text>
         </Pressable>
       </View>
     </View>

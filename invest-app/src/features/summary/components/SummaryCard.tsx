@@ -6,6 +6,7 @@ import Animated, {
   useAnimatedStyle,
 } from 'react-native-reanimated';
 import { SummaryEntry, ERROR_PREFIX } from '../types';
+import { useI18n } from '../../i18n/useI18n';
 
 interface SummaryCardProps {
   date: string;
@@ -14,6 +15,7 @@ interface SummaryCardProps {
 }
 
 export function SummaryCard({ date, entries, defaultExpanded = false }: SummaryCardProps) {
+  const { t } = useI18n();
   const [expanded, setExpanded] = useState(defaultExpanded);
   const maxHeight = useSharedValue(defaultExpanded ? 2000 : 0);
 
@@ -38,11 +40,11 @@ export function SummaryCard({ date, entries, defaultExpanded = false }: SummaryC
           <View className="flex-row items-center" style={{ gap: 8 }}>
             {errorCount > 0 && (
               <View style={{ backgroundColor: '#FF1744', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 }}>
-                <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>{errorCount} 失敗</Text>
+                <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>{t('summary.entryFailed', { count: errorCount })}</Text>
               </View>
             )}
             <View style={{ backgroundColor: '#1a1a2e', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 }}>
-              <Text className="text-muted text-xs">{entries.length} 檔</Text>
+              <Text className="text-muted text-xs">{t('summary.entryStocks', { count: entries.length })}</Text>
             </View>
             <Text className="text-muted text-sm">{expanded ? '▲' : '▼'}</Text>
           </View>
@@ -67,7 +69,7 @@ export function SummaryCard({ date, entries, defaultExpanded = false }: SummaryC
                     {entry.symbol}
                   </Text>
                   {isError && (
-                    <Text className="text-stock-down text-xs">(失敗)</Text>
+                    <Text className="text-stock-down text-xs">{t('summary.failedTag')}</Text>
                   )}
                 </View>
                 <Text

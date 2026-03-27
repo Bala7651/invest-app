@@ -14,10 +14,12 @@ import { useChartStore } from '../../features/charts/store/chartStore';
 import { Timeframe } from '../../features/charts/types';
 import { useQuoteStore } from '../../features/market/quoteStore';
 import { formatChange } from '../../features/watchlist/components/StockCard';
+import { useI18n } from '../../features/i18n/useI18n';
 
 export default function DetailScreen() {
   const { symbol } = useLocalSearchParams<{ symbol: string }>();
   const router = useRouter();
+  const { t, language } = useI18n();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
@@ -68,7 +70,7 @@ export default function DetailScreen() {
       <View className="flex-row items-center justify-between px-4 mb-4">
         <View className="flex-row items-center">
           <Pressable onPress={() => router.back()} className="mr-4 py-1">
-            <Text className="text-primary text-base">返回</Text>
+            <Text className="text-primary text-base">{t('detail.back')}</Text>
           </Pressable>
           <View>
             <Text className="text-primary font-bold text-lg">{symbol}</Text>
@@ -124,7 +126,7 @@ export default function DetailScreen() {
               }}
               className="bg-surface px-4 py-2 rounded-lg border border-border"
             >
-              <Text className="text-primary text-sm">重試</Text>
+              <Text className="text-primary text-sm">{t('common.retry')}</Text>
             </Pressable>
           </View>
         ) : candles && candles.length > 0 ? (
@@ -143,7 +145,7 @@ export default function DetailScreen() {
                   {/* Date + period change */}
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                     <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
-                      {new Date(selectedCandle.timestamp).toLocaleDateString('zh-TW', { year: 'numeric', month: 'numeric', day: 'numeric' })}
+                      {new Date(selectedCandle.timestamp).toLocaleDateString(language === 'en' ? 'en-US' : 'zh-TW', { year: 'numeric', month: 'numeric', day: 'numeric' })}
                       {'  '}
                       <Text style={{ color: isUp ? '#00ff88' : '#ff3366' }}>
                         {isUp ? '▲' : '▼'} {Math.abs(((selectedCandle.close - selectedCandle.open) / selectedCandle.open) * 100).toFixed(2)}%
@@ -151,30 +153,30 @@ export default function DetailScreen() {
                     </Text>
                     <View style={{ backgroundColor: periodColor + '22', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
                       <Text style={{ fontSize: 11, color: periodColor, fontWeight: '700' }}>
-                        本期 {periodSign}{periodPct.toFixed(2)}%
+                        {t('detail.period', { pct: `${periodSign}${periodPct.toFixed(2)}%` })}
                       </Text>
                     </View>
                   </View>
                   {/* OHLC row */}
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                     <View style={{ alignItems: 'center' }}>
-                      <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginBottom: 2 }}>開盤</Text>
+                      <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginBottom: 2 }}>{t('detail.open')}</Text>
                       <Text style={{ fontSize: 13, color: '#e0e0e0', fontWeight: '600' }}>{selectedCandle.open.toFixed(2)}</Text>
                     </View>
                     <View style={{ alignItems: 'center' }}>
-                      <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginBottom: 2 }}>最高</Text>
+                      <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginBottom: 2 }}>{t('detail.high')}</Text>
                       <Text style={{ fontSize: 13, color: '#00ff88', fontWeight: '600' }}>{selectedCandle.high.toFixed(2)}</Text>
                     </View>
                     <View style={{ alignItems: 'center' }}>
-                      <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginBottom: 2 }}>最低</Text>
+                      <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginBottom: 2 }}>{t('detail.low')}</Text>
                       <Text style={{ fontSize: 13, color: '#ff3366', fontWeight: '600' }}>{selectedCandle.low.toFixed(2)}</Text>
                     </View>
                     <View style={{ alignItems: 'center' }}>
-                      <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginBottom: 2 }}>收盤</Text>
+                      <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginBottom: 2 }}>{t('detail.close')}</Text>
                       <Text style={{ fontSize: 13, color: closeColor, fontWeight: '700' }}>{selectedCandle.close.toFixed(2)}</Text>
                     </View>
                     <View style={{ alignItems: 'center' }}>
-                      <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginBottom: 2 }}>成交量</Text>
+                      <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginBottom: 2 }}>{t('detail.volume')}</Text>
                       <Text style={{ fontSize: 13, color: '#e0e0e0', fontWeight: '600' }}>
                         {selectedCandle.volume >= 1000 ? `${(selectedCandle.volume / 1000).toFixed(0)}K` : String(selectedCandle.volume)}
                       </Text>
@@ -194,7 +196,7 @@ export default function DetailScreen() {
             </View>
             {/* Volume bars */}
             <View style={{ marginBottom: 12 }}>
-              <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2, paddingLeft: 2 }}>成交量</Text>
+              <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2, paddingLeft: 2 }}>{t('detail.volume')}</Text>
               <View className="border-t border-border" style={{ height: volumeHeight }}>
                 <VolumeBar data={candles} height={volumeHeight} width={chartWidth} />
               </View>

@@ -1,4 +1,6 @@
 import { HOLIDAYS_2026 } from './holidays2026';
+import { translate } from '../i18n/translations';
+import type { AppLanguage } from '../i18n/types';
 
 // Taiwan Standard Time = UTC+8, no DST
 // Use fixed offset instead of toLocaleString — Hermes doesn't reliably parse
@@ -29,7 +31,7 @@ export function isMarketOpen(now = new Date()): boolean {
   return mins >= 9 * 60 && mins < 13 * 60 + 30;
 }
 
-export function computeStatus(now = new Date()): { open: boolean; label: string } {
+export function computeStatus(now = new Date(), language: AppLanguage = 'zh-TW'): { open: boolean; label: string } {
   const taipei = toTaipeiDate(now);
   const open = isMarketOpen(now);
 
@@ -40,9 +42,12 @@ export function computeStatus(now = new Date()): { open: boolean; label: string 
     const h = Math.floor(remaining / 60);
     const m = remaining % 60;
     const parts: string[] = [];
-    if (h > 0) parts.push(`${h}時`);
-    if (m > 0) parts.push(`${m}分`);
-    return { open: true, label: `開盤中 · 距收盤 ${parts.join('')}` };
+    if (h > 0) parts.push(translate(language, 'market.status.hours', { count: h }));
+    if (m > 0) parts.push(translate(language, 'market.status.minutes', { count: m }));
+    return {
+      open: true,
+      label: translate(language, 'market.status.open', { remaining: parts.join('') }),
+    };
   }
 
   // Find the next market open: check upcoming days up to 7 days ahead
@@ -51,9 +56,9 @@ export function computeStatus(now = new Date()): { open: boolean; label: string 
     const candidateTaipei = toTaipeiDate(candidate);
     const day = candidateTaipei.getUTCDay();
     if (day !== 0 && day !== 6 && !isHoliday(candidateTaipei)) {
-      return { open: false, label: '休市 · 09:00 開盤' };
+      return { open: false, label: translate(language, 'market.status.closedNextOpen') };
     }
   }
 
-  return { open: false, label: '休市' };
+  return { open: false, label: translate(language, 'market.status.closed') };
 }

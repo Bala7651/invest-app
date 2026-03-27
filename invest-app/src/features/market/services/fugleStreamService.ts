@@ -54,6 +54,10 @@ function emitStatus(message: string | null) {
   handlers?.onStatus?.(message);
 }
 
+function t(key: string): string {
+  return translate(useSettingsStore.getState().language, key);
+}
+
 function isAuthFailure(message: string | null | undefined): boolean {
   if (!message) return false;
   const normalized = message.toLowerCase();
@@ -173,7 +177,7 @@ function openSocket() {
 
       if (message.event === 'error') {
         const errorMessage =
-          typeof message.data?.message === 'string' ? message.data.message : 'Fugle 連線失敗';
+          typeof message.data?.message === 'string' ? message.data.message : t('market.error.fugleConnect');
         emitStatus(errorMessage);
         if (isAuthFailure(errorMessage)) {
           authFailed = true;
@@ -189,12 +193,12 @@ function openSocket() {
         handlers?.onTrade(update);
       }
     } catch {
-      emitStatus('Fugle 訊息解析失敗');
+      emitStatus(t('market.error.fugleMessageParse'));
     }
   };
 
   socket.onerror = () => {
-    emitStatus('Fugle WebSocket 連線異常');
+    emitStatus(t('market.error.fugleSocketError'));
   };
 
   socket.onclose = () => {
@@ -203,7 +207,7 @@ function openSocket() {
     if (intentionalClose) return;
     if (authFailed) return;
     reconnectAttempts += 1;
-    emitStatus('Fugle WebSocket 已斷線，嘗試重連');
+    emitStatus(t('market.error.fugleSocketReconnect'));
     scheduleReconnect();
   };
 }
@@ -249,3 +253,5 @@ export function disconnectFugleWatchlistStream() {
   handlers = null;
   closeSocket();
 }
+import { translate } from '../../i18n/translations';
+import { useSettingsStore } from '../../settings/store/settingsStore';

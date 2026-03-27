@@ -15,6 +15,8 @@ import {
 } from '../services/summaryService';
 import { Credentials, ERROR_PREFIX, SummaryEntry } from '../types';
 import { isMarketOpen } from '../../market/marketHours';
+import { tFromStore } from '../../i18n/useI18n';
+import { useSettingsStore } from '../../settings/store/settingsStore';
 
 interface SummaryState {
   generating: boolean;
@@ -50,6 +52,7 @@ export const useSummaryStore = create<SummaryState>((set, get) => ({
     const watchlistItems = useWatchlistStore.getState().items;
     const total = watchlistItems.length + 1; // +1 for TAIEX index
     const marketOpen = isMarketOpen();
+    const language = useSettingsStore.getState().language;
 
     set({ generating: true, progress: { done: 0, total }, errors: {} });
 
@@ -57,15 +60,16 @@ export const useSummaryStore = create<SummaryState>((set, get) => ({
     try {
       const indexData = await fetchTWIX();
       if (indexData) {
-        const userPrompt = buildIndexSummaryPrompt(indexData);
-        const content = await generateSummaryContent('TWSE', userPrompt, credentials);
+        const userPrompt = buildIndexSummaryPrompt(indexData, language);
+        const content = await generateSummaryContent('TWSE', userPrompt, credentials, language);
         await upsertSummary('TWSE', date, content);
       } else {
-        await upsertSummary('TWSE', date, `${ERROR_PREFIX}無法取得大盤資料`);
-        set(s => ({ errors: { ...s.errors, 'TWSE': '無法取得大盤資料' } }));
+        const message = tFromStore('summary.indexDataUnavailable');
+        await upsertSummary('TWSE', date, `${ERROR_PREFIX}${message}`);
+        set(s => ({ errors: { ...s.errors, 'TWSE': message } }));
       }
     } catch (e) {
-      const msg = formatSummaryError(e);
+      const msg = formatSummaryError(e, language);
       await upsertSummary('TWSE', date, `${ERROR_PREFIX}${msg}`);
       set(s => ({ errors: { ...s.errors, 'TWSE': msg } }));
     }
@@ -77,15 +81,16 @@ export const useSummaryStore = create<SummaryState>((set, get) => ({
         const q = useQuoteStore.getState().quotes[item.symbol];
         const quoteData = mergeQuoteData(q, null, marketOpen);
         if (!quoteData || quoteData.price == null) {
-          await upsertSummary(item.symbol, date, `${ERROR_PREFIX}請先回自選清單更新行情後再試`);
-          set(s => ({ errors: { ...s.errors, [item.symbol]: '請先回自選清單更新行情後再試' } }));
+          const message = tFromStore('common.priceFallbackRefreshFirst');
+          await upsertSummary(item.symbol, date, `${ERROR_PREFIX}${message}`);
+          set(s => ({ errors: { ...s.errors, [item.symbol]: message } }));
         } else {
-          const userPrompt = buildSummaryPrompt(item.symbol, item.name, quoteData);
-          const content = await generateSummaryContent(item.symbol, userPrompt, credentials);
+          const userPrompt = buildSummaryPrompt(item.symbol, item.name, quoteData, language);
+          const content = await generateSummaryContent(item.symbol, userPrompt, credentials, language);
           await upsertSummary(item.symbol, date, content);
         }
       } catch (e) {
-        const msg = formatSummaryError(e);
+        const msg = formatSummaryError(e, language);
         await upsertSummary(item.symbol, date, `${ERROR_PREFIX}${msg}`);
         set(s => ({ errors: { ...s.errors, [item.symbol]: msg } }));
       }

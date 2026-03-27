@@ -15,6 +15,7 @@ import {
   disconnectFugleWatchlistStream,
   FugleTradeUpdate,
 } from './services/fugleStreamService';
+import { tFromStore } from '../i18n/useI18n';
 
 const REST_POLL_INTERVAL_MS = 30_000;
 const POLL_LOOP_INTERVAL_MS = 10_000;
@@ -286,12 +287,12 @@ function buildNoQuotesError(): Error {
     fugleEnabled,
   } = useSettingsStore.getState();
   if (marketDataProvider === 'fugle' && fugleApiKey && fugleEnabled) {
-    return new Error('Fugle、TWSE 與 Yahoo 都沒有返回任何報價資料');
+    return new Error(tFromStore('market.error.noQuotes.fugle'));
   }
   if (marketDataProvider === 'alpha_vantage' && alphaVantageApiKey && alphaVantageEnabled) {
-    return new Error('Alpha Vantage、TWSE 與 Yahoo 都沒有返回任何報價資料');
+    return new Error(tFromStore('market.error.noQuotes.alpha'));
   }
-  return new Error('TWSE 與 Yahoo 都沒有返回任何報價資料');
+  return new Error(tFromStore('market.error.noQuotes.twseYahoo'));
 }
 
 export const useQuoteStore = create<QuoteState>((set, get) => {
@@ -553,7 +554,7 @@ export const useQuoteStore = create<QuoteState>((set, get) => {
         set({ _fugleConnected: false });
       },
       onUnauthorized: () => {
-        set({ _fugleConnected: false, lastError: 'Fugle 驗證失敗，請檢查 API 金鑰。' });
+        set({ _fugleConnected: false, lastError: tFromStore('market.error.fugleAuth') });
       },
       onStatus: (message) => {
         if (message) {

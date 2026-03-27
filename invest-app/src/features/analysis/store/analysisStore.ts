@@ -4,6 +4,8 @@ import { mergeQuoteData } from '../../summary/services/summaryService';
 import { AnalysisResult } from '../types';
 import { useQuoteStore } from '../../market/quoteStore';
 import { isMarketOpen } from '../../market/marketHours';
+import { tFromStore } from '../../i18n/useI18n';
+import { useSettingsStore } from '../../settings/store/settingsStore';
 import {
   clearPersistedAnalyses,
   loadPersistedAnalyses,
@@ -94,12 +96,17 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
       if (effectiveQuote.price == null) {
         set(s => ({
           loading: { ...s.loading, [symbol]: false },
-          errors: { ...s.errors, [symbol]: '請先回自選清單更新行情後再試' },
+          errors: { ...s.errors, [symbol]: tFromStore('common.priceFallbackRefreshFirst') },
         }));
         return;
       }
 
-      const result = await callMiniMax(symbol, effectiveQuote, credentials);
+      const result = await callMiniMax(
+        symbol,
+        effectiveQuote,
+        credentials,
+        useSettingsStore.getState().language,
+      );
       const fetchedAt = Date.now();
       await upsertPersistedAnalysis(symbol, result, fetchedAt);
 

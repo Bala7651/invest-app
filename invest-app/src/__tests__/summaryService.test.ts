@@ -277,6 +277,13 @@ describe('buildSummaryPrompt', () => {
     const quoteWithNull = { ...quote, price: null };
     expect(buildSummaryPrompt('2330', '台積電', quoteWithNull)).toContain('無資料');
   });
+
+  it('builds an English stock summary prompt when language is set to en', () => {
+    const prompt = buildSummaryPrompt('2330', 'TSMC', quote, 'en');
+    expect(prompt).toContain('Generate a short daily summary');
+    expect(prompt).toContain('Current price');
+    expect(prompt).toContain('TWD');
+  });
 });
 
 describe('summary AI response helpers', () => {
@@ -346,6 +353,12 @@ describe('buildIndexSummaryPrompt', () => {
     const prompt = buildIndexSummaryPrompt(negData);
     expect(prompt).toContain('-200.00');
     expect(prompt).toContain('-0.60');
+  });
+
+  it('builds an English index summary prompt when language is set to en', () => {
+    const prompt = buildIndexSummaryPrompt(indexData, 'en');
+    expect(prompt).toContain('Taiwan Weighted Index');
+    expect(prompt).toContain('Latest index data');
   });
 });
 

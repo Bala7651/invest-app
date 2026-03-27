@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSummaryStore } from '../store/summaryStore';
 import { useSettingsStore } from '../../settings/store/settingsStore';
 import { SummaryCard } from './SummaryCard';
+import { useI18n } from '../../i18n/useI18n';
 
 interface SummaryScreenProps {
   isActive: boolean;
@@ -11,6 +12,7 @@ interface SummaryScreenProps {
 
 export function SummaryScreen({ isActive }: SummaryScreenProps) {
   const insets = useSafeAreaInsets();
+  const { t } = useI18n();
   const generating = useSummaryStore(s => s.generating);
   const progress = useSummaryStore(s => s.progress);
   const errors = useSummaryStore(s => s.errors);
@@ -27,7 +29,7 @@ export function SummaryScreen({ isActive }: SummaryScreenProps) {
   function handleGenerateNow() {
     const { apiKey, modelName, baseUrl } = useSettingsStore.getState().getActiveAiCredentials();
     if (!apiKey) {
-      Alert.alert('需要 API Key', '請先在設定頁面輸入 API Key');
+      Alert.alert(t('summary.needApiKeyTitle'), t('summary.needApiKeyBody'));
       return;
     }
     useSummaryStore.getState().generateToday({ apiKey, modelName, baseUrl });
@@ -43,7 +45,7 @@ export function SummaryScreen({ isActive }: SummaryScreenProps) {
   return (
     <View className="flex-1 bg-bg px-4" style={{ paddingTop: insets.top + 24, paddingBottom: Math.max(insets.bottom, 8) + 54 }}>
       <View className="flex-row items-center justify-between mb-4">
-        <Text className="text-text text-2xl font-bold">每日摘要</Text>
+        <Text className="text-text text-2xl font-bold">{t('summary.title')}</Text>
         <Pressable
           onPress={handleGenerateNow}
           disabled={generating}
@@ -52,7 +54,7 @@ export function SummaryScreen({ isActive }: SummaryScreenProps) {
             className="text-primary text-base"
             style={generating ? { opacity: 0.4 } : undefined}
           >
-            立即生成
+            {t('summary.generateNow')}
           </Text>
         </Pressable>
       </View>
@@ -61,7 +63,7 @@ export function SummaryScreen({ isActive }: SummaryScreenProps) {
         <View className="flex-row items-center mb-4" style={{ gap: 10 }}>
           <ActivityIndicator size="small" color="#00E676" />
           <Text className="text-muted text-sm">
-            生成中... {progress.done}/{progress.total}
+            {t('summary.progress', { done: progress.done, total: progress.total })}
           </Text>
         </View>
       )}
@@ -72,12 +74,12 @@ export function SummaryScreen({ isActive }: SummaryScreenProps) {
         >
           {twseError ? (
             <Text className="text-stock-down text-sm">
-              大盤摘要失敗：{twseError}
+              {t('summary.indexFailed', { error: twseError })}
             </Text>
           ) : null}
           {stockErrors.length > 0 ? (
             <Text className="text-stock-down text-sm" style={{ marginTop: twseError ? 8 : 0 }}>
-              個股摘要失敗（{stockErrors.length} 支）
+              {t('summary.stockFailed', { count: stockErrors.length })}
             </Text>
           ) : null}
           {stockErrors.slice(0, 3).map(([symbol, error]) => (
@@ -86,12 +88,12 @@ export function SummaryScreen({ isActive }: SummaryScreenProps) {
               className="text-muted text-xs"
               style={{ marginTop: 4, lineHeight: 18 }}
             >
-              {symbol}：{error}
+              {symbol}: {error}
             </Text>
           ))}
           {stockErrors.length > 3 ? (
             <Text className="text-muted text-xs" style={{ marginTop: 4 }}>
-              還有 {stockErrors.length - 3} 支個股失敗，請展開當日摘要查看詳細內容。
+              {t('summary.moreFailed', { count: stockErrors.length - 3 })}
             </Text>
           ) : null}
         </View>
@@ -100,13 +102,13 @@ export function SummaryScreen({ isActive }: SummaryScreenProps) {
       {isEmpty && !generating ? (
         <View className="flex-1 items-center justify-center" style={{ gap: 16 }}>
           <Text className="text-muted text-base text-center" style={{ lineHeight: 24 }}>
-            每日市場摘要將於交易日 12:30 自動生成
+            {t('summary.autoGenerateHint')}
           </Text>
           <Pressable
             onPress={handleGenerateNow}
             className="bg-primary rounded-lg px-6 py-3"
           >
-            <Text style={{ color: '#000', fontWeight: '700', fontSize: 16 }}>立即生成</Text>
+            <Text style={{ color: '#000', fontWeight: '700', fontSize: 16 }}>{t('summary.generateNow')}</Text>
           </Pressable>
         </View>
       ) : (

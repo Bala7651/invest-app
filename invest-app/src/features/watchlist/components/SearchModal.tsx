@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useWatchlistStore } from '../store/watchlistStore';
 import { filterStocks, StockEntry } from '../utils/searchStocks';
+import { useI18n } from '../../i18n/useI18n';
 
 interface SearchModalProps {
   visible: boolean;
@@ -16,6 +17,7 @@ interface SearchModalProps {
 }
 
 export function SearchModal({ visible, onClose }: SearchModalProps) {
+  const { t } = useI18n();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<StockEntry[]>([]);
   const [addedSymbols, setAddedSymbols] = useState<Set<string>>(new Set());
@@ -65,9 +67,9 @@ export function SearchModal({ visible, onClose }: SearchModalProps) {
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
       <View className="flex-1 bg-bg">
         <View className="flex-row items-center justify-between px-4 pb-4 border-b border-border" style={{ paddingTop: 52 }}>
-          <Text className="text-text text-xl font-bold">搜尋股票</Text>
+          <Text className="text-text text-xl font-bold">{t('watchlist.searchTitle')}</Text>
           <Pressable onPress={onClose}>
-            <Text className="text-primary text-base">關閉</Text>
+            <Text className="text-primary text-base">{t('common.close')}</Text>
           </Pressable>
         </View>
 
@@ -76,7 +78,7 @@ export function SearchModal({ visible, onClose }: SearchModalProps) {
             ref={inputRef}
             value={query}
             onChangeText={handleQueryChange}
-            placeholder="輸入股票代號或名稱..."
+            placeholder={t('watchlist.searchHint')}
             placeholderTextColor="#6B7280"
             className="bg-surface text-text border border-border rounded-lg px-3 py-2 text-base"
             keyboardType="default"
@@ -87,7 +89,7 @@ export function SearchModal({ visible, onClose }: SearchModalProps) {
 
         {query.length === 0 ? (
           <View className="flex-1 items-center justify-center">
-            <Text className="text-muted text-base">輸入股票代號或公司名稱</Text>
+            <Text className="text-muted text-base">{t('watchlist.searchEmpty')}</Text>
           </View>
         ) : (
           <FlatList

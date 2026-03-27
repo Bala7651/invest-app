@@ -21,6 +21,7 @@ import {
   ChatMessage,
 } from '../services/portfolioAiService';
 import { NoApiKeyPrompt } from '../../analysis/components/NoApiKeyPrompt';
+import { useI18n } from '../../i18n/useI18n';
 
 interface PortfolioScreenProps {
   isActive: boolean;
@@ -29,6 +30,7 @@ interface PortfolioScreenProps {
 
 export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
   const insets = useSafeAreaInsets();
+  const { t, language } = useI18n();
   const items = useWatchlistStore((s) => s.items);
   const quotes = useQuoteStore((s) => s.quotes);
   const holdings = useHoldingsStore((s) => s.holdings);
@@ -133,7 +135,7 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
   function buildPortfolioEntries(sourceQuotes = quotes) {
     return items.map((item) => {
       const q = sourceQuotes[item.symbol];
-      const snapshot = buildQuoteSnapshot(item.name, q);
+      const snapshot = buildQuoteSnapshot(item.name, q, language);
       const holding = holdings[item.symbol];
       return {
         symbol: item.symbol,
@@ -160,23 +162,24 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
         .map(entry => entry.symbol);
 
       if (missingSymbols.length > 0) {
-        setAnalysisError(`請先回自選清單更新行情後再試：${missingSymbols.join('、')}`);
+        setAnalysisError(t('portfolio.refreshFirstWithSymbols', { symbols: missingSymbols.join('、') }));
         return;
       }
 
-      const result = await callPortfolioMiniMax(entries, { apiKey, modelName, baseUrl });
+      const result = await callPortfolioMiniMax(entries, { apiKey, modelName, baseUrl }, language);
       if (!result) {
-        setAnalysisError('AI 回應為空');
+        setAnalysisError(t('portfolio.aiEmpty'));
         return;
       }
       const nextHistory: ChatMessage[] = [
-        { role: 'user', content: buildDetailedAnalysisPrompt(entries) },
+        { role: 'user', content: buildDetailedAnalysisPrompt(entries, language) },
         { role: 'assistant', content: result.paragraph },
       ];
       const nextQuestions = await generatePortfolioSuggestedQuestions(
         nextHistory,
         entries,
         { apiKey, modelName, baseUrl },
+        language,
       );
       useHoldingsStore.getState().setPortfolioAiState({
         lastAnalysis: result,
@@ -202,6 +205,7 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
         useHoldingsStore.getState().chatHistory,
         question,
         { apiKey, modelName, baseUrl },
+        language,
       );
       if (response) {
         const nextHistory = [
@@ -213,6 +217,7 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
           nextHistory,
           buildPortfolioEntries(useQuoteStore.getState().quotes),
           { apiKey, modelName, baseUrl },
+          language,
         );
         useHoldingsStore.getState().setPortfolioAiState({
           lastAnalysis: useHoldingsStore.getState().lastAnalysis,
@@ -221,7 +226,7 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
           suggestedQuestionsSource: nextQuestions.source,
         });
       } else {
-        setFollowUpError('追問暫時沒有收到 AI 回覆，請稍後再試。');
+        setFollowUpError(t('portfolio.followUpEmpty'));
       }
     } catch (error) {
       setFollowUpError(String(error));
@@ -241,6 +246,7 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
         useHoldingsStore.getState().chatHistory,
         buildPortfolioEntries(useQuoteStore.getState().quotes),
         { apiKey, modelName, baseUrl },
+        language,
       );
       useHoldingsStore.getState().setPortfolioAiState({
         lastAnalysis: useHoldingsStore.getState().lastAnalysis,
@@ -264,8 +270,8 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
           paddingBottom: Math.max(insets.bottom, 8) + 54,
         }}
       >
-        <Text className="text-text text-2xl font-bold mb-4">投資組合</Text>
-        <NoApiKeyPrompt />
+        <Text className="text-text text-2xl font-bold mb-4">{t('portfolio.title')}</Text>
+        <NoApiKeyPrompt titleKey="portfolio.title" bodyKey="common.apiKeyRequiredBody" />
       </View>
     );
   }
@@ -281,7 +287,7 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
       {/* Header */}
       <View className="px-4 mb-4">
         <View className="flex-row items-center justify-between">
-          <Text className="text-text text-2xl font-bold">投資組合</Text>
+          <Text className="text-text text-2xl font-bold">{t('portfolio.title')}</Text>
           {/* Lots / Shares toggle */}
           <View
             className="flex-row bg-surface border border-border rounded-lg overflow-hidden"
@@ -301,7 +307,7 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
                   fontSize: 13,
                 }}
               >
-                張
+                {t('portfolio.units.lots')}
               </Text>
             </Pressable>
             <Pressable
@@ -318,7 +324,7 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
                   fontSize: 13,
                 }}
               >
-                股
+                {t('portfolio.units.shares')}
               </Text>
             </Pressable>
           </View>
@@ -337,19 +343,19 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
         {items.length === 0 ? (
           <View className="flex-1 items-center justify-center py-12">
             <Text className="text-muted text-base text-center">
-              請先將股票加入自選清單
+              {t('portfolio.addWatchlistFirst')}
             </Text>
           </View>
         ) : (
           items.map((item) => {
-            const snapshot = buildQuoteSnapshot(item.name, quotes[item.symbol]);
+            const snapshot = buildQuoteSnapshot(item.name, quotes[item.symbol], language);
             const holding = holdings[item.symbol];
             const price = snapshot.price;
             const sharesHeld = holding?.quantity ?? 0;
             const entryPrice = holding?.entry_price ?? null;
             const value =
               price !== null && sharesHeld > 0
-                ? `${(sharesHeld * price).toLocaleString()} 元`
+                ? `${(sharesHeld * price).toLocaleString()} ${language === 'en' ? 'TWD' : '元'}`
                 : null;
             const unrealizedPnL =
               price !== null && entryPrice != null && sharesHeld > 0
@@ -372,10 +378,12 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
                   </Text>
                   <Text className="text-muted text-xs">{item.symbol}</Text>
                   <Text className="text-text text-xs" style={{ marginTop: 2 }}>
-                    {price != null ? `${price.toFixed(2)} 元` : '—'}
+                    {price != null ? `${price.toFixed(2)} ${language === 'en' ? 'TWD' : '元'}` : '—'}
                   </Text>
                   <Text className="text-muted text-xs" style={{ marginTop: 2 }}>
-                    {entryPrice != null ? `買入價 ${entryPrice.toFixed(2)} 元` : '買入價 未設定'}
+                    {entryPrice != null
+                      ? t('portfolio.buyPriceValue', { price: entryPrice.toFixed(2) })
+                      : t('portfolio.buyPriceMissing')}
                   </Text>
                   {snapshot.sourceMeta ? (
                     <Text className="text-muted text-xs" style={{ marginTop: 2 }}>
@@ -384,7 +392,7 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
                   ) : null}
                   {value ? (
                     <Text className="text-primary text-xs" style={{ marginTop: 2 }}>
-                      {value}
+                      {`${t('portfolio.marketValue')} ${value}`}
                     </Text>
                   ) : null}
                   {unrealizedPnL != null ? (
@@ -392,7 +400,7 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
                       className={unrealizedPnL >= 0 ? 'text-stock-up' : 'text-stock-down'}
                       style={{ marginTop: 2, fontSize: 12 }}
                     >
-                      未實現損益 {unrealizedPnL >= 0 ? '+' : ''}{Math.round(unrealizedPnL).toLocaleString()} 元
+                      {t('portfolio.unrealizedPnl')} {unrealizedPnL >= 0 ? '+' : ''}{Math.round(unrealizedPnL).toLocaleString()} {language === 'en' ? 'TWD' : '元'}
                       {unrealizedPct != null ? `（${unrealizedPct >= 0 ? '+' : ''}${unrealizedPct.toFixed(1)}%）` : ''}
                     </Text>
                   ) : null}
@@ -407,7 +415,7 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
                         handleEntryPriceChange(item.symbol, item.name, text)
                       }
                       keyboardType="numeric"
-                      placeholder="買入價"
+                      placeholder={t('portfolio.buyPriceLabel')}
                       placeholderTextColor="#616161"
                       style={{
                         color: '#E0E0E0',
@@ -424,7 +432,7 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
                     />
                     <View style={{ marginTop: 4, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       <Text className="text-muted" style={{ fontSize: 10 }}>
-                        買入價
+                        {t('portfolio.buyPriceLabel')}
                       </Text>
                       {entryPrice != null ? (
                         <Pressable
@@ -455,7 +463,7 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
                       void commitQuantityDraft(item.symbol, item.name);
                     }}
                     keyboardType="numeric"
-                    placeholder={isLots ? '張數' : '股數'}
+                    placeholder={isLots ? t('portfolio.units.lots') : t('portfolio.units.shares')}
                     placeholderTextColor="#616161"
                     style={{
                       color: '#E0E0E0',
@@ -471,7 +479,7 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
                     }}
                   />
                   <Text className="text-muted" style={{ fontSize: 10, marginTop: 2 }}>
-                    {isLots ? '張 (×1000股)' : '股'}
+                    {isLots ? `${t('portfolio.units.lots')} (×1000${t('portfolio.units.shares')})` : t('portfolio.units.shares')}
                   </Text>
                   {sharesHeld > 0 ? (
                     <Pressable
@@ -481,7 +489,7 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
                       style={{ marginTop: 4, alignSelf: 'flex-end' }}
                     >
                       <Text className="text-primary" style={{ fontSize: 10 }}>
-                        清除持股
+                        {t('portfolio.clearHolding')}
                       </Text>
                     </Pressable>
                   ) : null}
@@ -504,10 +512,10 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
           {analysisLoading ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <ActivityIndicator size="small" color="#4D7CFF" />
-              <Text className="text-primary font-semibold text-base">分析中...</Text>
+              <Text className="text-primary font-semibold text-base">{t('common.loading')}</Text>
             </View>
           ) : (
-            <Text className="text-primary font-semibold text-base">分析投資組合</Text>
+            <Text className="text-primary font-semibold text-base">{t('portfolio.analyze')}</Text>
           )}
         </Pressable>
 
@@ -516,7 +524,7 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
           <View className="bg-surface border border-border rounded-lg px-4 py-4 mb-4">
             <Text className="text-stock-down text-sm mb-2">{analysisError}</Text>
             <Pressable onPress={handleAnalyze}>
-              <Text className="text-primary text-sm">重試</Text>
+              <Text className="text-primary text-sm">{t('common.retry')}</Text>
             </Pressable>
           </View>
         ) : null}
@@ -557,7 +565,7 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
 
             <View className="mb-4 mt-2">
               <View className="flex-row items-center justify-between mb-3">
-                <Text className="text-primary text-sm font-semibold">延伸追問</Text>
+                <Text className="text-primary text-sm font-semibold">{t('portfolio.followUpTitle')}</Text>
                 <Pressable
                   onPress={handleRegenerateSuggestedQuestions}
                   disabled={followUpLoading || suggestionsLoading}
@@ -566,15 +574,15 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
                     className="text-primary text-xs"
                     style={followUpLoading || suggestionsLoading ? { opacity: 0.45 } : undefined}
                   >
-                    重新產生 5 題
+                    {t('portfolio.regenerateQuestions')}
                   </Text>
                 </Pressable>
               </View>
 
               <Text className="text-muted text-xs mb-3" style={{ lineHeight: 18 }}>
                 {suggestedQuestionsSource === 'fallback'
-                  ? 'AI 追問建議暫時不可用，以下為依持股內容整理的預設問題。'
-                  : '以下問題由 AI 依目前持股與既有對話內容整理。'}
+                  ? t('portfolio.suggestedQuestionsFallback')
+                  : t('portfolio.suggestedQuestionsAi')}
               </Text>
 
               {followUpError ? (
@@ -592,7 +600,7 @@ export function PortfolioScreen({ isActive }: PortfolioScreenProps) {
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <ActivityIndicator size="small" color="#4D7CFF" />
                     <Text className="text-muted text-sm">
-                      {followUpLoading ? '正在整理下一步問題...' : '正在重新產生追問...'}
+                      {followUpLoading ? t('portfolio.followUpLoading') : t('portfolio.regeneratingQuestions')}
                     </Text>
                   </View>
                 </View>

@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { createContext, useContext, useRef } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import ReanimatedDrawerLayout, { DrawerLayoutMethods, DrawerType } from 'react-native-gesture-handler/ReanimatedDrawerLayout';
+import { useI18n } from '../../i18n/useI18n';
 
 interface DrawerContextValue {
   openDrawer: () => void;
@@ -20,6 +21,7 @@ interface HamburgerDrawerProps {
 
 function DrawerContent({ closeDrawer }: { closeDrawer: () => void }) {
   const router = useRouter();
+  const { t } = useI18n();
 
   function handleSettingsPress() {
     closeDrawer();
@@ -32,7 +34,7 @@ function DrawerContent({ closeDrawer }: { closeDrawer: () => void }) {
         onPress={handleSettingsPress}
         className="py-4 border-b border-border"
       >
-        <Text className="text-text text-base">設定</Text>
+        <Text className="text-text text-base">{t('settings.title')}</Text>
       </Pressable>
     </View>
   );

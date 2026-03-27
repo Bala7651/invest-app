@@ -9,6 +9,7 @@ import { AnalysisResult } from '../types';
 import { AnalysisSkeleton } from './AnalysisSkeleton';
 import { Quote } from '../../market/quoteStore';
 import { buildQuoteSnapshot } from '../../market/quotePresentation';
+import { useI18n } from '../../i18n/useI18n';
 
 interface AnalysisCardProps {
   symbol: string;
@@ -39,10 +40,32 @@ function riskLevelColor(level: string): string {
   return '#FF1744'; // 高風險
 }
 
+function trendLabel(pos: string, t: (key: string) => string): string {
+  if (pos === '多方主導') return t('analysis.trend.bull');
+  if (pos === '偏多整理') return t('analysis.trend.leanBull');
+  if (pos === '偏空整理') return t('analysis.trend.leanBear');
+  return t('analysis.trend.bear');
+}
+
+function volumeLabel(signal: string, t: (key: string) => string): string {
+  if (signal === '顯著放量') return t('analysis.volume.heavy');
+  if (signal === '溫和放量') return t('analysis.volume.moderate');
+  if (signal === '量能持平') return t('analysis.volume.flat');
+  if (signal === '明顯縮量') return t('analysis.volume.light');
+  return t('analysis.volume.na');
+}
+
+function riskLabel(level: string, t: (key: string) => string): string {
+  if (level === '低風險') return t('analysis.risk.low');
+  if (level === '中等風險') return t('analysis.risk.medium');
+  return t('analysis.risk.high');
+}
+
 export function AnalysisCard({ symbol, name, quote, result, loading, error, onRetry }: AnalysisCardProps) {
+  const { t, language } = useI18n();
   const [expanded, setExpanded] = useState(false);
   const maxHeight = useSharedValue(0);
-  const snapshot = buildQuoteSnapshot(name, quote);
+  const snapshot = buildQuoteSnapshot(name, quote, language);
 
   const expandStyle = useAnimatedStyle(() => ({
     maxHeight: maxHeight.value,
@@ -90,7 +113,7 @@ export function AnalysisCard({ symbol, name, quote, result, loading, error, onRe
               style={{ backgroundColor: trendColor(result.trendPosition), borderRadius: 12, paddingHorizontal: 10, paddingVertical: 2 }}
             >
               <Text style={{ color: '#000', fontWeight: '700', fontSize: 12 }}>
-                {result.trendPosition}
+                {trendLabel(result.trendPosition, t)}
               </Text>
             </View>
           </View>
@@ -106,7 +129,7 @@ export function AnalysisCard({ symbol, name, quote, result, loading, error, onRe
             className="bg-surface border border-border rounded px-4 py-2 self-start"
             onPress={onRetry}
           >
-            <Text className="text-primary text-sm font-semibold">重試</Text>
+            <Text className="text-primary text-sm font-semibold">{t('common.retry')}</Text>
           </Pressable>
         </View>
       )}
@@ -114,7 +137,7 @@ export function AnalysisCard({ symbol, name, quote, result, loading, error, onRe
       {result && !loading && !error && (
         <Animated.View style={expandStyle}>
           <View className="border-t border-border mt-3 pt-3">
-            <Text className="text-primary font-semibold mb-1">技術分析</Text>
+            <Text className="text-primary font-semibold mb-1">{t('analysis.technical')}</Text>
             <Text style={{ color: scoreColor(result.technicalScore) }} className="text-sm font-semibold">
               {result.technicalScore}/100
             </Text>
@@ -122,26 +145,26 @@ export function AnalysisCard({ symbol, name, quote, result, loading, error, onRe
           </View>
 
           <View className="border-t border-border mt-3 pt-3">
-            <Text className="text-primary font-semibold mb-1">趨勢與量能</Text>
+            <Text className="text-primary font-semibold mb-1">{t('analysis.trendVolume')}</Text>
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
               <View style={{ backgroundColor: trendColor(result.trendPosition), borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 }}>
-                <Text style={{ color: '#000', fontSize: 12, fontWeight: '600' }}>{result.trendPosition}</Text>
+                <Text style={{ color: '#000', fontSize: 12, fontWeight: '600' }}>{trendLabel(result.trendPosition, t)}</Text>
               </View>
               <View style={{ backgroundColor: '#1E2A4A', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 }}>
-                <Text style={{ color: '#4D7CFF', fontSize: 12, fontWeight: '600' }}>{result.volumeSignal}</Text>
+                <Text style={{ color: '#4D7CFF', fontSize: 12, fontWeight: '600' }}>{volumeLabel(result.volumeSignal, t)}</Text>
               </View>
             </View>
           </View>
 
           <View className="border-t border-border mt-3 pt-3">
-            <Text className="text-primary font-semibold mb-1">短期展望</Text>
+            <Text className="text-primary font-semibold mb-1">{t('analysis.outlook')}</Text>
             <Text className="text-muted text-sm">{result.outlook}</Text>
           </View>
 
           <View className="border-t border-border mt-3 pt-3">
-            <Text className="text-primary font-semibold mb-1">風險評估</Text>
+            <Text className="text-primary font-semibold mb-1">{t('analysis.risk')}</Text>
             <View style={{ backgroundColor: riskLevelColor(result.riskLevel), borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, alignSelf: 'flex-start' }}>
-              <Text style={{ color: '#000', fontSize: 12, fontWeight: '600' }}>{result.riskLevel}</Text>
+              <Text style={{ color: '#000', fontSize: 12, fontWeight: '600' }}>{riskLabel(result.riskLevel, t)}</Text>
             </View>
             <Text className="text-muted text-sm mt-1">{result.riskExplanation}</Text>
           </View>
@@ -150,7 +173,7 @@ export function AnalysisCard({ symbol, name, quote, result, loading, error, onRe
             className="border border-primary rounded px-4 py-2 self-start mt-4"
             onPress={onRetry}
           >
-            <Text className="text-primary text-sm font-semibold">重新生成</Text>
+            <Text className="text-primary text-sm font-semibold">{t('common.regenerate')}</Text>
           </Pressable>
         </Animated.View>
       )}
