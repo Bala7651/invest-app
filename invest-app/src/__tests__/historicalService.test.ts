@@ -88,10 +88,12 @@ describe('fetchCandles', () => {
     const resultPromise = fetchCandles('2330', '1M');
     await jest.runAllTimersAsync();
     const result = await resultPromise;
+    const points = result.points;
 
-    expect(result.length).toBe(3);
+    expect(result.providerUsed).toBe('twse');
+    expect(points.length).toBe(3);
     // Check shape
-    const first = result[0];
+    const first = points[0];
     expect(first).toHaveProperty('timestamp');
     expect(first).toHaveProperty('open');
     expect(first).toHaveProperty('high');
@@ -99,8 +101,8 @@ describe('fetchCandles', () => {
     expect(first).toHaveProperty('close');
     expect(first).toHaveProperty('volume');
     // Check ascending sort
-    for (let i = 1; i < result.length; i++) {
-      expect(result[i].timestamp).toBeGreaterThanOrEqual(result[i - 1].timestamp);
+    for (let i = 1; i < points.length; i++) {
+      expect(points[i].timestamp).toBeGreaterThanOrEqual(points[i - 1].timestamp);
     }
   });
 
@@ -141,7 +143,7 @@ describe('fetchCandles', () => {
       (call[0] as string).includes('twse.com.tw')
     );
     expect(twseCalled).toBe(true);
-    expect(Array.isArray(result)).toBe(true);
+    expect(Array.isArray(result.points)).toBe(true);
   }, 30000);
 
   it('TWSE response parsing: handles comma-separated numbers and ROC dates', async () => {
@@ -153,10 +155,12 @@ describe('fetchCandles', () => {
     const resultPromise = fetchCandles('2330', '1D');
     await jest.runAllTimersAsync();
     const result = await resultPromise;
+    const points = result.points;
 
     // 1D keeps the latest 2 candles so the chart still has a drawable segment.
-    expect(result.length).toBe(2);
-    const point = result[result.length - 1];
+    expect(result.providerUsed).toBe('twse');
+    expect(points.length).toBe(2);
+    const point = points[points.length - 1];
     expect(typeof point.open).toBe('number');
     expect(typeof point.high).toBe('number');
     expect(typeof point.low).toBe('number');

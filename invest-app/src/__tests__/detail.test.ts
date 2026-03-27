@@ -38,7 +38,7 @@ jest.mock('expo-notifications', () => ({
 import { fetchCandles as mockFetchCandles } from '../features/charts/services/historicalService';
 
 function resetChartStore() {
-  useChartStore.setState({ cache: {}, loading: {}, errors: {} });
+  useChartStore.setState({ cache: {}, providers: {}, loading: {}, errors: {} });
 }
 
 function setupAlertStoreMock() {
@@ -73,7 +73,7 @@ describe('detail screen logic', () => {
   });
 
   it('calls fetchCandles on mount with symbol and default timeframe 1D', async () => {
-    (mockFetchCandles as jest.Mock).mockResolvedValue([]);
+    (mockFetchCandles as jest.Mock).mockResolvedValue({ points: [], providerUsed: 'twse' });
     const symbol = '2330';
     const defaultTimeframe: Timeframe = '1D';
 
@@ -81,11 +81,11 @@ describe('detail screen logic', () => {
       await useChartStore.getState().fetchCandles(symbol, defaultTimeframe);
     });
 
-    expect(mockFetchCandles).toHaveBeenCalledWith(symbol, defaultTimeframe);
+    expect(mockFetchCandles).toHaveBeenCalledWith(symbol, defaultTimeframe, 'auto');
   });
 
   it('changing timeframe triggers a new fetchCandles call', async () => {
-    (mockFetchCandles as jest.Mock).mockResolvedValue([]);
+    (mockFetchCandles as jest.Mock).mockResolvedValue({ points: [], providerUsed: 'twse' });
     const symbol = '2330';
 
     await act(async () => {
@@ -96,15 +96,15 @@ describe('detail screen logic', () => {
     });
 
     expect(mockFetchCandles).toHaveBeenCalledTimes(2);
-    expect(mockFetchCandles).toHaveBeenNthCalledWith(1, symbol, '1D');
-    expect(mockFetchCandles).toHaveBeenNthCalledWith(2, symbol, '1M');
+    expect(mockFetchCandles).toHaveBeenNthCalledWith(1, symbol, '1D', 'auto');
+    expect(mockFetchCandles).toHaveBeenNthCalledWith(2, symbol, '1M', 'auto');
   });
 
   it('isLoading is true during data fetch and false after', async () => {
     let loadingDuringFetch = false;
     (mockFetchCandles as jest.Mock).mockImplementation(async () => {
-      loadingDuringFetch = useChartStore.getState().loading['2330:1D'] === true;
-      return [];
+      loadingDuringFetch = useChartStore.getState().loading['2330:1D:auto'] === true;
+      return { points: [], providerUsed: 'twse' };
     });
 
     await act(async () => {
@@ -112,7 +112,7 @@ describe('detail screen logic', () => {
     });
 
     expect(loadingDuringFetch).toBe(true);
-    expect(useChartStore.getState().loading['2330:1D']).toBe(false);
+    expect(useChartStore.getState().loading['2330:1D:auto']).toBe(false);
   });
 
   it('getCandles returns undefined before fetch (skeleton should show)', () => {

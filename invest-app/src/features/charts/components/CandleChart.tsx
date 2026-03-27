@@ -6,6 +6,7 @@ import { OHLCVPoint } from '../types';
 interface CandleChartProps {
   data: OHLCVPoint[];
   height: number;
+  width?: number;
   onCandleChange?: (candle: OHLCVPoint | null) => void;
 }
 
@@ -16,6 +17,11 @@ const GRID_LEVELS = 4;
 function formatDate(ts: number): string {
   const d = new Date(ts);
   return `${d.getMonth() + 1}/${d.getDate()}`;
+}
+
+function formatTime(ts: number): string {
+  const d = new Date(ts);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 function buildMovingAverage(data: OHLCVPoint[], period: number): Array<number | null> {
@@ -32,9 +38,9 @@ function buildMovingAverage(data: OHLCVPoint[], period: number): Array<number | 
   });
 }
 
-export function CandleChart({ data, height, onCandleChange }: CandleChartProps) {
+export function CandleChart({ data, height, width, onCandleChange }: CandleChartProps) {
   const { width: screenWidth } = useWindowDimensions();
-  const chartWidth = screenWidth - 32;
+  const chartWidth = width ?? (screenWidth - 32);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
 
   if (data.length < 2) return null;
@@ -64,10 +70,15 @@ export function CandleChart({ data, height, onCandleChange }: CandleChartProps) 
   );
 
   // X-axis: show first, middle, last date
+  const isIntraday =
+    data.length > 12 &&
+    new Date(data[0].timestamp).toDateString() === new Date(data[data.length - 1].timestamp).toDateString();
   const dateIndices: number[] =
     data.length <= 4
       ? data.map((_, i) => i)
-      : [0, Math.floor((data.length - 1) / 2), data.length - 1];
+      : isIntraday
+        ? [0, Math.floor((data.length - 1) / 3), Math.floor(((data.length - 1) * 2) / 3), data.length - 1]
+        : [0, Math.floor((data.length - 1) / 2), data.length - 1];
 
   function handlePress(e: any) {
     const x = e.nativeEvent.locationX;
@@ -257,19 +268,20 @@ export function CandleChart({ data, height, onCandleChange }: CandleChartProps) 
       >
         {dateIndices.map(i => {
           const cx = i * candleWidth + candleWidth / 2;
+          const labelLeft = Math.max(0, Math.min(cx - 20, plotWidth - 40));
           return (
             <Text
               key={i}
               style={{
                 position: 'absolute',
-                left: cx - 20,
+                left: labelLeft,
                 width: 40,
                 textAlign: 'center',
                 fontSize: 10,
                 color: 'rgba(255,255,255,0.35)',
               }}
             >
-              {formatDate(data[i].timestamp)}
+              {isIntraday ? formatTime(data[i].timestamp) : formatDate(data[i].timestamp)}
             </Text>
           );
         })}

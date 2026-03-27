@@ -18,7 +18,7 @@ function getStore() {
 }
 
 function resetStore() {
-  useChartStore.setState({ cache: {}, loading: {}, errors: {} });
+  useChartStore.setState({ cache: {}, providers: {}, loading: {}, errors: {} });
 }
 
 describe('chartStore', () => {
@@ -28,18 +28,19 @@ describe('chartStore', () => {
   });
 
   it('fetchCandles stores data in cache under correct key', async () => {
-    (mockFetchCandles as jest.Mock).mockResolvedValue(mockCandles);
+    (mockFetchCandles as jest.Mock).mockResolvedValue({ points: mockCandles, providerUsed: 'twse' });
 
     await act(async () => {
       await getStore().fetchCandles('2330', '1M');
     });
 
     const cache = getStore().cache;
-    expect(cache['2330:1M']).toEqual(mockCandles);
+    expect(cache['2330:1M:auto']).toEqual(mockCandles);
+    expect(getStore().getProviderUsed('2330', '1M')).toBe('twse');
   });
 
   it('fetchCandles skips fetch when cache key exists', async () => {
-    (mockFetchCandles as jest.Mock).mockResolvedValue(mockCandles);
+    (mockFetchCandles as jest.Mock).mockResolvedValue({ points: mockCandles, providerUsed: 'twse' });
 
     await act(async () => {
       await getStore().fetchCandles('2330', '1M');
@@ -57,7 +58,7 @@ describe('chartStore', () => {
   });
 
   it('getCandles returns cached data for existing key', async () => {
-    (mockFetchCandles as jest.Mock).mockResolvedValue(mockCandles);
+    (mockFetchCandles as jest.Mock).mockResolvedValue({ points: mockCandles, providerUsed: 'twse' });
 
     await act(async () => {
       await getStore().fetchCandles('2330', '6M');
@@ -70,8 +71,8 @@ describe('chartStore', () => {
   it('loading toggles true during fetch, false after', async () => {
     let loadingDuringFetch = false;
     (mockFetchCandles as jest.Mock).mockImplementation(async () => {
-      loadingDuringFetch = getStore().loading['2330:1D'] === true;
-      return mockCandles;
+      loadingDuringFetch = getStore().loading['2330:1D:auto'] === true;
+      return { points: mockCandles, providerUsed: 'twse' };
     });
 
     await act(async () => {
@@ -79,7 +80,7 @@ describe('chartStore', () => {
     });
 
     expect(loadingDuringFetch).toBe(true);
-    expect(getStore().loading['2330:1D']).toBe(false);
+    expect(getStore().loading['2330:1D:auto']).toBe(false);
   });
 
   it('error state captured on fetch failure', async () => {
@@ -90,12 +91,12 @@ describe('chartStore', () => {
     });
 
     const errors = getStore().errors;
-    expect(errors['2330:5D']).toContain('API timeout');
-    expect(getStore().loading['2330:5D']).toBe(false);
+    expect(errors['2330:5D:auto']).toContain('API timeout');
+    expect(getStore().loading['2330:5D:auto']).toBe(false);
   });
 
   it('clearCache removes specific symbol entries', async () => {
-    (mockFetchCandles as jest.Mock).mockResolvedValue(mockCandles);
+    (mockFetchCandles as jest.Mock).mockResolvedValue({ points: mockCandles, providerUsed: 'twse' });
 
     await act(async () => {
       await getStore().fetchCandles('2330', '1M');
@@ -108,13 +109,13 @@ describe('chartStore', () => {
     });
 
     const cache = getStore().cache;
-    expect(cache['2330:1M']).toBeUndefined();
-    expect(cache['2330:6M']).toBeUndefined();
-    expect(cache['0050:1Y']).toEqual(mockCandles);
+    expect(cache['2330:1M:auto']).toBeUndefined();
+    expect(cache['2330:6M:auto']).toBeUndefined();
+    expect(cache['0050:1Y:auto']).toEqual(mockCandles);
   });
 
   it('clearCache with no argument clears entire cache', async () => {
-    (mockFetchCandles as jest.Mock).mockResolvedValue(mockCandles);
+    (mockFetchCandles as jest.Mock).mockResolvedValue({ points: mockCandles, providerUsed: 'twse' });
 
     await act(async () => {
       await getStore().fetchCandles('2330', '1M');

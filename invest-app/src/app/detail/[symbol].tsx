@@ -6,23 +6,27 @@ import { OHLCVPoint } from '../../features/charts/types';
 import { AlertModal } from '../../features/alerts/components/AlertModal';
 import { AlertStatusBar } from '../../features/alerts/components/AlertStatusBar';
 import { CandleChart } from '../../features/charts/components/CandleChart';
+import { ChartProviderOption, ChartProviderSelector } from '../../features/charts/components/ChartProviderSelector';
 import { ChartSkeleton } from '../../features/charts/components/ChartSkeleton';
 import { PatternCard } from '../../features/charts/components/PatternCard';
 import { TimeframeSelector } from '../../features/charts/components/TimeframeSelector';
 import { VolumeBar } from '../../features/charts/components/VolumeBar';
 import { useChartStore } from '../../features/charts/store/chartStore';
-import { Timeframe } from '../../features/charts/types';
+import { SelectableChartProvider, Timeframe } from '../../features/charts/types';
 import { Quote, useQuoteStore } from '../../features/market/quoteStore';
 import { formatChange } from '../../features/watchlist/components/StockCard';
 import { useI18n } from '../../features/i18n/useI18n';
 import { useSettingsStore } from '../../features/settings/store/settingsStore';
+import { getAvailableChartProviders } from '../../features/charts/services/historicalService';
 
 function mergeLiveQuoteIntoCandles(
   candles: OHLCVPoint[] | undefined,
   quote: Quote | undefined,
   timeframe: Timeframe,
+  provider: SelectableChartProvider,
 ): OHLCVPoint[] | undefined {
   if (!candles || candles.length === 0 || timeframe !== '1D') return candles;
+  if (provider !== 'fugle') return candles;
   if (!quote || quote.price == null || quote.source !== 'fugle_live') return candles;
   if (candles.length < 10) return candles;
 
@@ -68,32 +72,66 @@ export default function DetailScreen() {
 
   const quote = useQuoteStore(s => s.quotes[symbol]);
   const fugleEnabled = useSettingsStore(s => s.fugleEnabled);
-  const { fetchCandles, getCandles, loading, errors } = useChartStore();
+  const fugleApiKey = useSettingsStore(s => s.fugleApiKey);
+  const { fetchCandles, getCandles, getProviderUsed, loading, errors } = useChartStore();
 
   const [timeframe, setTimeframe] = useState<Timeframe>('1D');
+  const [intradayProvider, setIntradayProvider] = useState<SelectableChartProvider>(
+    fugleEnabled && fugleApiKey ? 'fugle' : 'twse'
+  );
   const [alertModalVisible, setAlertModalVisible] = useState(false);
   const [selectedCandle, setSelectedCandle] = useState<OHLCVPoint | null>(null);
 
-  const key = `${symbol}:${timeframe}`;
-  const candles = getCandles(symbol, timeframe);
+  const availableProviderValues = getAvailableChartProviders(timeframe).filter(provider => {
+    if (provider !== 'fugle') return true;
+    return fugleEnabled && !!fugleApiKey;
+  });
+  const activeChartProvider: SelectableChartProvider =
+    timeframe === '1D'
+      ? (availableProviderValues.includes(intradayProvider) ? intradayProvider : availableProviderValues[0] ?? 'twse')
+      : 'twse';
+  const key = `${symbol}:${timeframe}:${activeChartProvider}`;
+  const candles = getCandles(symbol, timeframe, activeChartProvider);
+  const providerUsed = getProviderUsed(symbol, timeframe, activeChartProvider);
   const displayCandles = useMemo(
-    () => mergeLiveQuoteIntoCandles(candles, quote, timeframe),
-    [candles, quote, timeframe],
+    () => mergeLiveQuoteIntoCandles(candles, quote, timeframe, activeChartProvider),
+    [candles, quote, timeframe, activeChartProvider],
   );
   const isLoading = loading[key] ?? false;
   const error = errors[key] ?? null;
   const chartSourceLabel =
-    timeframe === '1D' && fugleEnabled && (displayCandles?.length ?? 0) >= 10
-      ? t('market.source.fugle')
-      : 'TWSE';
+    providerUsed === 'fugle'
+      ? t('detail.chartProvider.fugle')
+      : providerUsed === 'yahoo'
+        ? t('detail.chartProvider.yahoo')
+        : t('detail.chartProvider.twse');
+  const providerOptions: ChartProviderOption[] = availableProviderValues.map(provider => ({
+    value: provider,
+    label:
+      provider === 'fugle'
+        ? t('detail.chartProvider.fugle')
+        : provider === 'yahoo'
+          ? t('detail.chartProvider.yahoo')
+          : t('detail.chartProvider.twse'),
+  }));
 
   useEffect(() => {
-    fetchCandles(symbol, timeframe);
-  }, [symbol, timeframe]);
+    fetchCandles(symbol, timeframe, activeChartProvider);
+  }, [symbol, timeframe, activeChartProvider]);
+
+  useEffect(() => {
+    if (timeframe !== '1D') return;
+    if (availableProviderValues.includes(intradayProvider)) return;
+    setIntradayProvider(availableProviderValues[0] ?? 'twse');
+  }, [timeframe, intradayProvider, availableProviderValues.join('|')]);
 
   useEffect(() => {
     if (displayCandles && displayCandles.length > 0) {
-      setSelectedCandle(displayCandles[displayCandles.length - 1]);
+      setSelectedCandle(current => {
+        if (!current) return displayCandles[displayCandles.length - 1];
+        const matched = displayCandles.find(candle => candle.timestamp === current.timestamp);
+        return matched ?? displayCandles[displayCandles.length - 1];
+      });
     }
   }, [displayCandles]);
 
@@ -120,18 +158,20 @@ export default function DetailScreen() {
     <View className="flex-1 bg-bg" style={{ paddingTop: insets.top + 24, paddingBottom: Math.max(insets.bottom, 8) + 54 }}>
       {/* Bloomberg-style header */}
       <View className="flex-row items-center justify-between px-4 mb-4">
-        <View className="flex-row items-center">
+        <View className="flex-row items-center" style={{ flex: 1, minWidth: 0, paddingRight: 12 }}>
           <Pressable onPress={() => router.back()} className="mr-4 py-1">
             <Text className="text-primary text-base">{t('detail.back')}</Text>
           </Pressable>
-          <View>
+          <View style={{ flex: 1, minWidth: 0 }}>
             <Text className="text-primary font-bold text-lg">{symbol}</Text>
             {quote?.name ? (
-              <Text className="text-muted text-sm">{quote.name}</Text>
+              <Text className="text-muted text-sm" numberOfLines={1}>
+                {quote.name}
+              </Text>
             ) : null}
           </View>
         </View>
-        <View className="items-end flex-row" style={{ gap: 12, alignItems: 'flex-start' }}>
+        <View className="items-end flex-row" style={{ gap: 12, alignItems: 'flex-start', flexShrink: 0 }}>
           <View className="items-end">
             <Text className="text-text font-semibold text-xl">{displayPrice}</Text>
             <Text className={`${changeColorClass} text-sm`}>{changeDisplay}</Text>
@@ -174,7 +214,7 @@ export default function DetailScreen() {
                     return c;
                   })(),
                 }));
-                fetchCandles(symbol, timeframe);
+                fetchCandles(symbol, timeframe, activeChartProvider);
               }}
               className="bg-surface px-4 py-2 rounded-lg border border-border"
             >
@@ -246,6 +286,7 @@ export default function DetailScreen() {
               <CandleChart
                 data={displayCandles}
                 height={chartHeight}
+                width={chartWidth}
                 onCandleChange={c => setSelectedCandle(c)}
               />
             </View>
@@ -275,6 +316,15 @@ export default function DetailScreen() {
               onSelect={setTimeframe}
               loading={isLoading}
             />
+            {timeframe === '1D' && providerOptions.length > 1 ? (
+              <ChartProviderSelector
+                value={activeChartProvider}
+                options={providerOptions}
+                onSelect={setIntradayProvider}
+                disabled={isLoading}
+                label={t('detail.chartProviderLabel')}
+              />
+            ) : null}
           </View>
 
           {/* Alert status bar */}
