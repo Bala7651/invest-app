@@ -76,7 +76,7 @@ export default function DetailScreen() {
   const { fetchCandles, getCandles, getProviderUsed, loading, errors } = useChartStore();
 
   const [timeframe, setTimeframe] = useState<Timeframe>('1D');
-  const [intradayProvider, setIntradayProvider] = useState<SelectableChartProvider>(
+  const [chartProvider, setChartProvider] = useState<SelectableChartProvider>(
     fugleEnabled && fugleApiKey ? 'fugle' : 'twse'
   );
   const [alertModalVisible, setAlertModalVisible] = useState(false);
@@ -87,9 +87,7 @@ export default function DetailScreen() {
     return fugleEnabled && !!fugleApiKey;
   });
   const activeChartProvider: SelectableChartProvider =
-    timeframe === '1D'
-      ? (availableProviderValues.includes(intradayProvider) ? intradayProvider : availableProviderValues[0] ?? 'twse')
-      : 'twse';
+    availableProviderValues.includes(chartProvider) ? chartProvider : availableProviderValues[0] ?? 'twse';
   const key = `${symbol}:${timeframe}:${activeChartProvider}`;
   const candles = getCandles(symbol, timeframe, activeChartProvider);
   const providerUsed = getProviderUsed(symbol, timeframe, activeChartProvider);
@@ -120,10 +118,9 @@ export default function DetailScreen() {
   }, [symbol, timeframe, activeChartProvider]);
 
   useEffect(() => {
-    if (timeframe !== '1D') return;
-    if (availableProviderValues.includes(intradayProvider)) return;
-    setIntradayProvider(availableProviderValues[0] ?? 'twse');
-  }, [timeframe, intradayProvider, availableProviderValues.join('|')]);
+    if (availableProviderValues.includes(chartProvider)) return;
+    setChartProvider(availableProviderValues[0] ?? 'twse');
+  }, [chartProvider, availableProviderValues.join('|')]);
 
   useEffect(() => {
     if (displayCandles && displayCandles.length > 0) {
@@ -316,11 +313,11 @@ export default function DetailScreen() {
               onSelect={setTimeframe}
               loading={isLoading}
             />
-            {timeframe === '1D' && providerOptions.length > 1 ? (
+            {providerOptions.length > 1 ? (
               <ChartProviderSelector
                 value={activeChartProvider}
                 options={providerOptions}
-                onSelect={setIntradayProvider}
+                onSelect={setChartProvider}
                 disabled={isLoading}
                 label={t('detail.chartProviderLabel')}
               />

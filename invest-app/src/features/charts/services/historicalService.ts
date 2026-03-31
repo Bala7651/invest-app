@@ -30,6 +30,17 @@ interface FugleIntradayCandlesResponse {
   }>;
 }
 
+interface FugleHistoricalCandlesResponse {
+  data?: Array<{
+    date?: string;
+    open?: number;
+    high?: number;
+    low?: number;
+    close?: number;
+    volume?: number;
+  }>;
+}
+
 interface YahooIntradayChartResponse {
   chart?: {
     result?: Array<{
@@ -75,48 +86,14 @@ function bucketCandles(points: OHLCVPoint[], minutes: number): OHLCVPoint[] {
   return Array.from(buckets.values()).sort((a, b) => a.timestamp - b.timestamp);
 }
 
-async function fetchFugleIntradayCandles(symbol: string): Promise<OHLCVPoint[]> {
-  const { fugleApiKey, fugleEnabled } = useSettingsStore.getState();
-  if (!fugleEnabled || !fugleApiKey) return [];
-
-  const url = `https://api.fugle.tw/marketdata/v1.0/stock/intraday/candles/${encodeURIComponent(symbol)}?timeframe=1&sort=asc`;
-  const res = await fetch(url, {
-    headers: {
-      'X-API-KEY': fugleApiKey,
-      'User-Agent': 'invest-app/1.0',
-    },
-    signal: timeoutSignal(6_000),
-  });
-  if (!res.ok) throw new Error(`Fugle HTTP ${res.status}`);
-  const data = await res.json() as FugleIntradayCandlesResponse;
-  if (!Array.isArray(data.data)) return [];
-
-  return data.data
-    .filter((row) =>
-      typeof row.date === 'string' &&
-      typeof row.open === 'number' &&
-      typeof row.high === 'number' &&
-      typeof row.low === 'number' &&
-      typeof row.close === 'number'
-    )
-    .map((row): OHLCVPoint => ({
-      timestamp: new Date(row.date as string).getTime(),
-      open: row.open as number,
-      high: row.high as number,
-      low: row.low as number,
-      close: row.close as number,
-      volume: typeof row.volume === 'number' ? row.volume : 0,
-    }));
+function formatIsoDate(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
-async function fetchYahooIntradayCandles(symbol: string): Promise<OHLCVPoint[]> {
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(`${symbol}.TW`)}?interval=5m&range=1d&includePrePost=false`;
-  const res = await fetch(url, {
-    headers: { 'User-Agent': 'Mozilla/5.0' },
-    signal: timeoutSignal(6_000),
-  });
-  if (!res.ok) throw new Error(`Yahoo HTTP ${res.status}`);
-  const data = await res.json() as YahooIntradayChartResponse;
+function parseYahooChartData(data: YahooIntradayChartResponse): OHLCVPoint[] {
   const result = data.chart?.result?.[0];
   const timestamps = result?.timestamp ?? [];
   const quote = result?.indicators?.quote?.[0];
@@ -152,6 +129,111 @@ async function fetchYahooIntradayCandles(symbol: string): Promise<OHLCVPoint[]> 
       };
     })
     .filter((point): point is OHLCVPoint => point !== null);
+}
+
+async function fetchFugleIntradayCandles(symbol: string): Promise<OHLCVPoint[]> {
+  const { fugleApiKey, fugleEnabled } = useSettingsStore.getState();
+  if (!fugleEnabled || !fugleApiKey) return [];
+
+  const url = `https://api.fugle.tw/marketdata/v1.0/stock/intraday/candles/${encodeURIComponent(symbol)}?timeframe=1&sort=asc`;
+  const res = await fetch(url, {
+    headers: {
+      'X-API-KEY': fugleApiKey,
+      'User-Agent': 'invest-app/1.0',
+    },
+    signal: timeoutSignal(6_000),
+  });
+  if (!res.ok) throw new Error(`Fugle HTTP ${res.status}`);
+  const data = await res.json() as FugleIntradayCandlesResponse;
+  if (!Array.isArray(data.data)) return [];
+
+  return data.data
+    .filter((row) =>
+      typeof row.date === 'string' &&
+      typeof row.open === 'number' &&
+      typeof row.high === 'number' &&
+      typeof row.low === 'number' &&
+      typeof row.close === 'number'
+    )
+    .map((row): OHLCVPoint => ({
+      timestamp: new Date(row.date as string).getTime(),
+      open: row.open as number,
+      high: row.high as number,
+      low: row.low as number,
+      close: row.close as number,
+      volume: typeof row.volume === 'number' ? row.volume : 0,
+    }));
+}
+
+async function fetchFugleHistoricalCandles(symbol: string, timeframe: Timeframe): Promise<OHLCVPoint[]> {
+  const { fugleApiKey, fugleEnabled } = useSettingsStore.getState();
+  if (!fugleEnabled || !fugleApiKey) return [];
+
+  const now = new Date();
+  const url = new URL(`https://api.fugle.tw/marketdata/v1.0/stock/historical/candles/${encodeURIComponent(symbol)}`);
+  url.searchParams.set('timeframe', 'D');
+  url.searchParams.set('from', getDateRange(timeframe));
+  url.searchParams.set('to', formatIsoDate(now));
+  url.searchParams.set('fields', 'open,high,low,close,volume');
+  url.searchParams.set('sort', 'asc');
+
+  const res = await fetch(url, {
+    headers: {
+      'X-API-KEY': fugleApiKey,
+      'User-Agent': 'invest-app/1.0',
+    },
+    signal: timeoutSignal(6_000),
+  });
+  if (!res.ok) throw new Error(`Fugle HTTP ${res.status}`);
+  const data = await res.json() as FugleHistoricalCandlesResponse;
+  if (!Array.isArray(data.data)) return [];
+
+  const points = data.data
+    .filter((row) =>
+      typeof row.date === 'string' &&
+      typeof row.open === 'number' &&
+      typeof row.high === 'number' &&
+      typeof row.low === 'number' &&
+      typeof row.close === 'number'
+    )
+    .map((row): OHLCVPoint => ({
+      timestamp: new Date(row.date as string).getTime(),
+      open: row.open as number,
+      high: row.high as number,
+      low: row.low as number,
+      close: row.close as number,
+      volume: typeof row.volume === 'number' ? row.volume : 0,
+    }));
+
+  return timeframe === '5D' ? points.slice(-5) : points;
+}
+
+function getYahooChartParams(timeframe: Timeframe): { range: string; interval: string } {
+  switch (timeframe) {
+    case '1D':
+      return { range: '1d', interval: '5m' };
+    case '5D':
+      return { range: '5d', interval: '1d' };
+    case '1M':
+      return { range: '1mo', interval: '1d' };
+    case '6M':
+      return { range: '6mo', interval: '1d' };
+    case '1Y':
+      return { range: '1y', interval: '1d' };
+  }
+}
+
+async function fetchYahooCandles(symbol: string, timeframe: Timeframe): Promise<OHLCVPoint[]> {
+  const { range, interval } = getYahooChartParams(timeframe);
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(`${symbol}.TW`)}?interval=${interval}&range=${range}&includePrePost=false`;
+  const res = await fetch(url, {
+    headers: { 'User-Agent': 'Mozilla/5.0' },
+    signal: timeoutSignal(6_000),
+  });
+  if (!res.ok) throw new Error(`Yahoo HTTP ${res.status}`);
+  const data = await res.json() as YahooIntradayChartResponse;
+  const points = parseYahooChartData(data);
+  return timeframe === '5D' ? points.slice(-5) : points;
 }
 
 async function fetchFinMindDaily(stockId: string, startDate: string): Promise<OHLCVPoint[]> {
@@ -224,11 +306,9 @@ export function getDateRange(timeframe: Timeframe): string {
   return `${y}-${m}-${d}`;
 }
 
-export function getAvailableChartProviders(timeframe: Timeframe): SelectableChartProvider[] {
-  if (timeframe === '1D') {
-    return ['fugle', 'twse', 'yahoo'];
-  }
-  return ['twse'];
+export function getAvailableChartProviders(_timeframe?: Timeframe): SelectableChartProvider[] {
+  void _timeframe;
+  return ['fugle', 'twse', 'yahoo'];
 }
 
 // Fetch all months in parallel — no queue needed
@@ -269,14 +349,30 @@ export async function fetchCandles(
     return { points, providerUsed: 'fugle' };
   }
 
-  if (timeframe === '1D' && requestedProvider === 'yahoo') {
-    points = await fetchYahooIntradayCandles(symbol);
+  if (timeframe !== '1D' && requestedProvider === 'fugle') {
+    points = await fetchFugleHistoricalCandles(symbol, timeframe);
+    return { points, providerUsed: 'fugle' };
+  }
+
+  if (requestedProvider === 'yahoo') {
+    points = await fetchYahooCandles(symbol, timeframe);
     return { points, providerUsed: 'yahoo' };
   }
 
   if (timeframe === '1D' && provider === 'auto') {
     try {
       points = bucketCandles(await fetchFugleIntradayCandles(symbol), 5);
+      if (points.length >= 2) {
+        return { points, providerUsed: 'fugle' };
+      }
+    } catch {
+      points = [];
+    }
+  }
+
+  if (timeframe !== '1D' && provider === 'auto') {
+    try {
+      points = await fetchFugleHistoricalCandles(symbol, timeframe);
       if (points.length >= 2) {
         return { points, providerUsed: 'fugle' };
       }

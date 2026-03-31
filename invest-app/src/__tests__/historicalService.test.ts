@@ -1,4 +1,5 @@
-import { twseDateToTimestamp, getDateRange, fetchCandles } from '../features/charts/services/historicalService';
+import { twseDateToTimestamp, getAvailableChartProviders, getDateRange, fetchCandles } from '../features/charts/services/historicalService';
+import { useSettingsStore } from '../features/settings/store/settingsStore';
 
 // ── twseDateToTimestamp ──────────────────────────────────────────────────────
 
@@ -68,15 +69,28 @@ const mockTWSEResponse = {
 };
 
 describe('fetchCandles', () => {
+  const originalSettings = useSettingsStore.getState();
+
   beforeEach(() => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2026-03-20T12:00:00Z'));
     global.fetch = jest.fn();
+    useSettingsStore.setState({ fugleEnabled: false, fugleApiKey: '' });
   });
 
   afterEach(() => {
     jest.useRealTimers();
     jest.restoreAllMocks();
+    useSettingsStore.setState({
+      fugleEnabled: originalSettings.fugleEnabled,
+      fugleApiKey: originalSettings.fugleApiKey,
+    });
+  });
+
+  it('all timeframes expose the same chart provider choices', () => {
+    expect(getAvailableChartProviders('1D')).toEqual(['fugle', 'twse', 'yahoo']);
+    expect(getAvailableChartProviders('5D')).toEqual(['fugle', 'twse', 'yahoo']);
+    expect(getAvailableChartProviders('1M')).toEqual(['fugle', 'twse', 'yahoo']);
   });
 
   it('1M: fetches from FinMind and returns sorted OHLCVPoint[]', async () => {
@@ -169,4 +183,60 @@ describe('fetchCandles', () => {
     // Verify comma-stripped parsing: '5,000' -> 5000
     expect(point.volume).toBe(5000);
   }, 30000);
+
+  it('5D: yahoo provider returns yahoo candles instead of TWSE fallback', async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        chart: {
+          result: [
+            {
+              timestamp: [1710720000, 1710806400, 1710892800, 1710979200, 1711065600],
+              indicators: {
+                quote: [
+                  {
+                    open: [100, 101, 102, 103, 104],
+                    high: [101, 102, 103, 104, 105],
+                    low: [99, 100, 101, 102, 103],
+                    close: [100.5, 101.5, 102.5, 103.5, 104.5],
+                    volume: [1000, 1100, 1200, 1300, 1400],
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      }),
+    });
+
+    const resultPromise = fetchCandles('2330', '5D', 'yahoo');
+    await jest.runAllTimersAsync();
+    const result = await resultPromise;
+
+    expect(result.providerUsed).toBe('yahoo');
+    expect(result.points).toHaveLength(5);
+    expect((global.fetch as jest.Mock).mock.calls[0][0]).toContain('query1.finance.yahoo.com');
+  });
+
+  it('1M: fugle provider uses historical candles endpoint', async () => {
+    useSettingsStore.setState({ fugleEnabled: true, fugleApiKey: 'test-key' });
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: [
+          { date: '2026-02-20', open: 100, high: 105, low: 98, close: 103, volume: 10000 },
+          { date: '2026-02-21', open: 103, high: 107, low: 102, close: 106, volume: 11000 },
+        ],
+      }),
+    });
+
+    const resultPromise = fetchCandles('2330', '1M', 'fugle');
+    await jest.runAllTimersAsync();
+    const result = await resultPromise;
+
+    expect(result.providerUsed).toBe('fugle');
+    expect(result.points).toHaveLength(2);
+    expect((global.fetch as jest.Mock).mock.calls[0][0].toString()).toContain('/historical/candles/2330');
+    expect((global.fetch as jest.Mock).mock.calls[0][0].toString()).toContain('timeframe=D');
+  });
 });
